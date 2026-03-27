@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Management System</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f6f9;
+        }
+
+        /* Navbar */
+        .navbar {
+            background-color: #2c3e50;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: bold;
+        }
+
+        .navbar a:hover {
+            color: #f1c40f;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .hero h1 {
+            font-size: 40px;
+            color: #2c3e50;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #555;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <div class="navbar">
+        <div><strong>Student Management System</strong></div>
+        <div>
+            <a href="/">Home</a>
+            <a href="/add-student/">Add Student</a>
+            <a href="/view-students/">View Students</a>
+            <a href="/login/">Login</a>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Welcome to Student Management System</h1>
+        <p>Manage student records easily and efficiently.</p>
+        <a href="/add-student/" class="btn">Add New Student</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        © 2026 Student Management System | Developed by ProjEdge
+    </div>
+
+</body>
+</html>
