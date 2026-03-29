@@ -1,0 +1,106 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}{{ action }} Faculty — Admin{% endblock %}
+{% block nav_faculty %}on{% endblock %}
+{% block breadcrumb %} / <a href="{% url 'admin_faculty_list' %}" style="color:var(--teal);text-decoration:none">Faculty</a> / {{ action }}{% endblock %}
+{% block page_title %}{{ action }} Faculty{% endblock %}
+{% block page_sub %}{% if action == 'Edit' %}Update faculty details{% else %}Add a new faculty member{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  {% if action == 'Add' %}
+  <div style="background:var(--surface2);border:1px dashed #bcd2db;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--muted);line-height:1.7">
+    Faster entry tip: enter the employee ID first. The form can use it as the username automatically, and the starter password is already filled in.
+  </div>
+  {% endif %}
+  <form method="POST">
+    {% csrf_token %}
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Personal Details</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Name <span>*</span></label>
+        <input type="text" name="first_name" class="form-control" value="{{ faculty.user.first_name|default:'' }}" required/>
+      </div>
+      <div class="form-group">
+        <label>Last Name <span>*</span></label>
+        <input type="text" name="last_name" class="form-control" value="{{ faculty.user.last_name|default:'' }}" required/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Email <span>*</span></label>
+        <input type="email" name="email" class="form-control" value="{{ faculty.user.email|default:'' }}" placeholder="faculty@college.edu" required/>
+      </div>
+      {% if action == 'Add' %}
+      <div class="form-group">
+        <label>Username <span>*</span></label>
+        <input type="text" id="faculty-username" name="username" class="form-control" placeholder="Auto-filled from employee ID" required/>
+      </div>
+      {% endif %}
+    </div>
+    {% if action == 'Add' %}
+    <div class="form-group">
+      <label>Password <span>*</span></label>
+      <input type="text" id="faculty-password" name="password" class="form-control" value="Faculty@1234" required/>
+      <div class="form-hint">Default starter password is filled in. Change it if needed.</div>
+    </div>
+    {% endif %}
+
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Professional Details</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Employee ID <span>*</span></label>
+        <input type="text" id="faculty-employee-id" name="employee_id" class="form-control" value="{{ faculty.employee_id|default:'' }}" placeholder="e.g. FAC001" required/>
+      </div>
+      <div class="form-group">
+        <label>Department <span>*</span></label>
+        <select name="department" class="form-control" required>
+          <option value="">Select Department</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if faculty.department_id == d.pk %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Designation <span>*</span></label>
+        <input type="text" name="designation" class="form-control" value="{{ faculty.designation|default:'' }}" placeholder="e.g. Assistant Professor" required/>
+      </div>
+      <div class="form-group">
+        <label>Qualification <span>*</span></label>
+        <input type="text" name="qualification" class="form-control" value="{{ faculty.qualification|default:'' }}" placeholder="e.g. M.Tech CSE" required/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Experience (Years)</label>
+        <input type="number" name="experience_years" class="form-control" value="{{ faculty.experience_years|default:0 }}" min="0"/>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="text" name="phone_number" class="form-control" value="{{ faculty.phone_number|default:'' }}" placeholder="10-digit mobile"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Save Faculty</button>
+      <a href="{% url 'admin_faculty_list' %}" class="btn-cancel">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% if action == 'Add' %}
+{% block extra_js %}
+const facultyIdInput = document.getElementById('faculty-employee-id');
+const facultyUsernameInput = document.getElementById('faculty-username');
+if (facultyIdInput && facultyUsernameInput) {
+  facultyIdInput.addEventListener('input', function () {
+    if (!facultyUsernameInput.dataset.edited) {
+      facultyUsernameInput.value = facultyIdInput.value.trim().toLowerCase();
+    }
+  });
+  facultyUsernameInput.addEventListener('input', function () {
+    facultyUsernameInput.dataset.edited = facultyUsernameInput.value.trim() ? 'true' : '';
+  });
+}
+{% endblock %}
+{% endif %}

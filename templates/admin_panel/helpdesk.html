@@ -1,0 +1,62 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Help Desk - Admin{% endblock %}
+{% block nav_helpdesk %}on{% endblock %}
+{% block breadcrumb %} / Help Desk{% endblock %}
+{% block page_title %}Help Desk{% endblock %}
+{% block page_sub %}Track support tickets for access, fees, academics, and technical issues{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap">
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Tickets</option>
+      <option value="OPEN" {% if status_filter == 'OPEN' %}selected{% endif %}>Open</option>
+      <option value="IN_PROGRESS" {% if status_filter == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+      <option value="RESOLVED" {% if status_filter == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+    </select>
+    {% if status_filter %}
+    <a href="{% url 'admin_helpdesk' %}" class="btn-cancel" style="padding:8px 14px">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="ap-card">
+  {% if tickets %}
+  <table class="ap-table">
+    <thead>
+      <tr><th>Requester</th><th>Issue</th><th>College</th><th>Status</th><th>Created</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      {% for ticket in tickets %}
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--deep)">{{ ticket.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ticket.email }}</div>
+        </td>
+        <td>
+          <div style="font-weight:600;color:var(--deep)">{{ ticket.subject }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ticket.get_issue_type_display }} · {{ ticket.description|truncatechars:90 }}</div>
+        </td>
+        <td>{% if ticket.college %}{{ ticket.college.code }}{% else %}-{% endif %}</td>
+        <td>{{ ticket.get_status_display }}</td>
+        <td>{{ ticket.created_at|date:"d M Y" }}</td>
+        <td>
+          <form method="POST" action="{% url 'admin_helpdesk_update' ticket.pk %}" style="display:flex;gap:8px;align-items:center">
+            {% csrf_token %}
+            <select name="status" class="filter-select" style="min-width:130px">
+              <option value="OPEN" {% if ticket.status == 'OPEN' %}selected{% endif %}>Open</option>
+              <option value="IN_PROGRESS" {% if ticket.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+              <option value="RESOLVED" {% if ticket.status == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+            </select>
+            <button type="submit" class="btn-edit"><i class="fas fa-save"></i> Save</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><i class="fas fa-headset"></i><p>No help desk tickets found.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

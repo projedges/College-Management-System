@@ -1,26 +1,44 @@
+from uuid import uuid4
+
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 # USER ROLE MODEL
 
 class UserRole(models.Model):
     ROLE_CHOICES = (
-        (1, 'Admin'),
+        (1, 'College Admin'),
         (2, 'HOD'),
         (3, 'Faculty'),
         (4, 'Student'),
         (5, 'Lab Staff'),
+        (6, 'Principal'),
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.IntegerField(choices=ROLE_CHOICES, default=4)
+    college = models.ForeignKey('College', on_delete=models.SET_NULL, null=True, blank=True, related_name='user_roles')
 
     def __str__(self):
         return f"{self.user.username} - {self.get_role_display()}"
 
+# COLLEGE MODEL
+class College(models.Model):
+    name = models.CharField(max_length=150, unique=True)
+    code = models.CharField(max_length=30, unique=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
 # DEPARTMENT MODEL
 class Department(models.Model):
+    college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='departments')
     name = models.CharField(max_length=100, unique=True)
     code = models.CharField(max_length=20, unique=True)
 
@@ -189,6 +207,7 @@ class AdminProfile(models.Model):
 
 # ANNOUNCEMENTS
 class Announcement(models.Model):
+    college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='announcements')
     title = models.CharField(max_length=200)
     message = models.TextField()
 
@@ -211,6 +230,84 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Notification"
+
+
+class RegistrationRequest(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('REVIEWED', 'Reviewed'),
+        ('CONVERTED', 'Converted'),
+        ('REJECTED', 'Rejected'),
+    )
+
+    college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='registration_requests')
+    desired_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=15, blank=True)
+    admission_year = models.IntegerField(null=True, blank=True)
+    current_semester = models.IntegerField(null=True, blank=True)
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.email}"
+
+
+class RegistrationInvite(models.Model):
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='registration_invites')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    invited_email = models.EmailField()
+    admission_year = models.IntegerField(null=True, blank=True)
+    current_semester = models.IntegerField(null=True, blank=True)
+    token = models.CharField(max_length=64, unique=True, default=uuid4, editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_registration_invites')
+    used_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_usable(self):
+        if self.used_at:
+            return False
+        if self.expires_at and self.expires_at < timezone.now():
+            return False
+        return True
+
+    def __str__(self):
+        return f"{self.invited_email} - {self.college.code}"
+
+
+class HelpDeskTicket(models.Model):
+    ISSUE_TYPES = (
+        ('ACCESS', 'Access / Login'),
+        ('ACADEMIC', 'Academic'),
+        ('FEES', 'Fees'),
+        ('TECHNICAL', 'Technical'),
+        ('GENERAL', 'General'),
+    )
+
+    STATUS_CHOICES = (
+        ('OPEN', 'Open'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+    )
+
+    college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='helpdesk_tickets')
+    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='helpdesk_tickets')
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    issue_type = models.CharField(max_length=20, choices=ISSUE_TYPES, default='GENERAL')
+    subject = models.CharField(max_length=150)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.subject} - {self.email}"
 
 
 # ACTIVITY LOGS (SECURITY 🔐)
@@ -332,6 +429,18 @@ class HOD(models.Model):
         return f"HOD - {self.user.username}"
     
 
+class Principal(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    college = models.OneToOneField(College, on_delete=models.CASCADE, related_name='principal')
+    employee_id = models.CharField(max_length=50, unique=True)
+    phone_number = models.CharField(max_length=15)
+    qualification = models.CharField(max_length=100)
+    experience_years = models.IntegerField()
+
+    def __str__(self):
+        return f"Principal - {self.user.username}"
+    
+
     
 # FACULTY MODEL
 class Faculty(models.Model):
@@ -350,6 +459,29 @@ class Faculty(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+class FacultyAvailability(models.Model):
+    DAYS = (
+        ('MON', 'Monday'),
+        ('TUE', 'Tuesday'),
+        ('WED', 'Wednesday'),
+        ('THU', 'Thursday'),
+        ('FRI', 'Friday'),
+        ('SAT', 'Saturday'),
+    )
+
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='availability_slots')
+    day_of_week = models.CharField(max_length=3, choices=DAYS)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    is_available = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('faculty', 'day_of_week', 'start_time', 'end_time')
+
+    def __str__(self):
+        return f"{self.faculty} - {self.day_of_week} {self.start_time}-{self.end_time}"
 
 
 # SUBJECT MODEL
@@ -516,6 +648,7 @@ class Attendance(models.Model):
         return f"{self.student} - {self.status}"
     
 class Exam(models.Model):
+    college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='exams')
     name = models.CharField(max_length=100)
     semester = models.IntegerField()
 

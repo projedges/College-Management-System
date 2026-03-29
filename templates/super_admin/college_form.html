@@ -1,0 +1,27 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Add College - EduTrack{% endblock %}
+{% block role_label %}Super Admin{% endblock %}
+{% block page_title %}Add College{% endblock %}
+{% block page_sub %}Create a new college entity{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'super_admin_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Super Admin</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="max-width:720px">
+  <form method="POST">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College Name</label><input type="text" name="name" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College Code</label><input type="text" name="code" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">City</label><input type="text" name="city" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">State</label><input type="text" name="state" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Create College</button>
+      <a href="{% url 'super_admin_dashboard' %}#colleges" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

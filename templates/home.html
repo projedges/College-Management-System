@@ -6,7 +6,7 @@
   <title>EduTrack — Academic Management Portal</title>
   {% load static %}
   <!-- SVG Favicon (replace with your own later) -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230d7377'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='18' font-weight='900' font-family='Arial' fill='white'>E</text></svg>"/>
+  <link rel="icon" type="image/png" href="{% static 'students/images/favicon.png' %}"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
@@ -204,7 +204,6 @@
   </div>
   <div class="nav-acts">
     <a href="/login/" class="btn-ghost">Sign In</a>
-    <a href="/admin/" class="btn-teal"><i class="fas fa-lock" style="font-size:11px"></i> Admin</a>
   </div>
   <div class="ham" id="ham" onclick="toggleMob()"><span></span><span></span><span></span></div>
 </nav>
@@ -216,7 +215,6 @@
   <a href="#roles">Who Uses It</a>
   <a href="#how-it-works">How It Works</a>
   <a href="/login/">Sign In</a>
-  <a href="/admin/" class="mob-p">Admin Panel</a>
 </div>
 
 <!-- HERO -->
@@ -323,7 +321,7 @@
     <div class="fcard reveal">
       <div class="ficon bg-green"><i class="fas fa-lock"></i></div>
       <h3>Secure Role Access</h3>
-      <p>Separate portals for Admin, HOD, Faculty, and Students — each with the right permissions, nothing more.</p>
+      <p>Separate portals for Super Admin, College Admin, HOD, Faculty, and Students — each with the right permissions, nothing more.</p>
     </div>
   </div>
 </section>
@@ -338,11 +336,16 @@
   <div class="role-grid">
     <div class="rcard reveal">
       <div class="ricon bg-teal"><i class="fas fa-user-shield"></i></div>
-      <h3>Admin</h3>
-      <p>Full control — users, departments, settings, reports, and system configuration.</p>
+      <h3>Super Admin</h3>
+      <p>Creates colleges and college-admin entities, and oversees the platform globally.</p>
     </div>
     <div class="rcard reveal">
       <div class="ricon bg-gold"><i class="fas fa-building-columns"></i></div>
+      <h3>College Admin</h3>
+      <p>Manages students, staff, departments, fees, subjects, exams, and notices for one college.</p>
+    </div>
+    <div class="rcard reveal">
+      <div class="ricon bg-teal"><i class="fas fa-building-columns"></i></div>
       <h3>HOD</h3>
       <p>Department oversight, approval workflows, and faculty performance monitoring.</p>
     </div>
@@ -374,7 +377,7 @@
   </div>
   <div class="steps-grid">
     <div class="step reveal"><div class="step-n">1</div><h3>Setup Structure</h3><p>Configure departments, courses, and academic year structure.</p></div>
-    <div class="step reveal"><div class="step-n">2</div><h3>Add Users</h3><p>Onboard HODs, faculty, and students. Roles are assigned automatically.</p></div>
+    <div class="step reveal"><div class="step-n">2</div><h3>Add Users</h3><p>Onboard HODs, faculty, and students through controlled admin workflows and request review.</p></div>
     <div class="step reveal"><div class="step-n">3</div><h3>Configure Academics</h3><p>Set up subjects, timetables, exam schedules, and fee structures per semester.</p></div>
     <div class="step reveal"><div class="step-n">4</div><h3>Go Live</h3><p>Start tracking attendance, publishing results, and managing everything from one dashboard.</p></div>
   </div>
@@ -387,7 +390,7 @@
     <p>Access your attendance, results, timetable, assignments, and fee details — all in one place.</p>
     <div class="cta-btns">
       <a href="/login/" class="btn-cta-g"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
-      <a href="/admin/" class="btn-cta-w"><i class="fas fa-user-shield"></i> Admin Panel</a>
+      <a href="/helpdesk/" class="btn-cta-w"><i class="fas fa-headset"></i> Request Access Help</a>
     </div>
   </div>
 </div>
@@ -418,12 +421,12 @@
       <h4>Portal Access</h4>
       <a href="/login/">Student Login</a>
       <a href="/login/">Faculty Login</a>
-      <a href="/admin/">Admin Login</a>
+      <a href="/helpdesk/">Request Access Help</a>
     </div>
     <div class="fcol">
       <h4>Support</h4>
       <a href="#">Documentation</a>
-      <a href="#">IT Support</a>
+      <a href="/helpdesk/">IT Support</a>
       <a href="#">Privacy Policy</a>
       <a href="#">Terms of Use</a>
     </div>

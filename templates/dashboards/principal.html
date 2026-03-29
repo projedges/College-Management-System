@@ -1,0 +1,220 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Principal Dashboard - EduTrack{% endblock %}
+{% block role_label %}Principal{% endblock %}
+{% block page_title %}Principal Dashboard{% endblock %}
+{% block page_sub %}{{ college.name }} · Principal Workspace{% endblock %}
+
+{% block sidebar_links %}
+<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#departments" data-section-target="departments" class="sb-link"><i class="fas fa-building"></i> Departments</a>
+<a href="#faculty" data-section-target="faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
+<a href="#students" data-section-target="students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
+<a href="#hods" data-section-target="hods" class="sb-link"><i class="fas fa-building-columns"></i> HODs</a>
+<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+{% endblock %}
+
+{% block quick_nav %}
+<div class="quick-nav">
+  <a href="#departments" data-section-target="departments" class="quick-chip"><i class="fas fa-building"></i> Departments</a>
+  <a href="#faculty" data-section-target="faculty" class="quick-chip"><i class="fas fa-users"></i> Faculty</a>
+  <a href="#students" data-section-target="students" class="quick-chip"><i class="fas fa-user-graduate"></i> Students</a>
+  <a href="#hods" data-section-target="hods" class="quick-chip"><i class="fas fa-building-columns"></i> HODs</a>
+  <a href="#notices" data-section-target="notices" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
+  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .d-title i{color:var(--teal)}
+  .dtable{width:100%;border-collapse:collapse;font-size:13px}
+  .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
+  .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
+  .dtable tr:last-child td{border-bottom:none}
+  .dtable tbody tr:hover td{background:#f9fafb}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:860px){.two-col{grid-template-columns:1fr}}
+  .empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
+  .empty i{font-size:26px;display:block;margin-bottom:8px;color:#d1d5db}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building"></i></div>
+      <div class="s-val">{{ total_departments }}</div>
+      <div class="s-lbl">Departments</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div class="s-val">{{ total_faculty }}</div>
+      <div class="s-lbl">Faculty</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-user-graduate"></i></div>
+      <div class="s-val">{{ total_students }}</div>
+      <div class="s-lbl">Students</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(99,102,241,.09);color:#6366f1"><i class="fas fa-building-columns"></i></div>
+      <div class="s-val">{{ total_hods }}</div>
+      <div class="s-lbl">HODs</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-user-graduate"></i> Recent Students</div>
+      {% if recent_students %}
+      <div class="table-scroll content-scroll">
+        <table class="dtable">
+          <thead><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Semester</th></tr></thead>
+          <tbody>
+            {% for s in recent_students %}
+            <tr>
+              <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
+              <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+              <td>{{ s.department.code }}</td>
+              <td>{{ s.current_semester }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-user-graduate"></i>No students yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-bell"></i> College Notices</div>
+      {% if announcements %}
+      <div class="content-scroll soft">
+        {% for ann in announcements %}
+        <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No notices yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="departments" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-building"></i> Departments</div>
+    {% if departments %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Code</th></tr></thead>
+        <tbody>
+          {% for d in departments %}
+          <tr><td>{{ d.name }}</td><td>{{ d.code }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-building"></i>No departments found.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="faculty" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty</div>
+    {% if faculty_list %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Department</th><th>Designation</th></tr></thead>
+        <tbody>
+          {% for f in faculty_list %}
+          <tr>
+            <td>{{ f.user.get_full_name|default:f.user.username }}</td>
+            <td>{{ f.department.code }}</td>
+            <td>{{ f.designation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-chalkboard-teacher"></i>No faculty found.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="students" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-graduate"></i> Students</div>
+    {% if students_list %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Semester</th></tr></thead>
+        <tbody>
+          {% for s in students_list %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
+            <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+            <td>{{ s.department.code }}</td>
+            <td>{{ s.current_semester }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-user-graduate"></i>No students found.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="hods" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-building-columns"></i> Heads Of Department</div>
+    {% if hod_list %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Department</th><th>Employee ID</th></tr></thead>
+        <tbody>
+          {% for h in hod_list %}
+          <tr>
+            <td>{{ h.user.get_full_name|default:h.user.username }}</td>
+            <td>{{ h.department.code }}</td>
+            <td>{{ h.employee_id }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-building-columns"></i>No HODs found.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="notices" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
+    {% if announcements %}
+    <div class="content-scroll">
+      {% for ann in announcements %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-bell-slash"></i>No notices yet.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

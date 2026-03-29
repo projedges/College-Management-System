@@ -1,0 +1,52 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Subjects — Admin{% endblock %}
+{% block nav_subjects %}on{% endblock %}
+{% block breadcrumb %} / Subjects{% endblock %}
+{% block page_title %}Subjects{% endblock %}
+{% block page_sub %}All subjects across departments and semesters{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_subject_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Subject</a>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET" style="display:flex;gap:10px">
+    <select name="dept" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>
+      {% endfor %}
+    </select>
+    {% if dept_filter %}<a href="{% url 'admin_subjects' %}" style="padding:8px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:13px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>{% endif %}
+  </form>
+  <span style="font-size:13px;color:var(--muted);margin-left:auto">{{ subjects|length }} subject{{ subjects|length|pluralize }}</span>
+</div>
+
+{% if subjects %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Subject Name</th><th>Code</th><th>Department</th><th>Semester</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for s in subjects %}
+      <tr>
+        <td style="font-weight:600;color:var(--deep)">{{ s.name }}</td>
+        <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">{{ s.code }}</span></td>
+        <td>{{ s.department.code }}</td>
+        <td style="text-align:center">Sem {{ s.semester }}</td>
+        <td>
+          <button class="btn-del" onclick="confirmDelete('{% url 'admin_subject_delete' s.pk %}','Delete subject {{ s.name }}?')">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-book"></i><p>No subjects yet. <a href="{% url 'admin_subject_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
+{% endif %}
+{% include 'admin_panel/_confirm_modal.html' %}
+{% endblock %}

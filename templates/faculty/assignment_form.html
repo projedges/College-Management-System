@@ -1,0 +1,44 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Create Assignment - EduTrack{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Create Assignment{% endblock %}
+{% block page_sub %}Publish a new assignment for one of your subjects{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="max-width:760px">
+  <form method="POST">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Subject</label>
+        <select name="subject" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
+          <option value="">Select Subject</option>
+          {% for subject in subjects %}
+          <option value="{{ subject.id }}">{{ subject.name }} ({{ subject.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Deadline</label>
+        <input type="datetime-local" name="deadline" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Title</label>
+      <input type="text" name="title" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
+    </div>
+    <div style="margin-top:16px">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Description</label>
+      <textarea name="description" rows="7" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;resize:vertical"></textarea>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-teal"><i class="fas fa-plus"></i> Publish Assignment</button>
+      <a href="{% url 'faculty_dashboard' %}#submissions" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

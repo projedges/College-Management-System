@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Access Denied - EduTrack{% endblock %}
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div class="card" style="width:100%;max-width:620px;text-align:center">
+    <div style="font-family:'Outfit',sans-serif;font-size:46px;font-weight:900;color:var(--red)">403</div>
+    <h2 style="font-family:'Outfit',sans-serif;margin:8px 0">Access denied</h2>
+    <p style="color:var(--muted);line-height:1.7;margin-bottom:12px">You don't have permission to access this page or the request failed a security check.</p>
+    {% if reason %}
+    <p style="font-size:13px;color:var(--muted);background:var(--surface2);padding:12px;border-radius:10px;margin-bottom:18px">{{ reason }}</p>
+    {% endif %}
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="/" class="btn btn-teal">Go Home</a>
+      <a href="{% url 'login' %}" class="btn btn-outline">Login Again</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

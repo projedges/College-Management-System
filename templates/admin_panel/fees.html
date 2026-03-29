@@ -1,0 +1,58 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Fee Records — Admin{% endblock %}
+{% block nav_fees %}on{% endblock %}
+{% block breadcrumb %} / Fees{% endblock %}
+{% block page_title %}Fee Records{% endblock %}
+{% block page_sub %}Track and manage student fee payments{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_fee_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Fee Record</a>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET" style="display:flex;gap:10px">
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Status</option>
+      <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Paid</option>
+      <option value="PARTIAL" {% if status_filter == 'PARTIAL' %}selected{% endif %}>Partial</option>
+      <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+    </select>
+    {% if status_filter %}<a href="{% url 'admin_fees' %}" style="padding:8px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:13px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>{% endif %}
+  </form>
+  <span style="font-size:13px;color:var(--muted);margin-left:auto">{{ fees|length }} record{{ fees|length|pluralize }}</span>
+</div>
+
+{% if fees %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Student</th><th>Roll No</th><th>Dept</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for f in fees %}
+      <tr>
+        <td style="font-weight:600;color:var(--deep)">{{ f.student.user.get_full_name|default:f.student.user.username }}</td>
+        <td style="color:var(--teal);font-weight:600">{{ f.student.roll_number }}</td>
+        <td>{{ f.student.department.code }}</td>
+        <td>₹{{ f.total_amount|floatformat:0 }}</td>
+        <td style="color:var(--green);font-weight:600">₹{{ f.paid_amount|floatformat:0 }}</td>
+        <td style="color:{% if f.total_amount > f.paid_amount %}var(--red){% else %}var(--green){% endif %};font-weight:600">
+          ₹{% widthratio f.paid_amount 1 1 %}{{ f.total_amount|floatformat:0 }}
+        </td>
+        <td>
+          {% if f.status == 'PAID' %}<span class="ap-badge badge-paid">Paid</span>
+          {% elif f.status == 'PARTIAL' %}<span class="ap-badge badge-partial">Partial</span>
+          {% else %}<span class="ap-badge badge-pending">Pending</span>{% endif %}
+        </td>
+        <td>
+          <a href="{% url 'admin_fee_edit' f.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-indian-rupee-sign"></i><p>No fee records found.</p></div>
+{% endif %}
+{% endblock %}

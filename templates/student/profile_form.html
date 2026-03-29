@@ -1,0 +1,77 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Edit Profile - EduTrack{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}Edit Profile{% endblock %}
+{% block page_sub %}{{ student.roll_number }} · {{ student.department.name }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<form method="POST" enctype="multipart/form-data" class="card" style="max-width:980px">
+  {% csrf_token %}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">First Name</label><input type="text" name="first_name" value="{{ request.user.first_name }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Last Name</label><input type="text" name="last_name" value="{{ request.user.last_name }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Email</label><input type="email" name="email" value="{{ request.user.email }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Phone Number</label><input type="text" name="phone_number" value="{% if profile %}{{ profile.phone_number }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Date of Birth</label><input type="date" name="date_of_birth" value="{% if profile %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div>
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Gender</label>
+      <select name="gender" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
+        <option value="">Select</option>
+        <option value="Male" {% if profile and profile.gender == 'Male' %}selected{% endif %}>Male</option>
+        <option value="Female" {% if profile and profile.gender == 'Female' %}selected{% endif %}>Female</option>
+        <option value="Other" {% if profile and profile.gender == 'Other' %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Aadhaar Number</label><input type="text" name="aadhaar_number" value="{% if profile %}{{ profile.aadhaar_number }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Profile Photo</label><input type="file" name="profile_photo" accept="image/*" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:#fff"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Intermediate College</label><input type="text" name="inter_college_name" value="{% if profile %}{{ profile.inter_college_name }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Passed Year</label><input type="number" name="inter_passed_year" value="{% if profile %}{{ profile.inter_passed_year }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Percentage</label><input type="number" step="0.01" name="inter_percentage" value="{% if profile %}{{ profile.inter_percentage }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    </div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">School Name</label><input type="text" name="school_name" value="{% if profile %}{{ profile.school_name }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Passed Year</label><input type="number" name="school_passed_year" value="{% if profile %}{{ profile.school_passed_year }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Percentage</label><input type="number" step="0.01" name="school_percentage" value="{% if profile %}{{ profile.school_percentage }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    </div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Blood Group</label><input type="text" name="blood_group" value="{% if profile %}{{ profile.blood_group }}{% endif %}" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Nationality</label><input type="text" name="nationality" value="{% if profile %}{{ profile.nationality }}{% else %}Indian{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Category</label><input type="text" name="category" value="{% if profile %}{{ profile.category }}{% endif %}" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+  </div>
+
+  <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:24px">
+    <h3 style="font-family:'Outfit',sans-serif;margin-bottom:14px">Address & Family Details</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div style="grid-column:1 / -1"><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Street Address</label><textarea name="street" rows="3" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;resize:vertical">{% if address %}{{ address.street }}{% endif %}</textarea></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">City</label><input type="text" name="city" value="{% if address %}{{ address.city }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">State</label><input type="text" name="state" value="{% if address %}{{ address.state }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Pincode</label><input type="text" name="pincode" value="{% if address %}{{ address.pincode }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Country</label><input type="text" name="country" value="{% if address %}{{ address.country }}{% else %}India{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Parent Type</label>
+        <select name="parent_type" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
+          <option value="FATHER" {% if parent and parent.parent_type == 'FATHER' %}selected{% endif %}>Father</option>
+          <option value="MOTHER" {% if parent and parent.parent_type == 'MOTHER' %}selected{% endif %}>Mother</option>
+          <option value="GUARDIAN" {% if parent and parent.parent_type == 'GUARDIAN' %}selected{% endif %}>Guardian</option>
+        </select>
+      </div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Parent Name</label><input type="text" name="parent_name" value="{% if parent %}{{ parent.name }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Parent Phone</label><input type="text" name="parent_phone_number" value="{% if parent %}{{ parent.phone_number }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Parent Email</label><input type="email" name="parent_email" value="{% if parent %}{{ parent.email }}{% endif %}" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Parent Occupation</label><input type="text" name="parent_occupation" value="{% if parent %}{{ parent.occupation }}{% endif %}" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Emergency Contact Name</label><input type="text" name="emergency_name" value="{% if emergency_contact %}{{ emergency_contact.name }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Emergency Relation</label><input type="text" name="emergency_relation" value="{% if emergency_contact %}{{ emergency_contact.relation }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Emergency Phone</label><input type="text" name="emergency_phone_number" value="{% if emergency_contact %}{{ emergency_contact.phone_number }}{% endif %}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
+    <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Save Profile</button>
+    <a href="{% url 'student_dashboard' %}#profile" class="btn btn-outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}

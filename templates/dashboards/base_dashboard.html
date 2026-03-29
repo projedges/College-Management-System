@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body %}
+<div style="display:flex;min-height:100vh">
+
+  <aside style="width:240px;background:var(--deep);color:#fff;padding:0;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column">
+    <div style="padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:10px;padding:7px 12px;">
+        <img src="{% static 'students/images/logo.png' %}" alt="Logo" style="height:46px;width:auto;max-width:170px;object-fit:contain;display:block"
+             onerror="this.parentElement.style.display='none';document.getElementById('sb-logo-fb').style.display='block'"/>
+      </div>
+      <div id="sb-logo-fb" style="display:none;font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:#fff;margin-top:4px">
+        Edu<span style="color:var(--teal-lt)">Track</span>
+      </div>
+    </div>
+
+    <div style="padding:16px 12px;flex:1">
+      <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin-bottom:8px">Menu</p>
+      {% block sidebar_links %}{% endblock %}
+    </div>
+
+    <div style="padding:16px;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#fff">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4)">{% block role_label %}User{% endblock %}</div>
+          {% if college %}<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px">{{ college.name }}</div>{% endif %}
+        </div>
+      </div>
+      <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:rgba(239,68,68,.12);color:#f87171;font-size:13px;font-weight:600;text-decoration:none;transition:background .2s"
+         onmouseover="this.style.background='rgba(239,68,68,.2)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <main style="flex:1;padding:32px;overflow-y:auto;min-width:0">
+    <div style="margin-bottom:28px">
+      <h1 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:4px">{% block page_title %}Dashboard{% endblock %}</h1>
+      <p style="font-size:14px;color:var(--muted)">{% block page_sub %}Welcome back, {{ request.user.first_name|default:request.user.username }}{% endblock %}</p>
+    </div>
+
+    {% block quick_nav %}{% endblock %}
+
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" style="margin-bottom:20px">
+        <i class="fas fa-circle-info"></i> {{ message }}
+      </div>
+    {% endfor %}
+
+    {% block dashboard_content %}{% endblock %}
+  </main>
+</div>
+
+<style>
+  .sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:500;text-decoration:none;transition:all .2s;margin-bottom:2px}
+  .sb-link:hover,.sb-link.active{background:rgba(255,255,255,.08);color:#fff}
+  .sb-link.active{background:var(--teal);color:#fff}
+  .sb-link i{width:16px;text-align:center;font-size:14px}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+  .stat-card{background:#fff;border-radius:var(--r-lg);padding:20px;border:1px solid var(--border);box-shadow:var(--sh)}
+  .stat-card .s-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+  .stat-card .s-val{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep);margin-bottom:2px}
+  .stat-card .s-lbl{font-size:12px;color:var(--muted)}
+  .quick-nav{display:flex;gap:10px;flex-wrap:wrap;margin:-10px 0 20px}
+  .quick-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:#fff;border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:700;text-decoration:none;box-shadow:var(--sh);transition:all .2s}
+  .quick-chip:hover,.quick-chip.active{color:var(--teal);border-color:rgba(13,115,119,.25);transform:translateY(-1px)}
+  .quick-chip i{color:var(--teal)}
+  .section-meta{font-size:12px;color:var(--muted);margin:-8px 0 14px}
+  .content-scroll{max-height:340px;overflow:auto;padding-right:4px}
+  .content-scroll.soft{max-height:280px}
+  .content-scroll::-webkit-scrollbar{width:8px;height:8px}
+  .content-scroll::-webkit-scrollbar-thumb{background:#d7dee4;border-radius:999px}
+  .content-scroll::-webkit-scrollbar-track{background:transparent}
+  .table-scroll{overflow:auto}
+  .table-scroll::-webkit-scrollbar{height:8px}
+  .table-scroll::-webkit-scrollbar-thumb{background:#d7dee4;border-radius:999px}
+  .dashboard-pane{display:none}
+  .dashboard-pane.active{display:block}
+  @media(max-width:860px){
+    main{padding:24px 18px}
+    .quick-nav{margin-top:-4px}
+    .content-scroll,.content-scroll.soft{max-height:none}
+  }
+</style>
+
+<script>
+  (function () {
+    var panes = Array.prototype.slice.call(document.querySelectorAll('[data-dashboard-pane]'));
+    if (!panes.length) return;
+
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-section-target]'));
+    var defaultSection = 'dashboard';
+
+    function activateSection(section) {
+      var next = section || defaultSection;
+      var matched = false;
+
+      panes.forEach(function (pane) {
+        var isActive = pane.getAttribute('data-dashboard-pane') === next;
+        pane.classList.toggle('active', isActive);
+        if (isActive) matched = true;
+      });
+
+      if (!matched && next !== defaultSection) {
+        activateSection(defaultSection);
+        return;
+      }
+
+      navLinks.forEach(function (link) {
+        var isActive = link.getAttribute('data-section-target') === next;
+        link.classList.toggle('active', isActive);
+      });
+
+      if (window.location.hash !== '#' + next) {
+        history.replaceState(null, '', '#' + next);
+      }
+    }
+
+    navLinks.forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        var href = link.getAttribute('href') || '';
+        if (href.charAt(0) !== '#') return;
+        event.preventDefault();
+        activateSection(link.getAttribute('data-section-target'));
+      });
+    });
+
+    var initial = (window.location.hash || '').replace('#', '') || defaultSection;
+    activateSection(initial);
+  })();
+</script>
+{% endblock %}

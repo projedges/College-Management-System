@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Help Desk - EduTrack{% endblock %}
+
+{% block extra_css %}
+<style>
+  body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .support-wrap{width:100%;max-width:680px}
+  .support-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:34px;box-shadow:0 8px 40px rgba(7,30,38,.12)}
+  .support-card h2{font-family:'Outfit',sans-serif;font-size:24px;font-weight:800;color:var(--deep);margin-bottom:6px}
+  .support-card .sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7}
+  .info-box{background:var(--surface2);border:1px dashed #bcd2db;border-radius:14px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.7}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .form-group{margin-bottom:16px}
+  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;outline:none}
+  .form-group textarea{min-height:120px;resize:vertical}
+  .btn-submit{width:100%;padding:12px;border-radius:var(--r);background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer}
+  .support-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .support-links a{text-decoration:none;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700}
+  .link-ghost{background:#fff;border:1.5px solid var(--border);color:var(--deep)}
+  .link-deep{background:var(--deep);color:#fff}
+  @media(max-width:640px){.form-row{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="support-wrap">
+  <div class="support-card">
+    <h2>Help Desk</h2>
+    <p class="sub">Use this page for access issues, missing invite links, fee questions, academic corrections, or technical problems.</p>
+
+    <div class="info-box">
+      If you are a new student and you do not have a one-time onboarding link from the college admin, submit a help desk ticket here instead of trying to register directly.
+    </div>
+
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" style="margin-bottom:14px">
+        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}"></i>
+        {{ message }}
+      </div>
+    {% endfor %}
+
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" name="name" value="{{ request.user.get_full_name|default:'' }}" required/>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" value="{{ request.user.email|default:'' }}" required/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>College</label>
+          <select name="college">
+            {% for college in colleges %}
+            <option value="{{ college.pk }}" {% if initial_college and initial_college.pk == college.pk %}selected{% endif %}>{{ college.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Issue Type</label>
+          <select name="issue_type">
+            <option value="ACCESS">Access / Login</option>
+            <option value="ACADEMIC">Academic</option>
+            <option value="FEES">Fees</option>
+            <option value="TECHNICAL">Technical</option>
+            <option value="GENERAL">General</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Subject</label>
+        <input type="text" name="subject" placeholder="Example: Need invite link for student onboarding" required/>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" placeholder="Explain the issue clearly so the college admin can act on it faster." required></textarea>
+      </div>
+      <button type="submit" class="btn-submit">Submit Ticket</button>
+    </form>
+
+    <div class="support-links">
+      <a href="{% url 'login' %}" class="link-ghost">Back to Sign In</a>
+      <a href="{% url 'home' %}" class="link-deep">Home</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
