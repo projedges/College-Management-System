@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sign In - EduTrack{% endblock %}
+
+{% block extra_css %}
+<style>
+  body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .auth-wrap{width:100%;max-width:420px}
+  .auth-logo{text-align:center;margin-bottom:28px}
+  .auth-logo img{height:64px;width:auto;max-width:220px;object-fit:contain;display:block;margin:0 auto}
+  .auth-logo .logo-txt{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)}
+  .auth-logo .logo-txt span{color:var(--teal)}
+  .auth-logo .logo-sub{font-size:12px;color:var(--muted);margin-top:2px;letter-spacing:.5px}
+  .auth-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:36px;box-shadow:0 8px 40px rgba(7,30,38,.12)}
+  .auth-card h2{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:4px}
+  .auth-card .sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+  .form-group{margin-bottom:18px}
+  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .form-group .input-wrap{position:relative}
+  .form-group .input-wrap i.lead-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+  .form-group input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none}
+  .form-group input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .form-group input::placeholder{color:var(--muted)}
+  .form-group input.has-toggle{padding-right:44px}
+  .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .pw-toggle:hover{background:rgba(13,115,119,.08);color:var(--teal)}
+  .btn-submit{width:100%;padding:12px;border-radius:var(--r);background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(13,115,119,.3);font-family:'Inter',sans-serif}
+  .btn-submit:hover{background:var(--teal-dk);transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,115,119,.4)}
+  .auth-footer{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+  .auth-footer a{color:var(--teal);font-weight:600}
+  .auth-footer a:hover{text-decoration:underline}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:12px}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-logo">
+    <img src="{% static 'students/images/logo.png' %}" alt="Logo"
+         onerror="this.style.display='none';document.getElementById('logo-fb').style.display='block'"/>
+    <div id="logo-fb" style="display:none">
+      <div class="logo-txt">Edu<span>Track</span></div>
+    </div>
+    <div class="logo-sub">Academic Management Portal</div>
+  </div>
+
+  <div class="auth-card">
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in to access your portal</p>
+
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}"></i>
+        {{ message }}
+      </div>
+    {% endfor %}
+
+    <form method="POST" action="{% url 'login' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Username</label>
+        <div class="input-wrap">
+          <i class="fas fa-user lead-icon"></i>
+          <input type="text" name="username" placeholder="Enter your username" required autofocus/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock lead-icon"></i>
+          <input id="loginPassword" class="has-toggle" type="password" name="password" placeholder="Enter your password" required/>
+          <button type="button" class="pw-toggle" aria-label="Show password" onclick="togglePassword('loginPassword', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div style="margin-top:8px;text-align:right">
+          <a href="{% url 'password_reset' %}" style="font-size:12px;color:var(--teal);font-weight:600">Forgot password?</a>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+    </form>
+
+    <div class="divider">or</div>
+    <div class="auth-footer">
+      Don't have an account? <a href="{% url 'register' %}">Register here</a>
+    </div>
+  </div>
+</div>
+<script>
+  function togglePassword(fieldId, trigger) {
+    var input = document.getElementById(fieldId);
+    if (!input || !trigger) return;
+    var icon = trigger.querySelector('i');
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    trigger.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    if (icon) {
+      icon.classList.toggle('fa-eye', showing);
+      icon.classList.toggle('fa-eye-slash', !showing);
+    }
+  }
+</script>
+{% endblock %}

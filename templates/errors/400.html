@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Bad Request - EduTrack{% endblock %}
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div class="card" style="width:100%;max-width:560px;text-align:center">
+    <div style="font-family:'Outfit',sans-serif;font-size:46px;font-weight:900;color:var(--gold)">400</div>
+    <h2 style="font-family:'Outfit',sans-serif;margin:8px 0">Bad Request</h2>
+    <p style="color:var(--muted);line-height:1.7;margin-bottom:18px">The request could not be processed. Please go back and try again.</p>
+    <a href="/" class="btn btn-teal">Go Home</a>
+  </div>
+</div>
+{% endblock %}

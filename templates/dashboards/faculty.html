@@ -1,0 +1,278 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Faculty Dashboard - EduTrack{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Faculty Dashboard{% endblock %}
+{% block page_sub %}{{ faculty.designation }} · {{ faculty.department.name }}{% if college %} · {{ college.name }}{% endif %}{% endblock %}
+
+{% block sidebar_links %}
+<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#subjects" data-section-target="subjects" class="sb-link"><i class="fas fa-book"></i> My Subjects</a>
+<a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="#submissions" data-section-target="submissions" class="sb-link"><i class="fas fa-file-alt"></i> Assignments & Reviews</a>
+<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+{% endblock %}
+
+{% block quick_nav %}
+<div class="quick-nav">
+  <a href="#subjects" data-section-target="subjects" class="quick-chip"><i class="fas fa-book"></i> Subjects</a>
+  <a href="#attendance" data-section-target="attendance" class="quick-chip"><i class="fas fa-calendar-check"></i> Attendance</a>
+  <a href="#timetable" data-section-target="timetable" class="quick-chip"><i class="fas fa-clock"></i> Timetable</a>
+  <a href="#submissions" data-section-target="submissions" class="quick-chip"><i class="fas fa-file-alt"></i> Reviews</a>
+  <a href="#notices" data-section-target="notices" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
+  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .d-title i{color:var(--teal)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:860px){.two-col{grid-template-columns:1fr}}
+  .subj-card{background:var(--surface2);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;border:1px solid var(--border)}
+  .subj-icon{width:40px;height:40px;border-radius:10px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .subj-name{font-size:13px;font-weight:700;color:var(--deep)}
+  .subj-meta{font-size:11px;color:var(--muted)}
+  .subj-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .btn-sm{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .2s}
+  .btn-sm-teal{background:var(--teal);color:#fff}
+  .btn-sm-teal:hover{background:var(--teal-dk)}
+  .btn-sm-deep{background:var(--deep);color:#fff}
+  .btn-sm-deep:hover{background:var(--deep2)}
+  .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
+  .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
+  .tt-room{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;background:var(--border);padding:2px 8px;border-radius:6px}
+  .sess-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+  .sess-row:last-child{border-bottom:none}
+  .sub-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6}
+  .sub-row:last-child{border-bottom:none}
+  .action-row{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 16px}
+  .empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
+  .empty i{font-size:26px;display:block;margin-bottom:8px;color:#d1d5db}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-book"></i></div>
+      <div class="s-val">{{ total_subjects }}</div>
+      <div class="s-lbl">Subjects Assigned</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-calendar-check"></i></div>
+      <div class="s-val">{{ today_sessions|length }}</div>
+      <div class="s-lbl">Sessions Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-file-alt"></i></div>
+      <div class="s-val">{{ pending_submissions|length }}</div>
+      <div class="s-lbl">Pending Reviews</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-clock"></i></div>
+      <div class="s-val">{{ today_timetable|length }}</div>
+      <div class="s-lbl">Classes Today</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-book"></i> Subject Snapshot</div>
+      <div class="section-meta">A quick action-oriented summary of your current teaching load.</div>
+      {% if subject_cards %}
+      <div class="content-scroll soft">
+        {% for item in subject_cards %}
+        <div class="subj-card">
+          <div class="subj-icon"><i class="fas fa-book-open"></i></div>
+          <div>
+            <div class="subj-name">{{ item.subject.name }}</div>
+            <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }} · {{ item.subject.department.code }}</div>
+          </div>
+          <div class="subj-actions">
+            <a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal">
+              <i class="fas fa-calendar-check"></i> Attendance
+            </a>
+            {% if item.exam %}
+            <a href="{% url 'faculty_enter_marks' item.subject.id item.exam.id %}" class="btn-sm btn-sm-deep">
+              <i class="fas fa-pen"></i> Marks
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-book"></i>No subjects assigned yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-clock"></i> Today's Schedule</div>
+      <div class="section-meta">Upcoming classes for the day.</div>
+      {% if today_timetable %}
+      <div class="content-scroll soft">
+        {% for t in today_timetable %}
+        <div class="tt-row">
+          <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
+          </div>
+          <div class="tt-room">{{ t.classroom.room_number }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-mug-hot"></i>No classes today.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="subjects" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-book"></i> My Subjects</div>
+    <div class="section-meta">Work from your full subject list here.</div>
+    <div class="action-row">
+      <a href="{% url 'faculty_assignment_create' %}" class="btn-sm btn-sm-teal"><i class="fas fa-plus"></i> New Assignment</a>
+    </div>
+    {% if subject_cards %}
+    <div class="content-scroll">
+      {% for item in subject_cards %}
+      <div class="subj-card">
+        <div class="subj-icon"><i class="fas fa-book-open"></i></div>
+        <div>
+          <div class="subj-name">{{ item.subject.name }}</div>
+          <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }} · {{ item.subject.department.code }}</div>
+        </div>
+        <div class="subj-actions">
+          <a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal">
+            <i class="fas fa-calendar-check"></i> Attendance
+          </a>
+          {% if item.exam %}
+          <a href="{% url 'faculty_enter_marks' item.subject.id item.exam.id %}" class="btn-sm btn-sm-deep">
+            <i class="fas fa-pen"></i> Marks
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-book"></i>No subjects assigned yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="attendance" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Recent Attendance Sessions</div>
+    <div class="section-meta">Recent attendance work without the other dashboard blocks competing for space.</div>
+    {% if recent_sessions %}
+    <div class="content-scroll">
+      {% for sess in recent_sessions %}
+      <div class="sess-row">
+        <div>
+          <span style="font-weight:600;color:var(--deep)">{{ sess.subject.name }}</span>
+          <span style="color:var(--muted);font-size:12px"> · {{ sess.subject.code }}</span>
+        </div>
+        <span style="color:var(--muted);font-size:12px">{{ sess.date|date:"d M Y" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No sessions marked yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="timetable" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-clock"></i> Today's Timetable</div>
+    <div class="section-meta">A focused schedule view for quick reference before class.</div>
+    {% if today_timetable %}
+    <div class="content-scroll">
+      {% for t in today_timetable %}
+      <div class="tt-row">
+        <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
+        </div>
+        <div class="tt-room">{{ t.classroom.room_number }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-mug-hot"></i>No classes today.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="submissions" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-file-alt"></i> Pending Submissions to Review</div>
+    <div class="section-meta">Review queue for assignment submissions.</div>
+    <div class="action-row">
+      <a href="{% url 'faculty_assignment_create' %}" class="btn-sm btn-sm-teal"><i class="fas fa-plus"></i> Create Assignment</a>
+    </div>
+    {% if pending_submissions %}
+    <div class="content-scroll">
+      {% for sub in pending_submissions %}
+      <div class="sub-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.student.user.get_full_name|default:sub.student.roll_number }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.title }} · {{ sub.assignment.subject.name }}</div>
+        </div>
+        <a href="{% url 'faculty_review_submission' sub.pk %}" class="btn-sm btn-sm-teal" style="margin-left:auto"><i class="fas fa-check"></i> Review</a>
+        <span style="font-size:11px;color:var(--muted)">{{ sub.submitted_at|date:"d M" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-check-circle"></i>No pending reviews.</div>
+    {% endif %}
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-clipboard-list"></i> My Assignments</div>
+    <div class="section-meta">Assignments you have already published.</div>
+    {% if my_assignments %}
+    <div class="content-scroll">
+      {% for assignment in my_assignments %}
+      <div class="sub-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ assignment.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ assignment.subject.name }} · Due {{ assignment.deadline|date:"d M Y H:i" }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-file-circle-plus"></i>No assignments created yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="notices" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
+    <div class="section-meta">Announcements in one focused stream.</div>
+    {% if announcements %}
+    <div class="content-scroll">
+      {% for ann in announcements %}
+      <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Review Submission - EduTrack{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Review Submission{% endblock %}
+{% block page_sub %}{{ submission.assignment.title }} · {{ submission.student.roll_number }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="max-width:760px">
+  <div style="display:grid;gap:12px;margin-bottom:18px">
+    <div><strong>Student:</strong> {{ submission.student.user.get_full_name|default:submission.student.user.username }}</div>
+    <div><strong>Subject:</strong> {{ submission.assignment.subject.name }}</div>
+    <div><strong>Submitted:</strong> {{ submission.submitted_at|date:"d M Y H:i" }}</div>
+    <div><strong>File:</strong> <a href="{{ submission.file.url }}" target="_blank" rel="noopener">Open Uploaded File</a></div>
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Marks</label>
+    <input type="number" step="0.5" min="0" name="marks" value="{% if submission.marks is not None %}{{ submission.marks|floatformat:'-1' }}{% endif %}" style="width:180px;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Save Review</button>
+      <a href="{% url 'faculty_dashboard' %}#submissions" class="btn btn-outline">Back</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

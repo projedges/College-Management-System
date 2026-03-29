@@ -1,0 +1,127 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Super Admin Dashboard - EduTrack{% endblock %}
+{% block role_label %}Super Admin{% endblock %}
+{% block page_title %}Super Admin Workspace{% endblock %}
+{% block page_sub %}Global control across colleges and college-admin entities{% endblock %}
+
+{% block sidebar_links %}
+<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Overview</a>
+<a href="#colleges" data-section-target="colleges" class="sb-link"><i class="fas fa-building"></i> Colleges</a>
+<a href="#admins" data-section-target="admins" class="sb-link"><i class="fas fa-user-shield"></i> College Admins</a>
+<a href="#activity" data-section-target="activity" class="sb-link"><i class="fas fa-clock-rotate-left"></i> Activity</a>
+<a href="/admin/" class="sb-link"><i class="fas fa-cog"></i> Django Admin</a>
+{% endblock %}
+
+{% block quick_nav %}
+<div class="quick-nav">
+  <a href="{% url 'super_admin_college_add' %}" class="quick-chip"><i class="fas fa-plus"></i> Add College</a>
+  <a href="{% url 'super_admin_college_admin_add' %}" class="quick-chip"><i class="fas fa-user-plus"></i> Add College Admin</a>
+  <a href="#activity" data-section-target="activity" class="quick-chip"><i class="fas fa-clock-rotate-left"></i> Activity</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
+  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .d-title i{color:var(--teal)}
+  .panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+  .focus-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbfb 100%);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh)}
+  .focus-card h3{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep);margin-bottom:8px}
+  .focus-card p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+  .qa-row{display:flex;flex-wrap:wrap;gap:10px}
+  .qa-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none}
+  .qa-teal{background:var(--teal);color:#fff}
+  .qa-deep{background:var(--deep);color:#fff}
+  .dtable{width:100%;border-collapse:collapse;font-size:13px}
+  .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
+  .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
+  .dtable tr:last-child td{border-bottom:none}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="stat-grid">
+    <div class="stat-card"><div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building"></i></div><div class="s-val">{{ total_colleges }}</div><div class="s-lbl">Colleges</div></div>
+    <div class="stat-card"><div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-shield"></i></div><div class="s-val">{{ total_college_admins }}</div><div class="s-lbl">College Admins</div></div>
+    <div class="stat-card"><div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-users"></i></div><div class="s-val">{{ total_users }}</div><div class="s-lbl">Total Users</div></div>
+  </div>
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Create a College</h3>
+      <p>Start by creating the college entity. That becomes the root for department, student, faculty, and announcement scoping.</p>
+      <div class="qa-row"><a href="{% url 'super_admin_college_add' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add College</a></div>
+    </div>
+    <div class="focus-card">
+      <h3>Create a College Admin</h3>
+      <p>Once the college exists, create the college admin account and attach it to that college.</p>
+      <div class="qa-row"><a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep"><i class="fas fa-user-plus"></i> Add College Admin</a></div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="colleges" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-building"></i> Colleges</div>
+    <div class="qa-row" style="margin-bottom:16px"><a href="{% url 'super_admin_college_add' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add College</a></div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>College</th><th>Code</th><th>City</th><th>Departments</th><th>Admins</th><th>Students</th></tr></thead>
+        <tbody>
+          {% for college in colleges %}
+          <tr>
+            <td>{{ college.name }}</td>
+            <td>{{ college.code }}</td>
+            <td>{{ college.city|default:"-" }}</td>
+            <td>{{ college.department_count }}</td>
+            <td>{{ college.admin_count }}</td>
+            <td>{{ college.student_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="admins" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-shield"></i> College Admin Accounts</div>
+    <div class="qa-row" style="margin-bottom:16px"><a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep"><i class="fas fa-user-plus"></i> Add College Admin</a></div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>College</th></tr></thead>
+        <tbody>
+          {% for item in college_admins %}
+          <tr>
+            <td>{{ item.user.get_full_name|default:item.user.username }}</td>
+            <td>{{ item.user.username }}</td>
+            <td>{{ item.user.email }}</td>
+            <td>{{ item.college.name }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="activity" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
+    {% if recent_activity %}
+    <div class="content-scroll">
+      {% for log in recent_activity %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ log.action }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ log.user.username }} · {{ log.timestamp|date:"d M Y H:i" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="font-size:13px;color:var(--muted)">No recent activity logged yet.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

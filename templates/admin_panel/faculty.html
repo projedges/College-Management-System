@@ -1,0 +1,60 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Faculty — Admin{% endblock %}
+{% block nav_faculty %}on{% endblock %}
+{% block breadcrumb %} / Faculty{% endblock %}
+{% block page_title %}Faculty{% endblock %}
+{% block page_sub %}All faculty members across departments{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_faculty_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Faculty</a>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET" style="display:flex;gap:10px">
+    <select name="dept" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>
+      {% endfor %}
+    </select>
+    {% if dept_filter %}<a href="{% url 'admin_faculty_list' %}" style="padding:8px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:13px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>{% endif %}
+  </form>
+  <span style="font-size:13px;color:var(--muted);margin-left:auto">{{ faculty|length }} member{{ faculty|length|pluralize }}</span>
+</div>
+
+{% if faculty %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Name</th><th>Emp ID</th><th>Department</th><th>Designation</th><th>Experience</th><th>Phone</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for f in faculty %}
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ f.user.email }}</div>
+        </td>
+        <td style="font-weight:600;color:var(--teal)">{{ f.employee_id }}</td>
+        <td>{{ f.department.code }}</td>
+        <td style="color:var(--muted)">{{ f.designation }}</td>
+        <td style="text-align:center">{{ f.experience_years }} yrs</td>
+        <td style="color:var(--muted)">{{ f.phone_number }}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
+            <button class="btn-del" onclick="confirmDelete('{% url 'admin_faculty_delete' f.pk %}','Delete faculty {{ f.user.get_full_name }}?')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-chalkboard-teacher"></i><p>No faculty found. <a href="{% url 'admin_faculty_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
+{% endif %}
+{% include 'admin_panel/_confirm_modal.html' %}
+{% endblock %}

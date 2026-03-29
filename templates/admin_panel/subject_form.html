@@ -1,0 +1,48 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Add Subject — Admin{% endblock %}
+{% block nav_subjects %}on{% endblock %}
+{% block breadcrumb %} / <a href="{% url 'admin_subjects' %}" style="color:var(--teal);text-decoration:none">Subjects</a> / Add{% endblock %}
+{% block page_title %}Add Subject{% endblock %}
+{% block page_sub %}Add a new subject to a department{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Subject Name <span>*</span></label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. Data Structures" required/>
+      </div>
+      <div class="form-group">
+        <label>Subject Code <span>*</span></label>
+        <input type="text" name="code" class="form-control" placeholder="e.g. CSE401" required/>
+        <div class="form-hint">Must be unique across all subjects</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Department <span>*</span></label>
+        <select name="department" class="form-control" required>
+          <option value="">Select Department</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Semester <span>*</span></label>
+        <select name="semester" class="form-control" required>
+          {% for i in "12345678" %}
+          <option value="{{ i }}">Semester {{ i }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Add Subject</button>
+      <a href="{% url 'admin_subjects' %}" class="btn-cancel">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

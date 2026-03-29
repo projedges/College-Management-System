@@ -1,0 +1,40 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Exams — Admin{% endblock %}
+{% block nav_exams %}on{% endblock %}
+{% block breadcrumb %} / Exams{% endblock %}
+{% block page_title %}Exams{% endblock %}
+{% block page_sub %}Create and manage exam schedules{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_exam_add' %}" class="btn-add"><i class="fas fa-plus"></i> Create Exam</a>
+{% endblock %}
+
+{% block content %}
+{% if exams %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Exam Name</th><th>Semester</th><th>Start Date</th><th>End Date</th><th>Created By</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for e in exams %}
+      <tr>
+        <td style="font-weight:600;color:var(--deep)">{{ e.name }}</td>
+        <td style="text-align:center">Sem {{ e.semester }}</td>
+        <td>{{ e.start_date|date:"d M Y" }}</td>
+        <td>{{ e.end_date|date:"d M Y" }}</td>
+        <td style="color:var(--muted)">{{ e.created_by.get_full_name|default:e.created_by.username }}</td>
+        <td>
+          <button class="btn-del" onclick="confirmDelete('{% url 'admin_exam_delete' e.pk %}','Delete exam {{ e.name }}?')">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-file-pen"></i><p>No exams created yet. <a href="{% url 'admin_exam_add' %}" style="color:var(--teal)">Create one</a>.</p></div>
+{% endif %}
+{% include 'admin_panel/_confirm_modal.html' %}
+{% endblock %}

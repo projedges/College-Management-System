@@ -1,0 +1,98 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Enter Marks - {{ subject.name }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Enter Marks{% endblock %}
+{% block page_sub %}{{ subject.name }} · {{ exam.name }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .marks-form{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:760px}
+  .info-bar{display:flex;gap:24px;margin-bottom:24px;padding:14px 16px;background:var(--surface2);border-radius:var(--r);flex-wrap:wrap}
+  .info-item .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .info-item .val{font-size:14px;font-weight:700;color:var(--deep)}
+  .max-marks-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .max-marks-row label{font-size:13px;font-weight:600;color:var(--text)}
+  .max-input{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;width:120px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+  .max-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .student-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6}
+  .student-row:last-child{border-bottom:none}
+  .s-avatar{width:34px;height:34px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .marks-input{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;width:90px;text-align:center;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+  .marks-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .grade-badge{width:36px;text-align:center;font-size:13px;font-weight:800;color:var(--teal)}
+  .submit-btn{width:100%;padding:13px;border-radius:10px;background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:20px;transition:all .2s;font-family:'Inter',sans-serif}
+  .submit-btn:hover{background:var(--teal-dk);transform:translateY(-1px)}
+  .empty{text-align:center;padding:40px;color:var(--muted)}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="marks-form">
+  <div class="info-bar">
+    <div class="info-item"><div class="lbl">Subject</div><div class="val">{{ subject.name }}</div></div>
+    <div class="info-item"><div class="lbl">Code</div><div class="val">{{ subject.code }}</div></div>
+    <div class="info-item"><div class="lbl">Exam</div><div class="val">{{ exam.name }}</div></div>
+    <div class="info-item"><div class="lbl">Semester</div><div class="val">{{ subject.semester }}</div></div>
+  </div>
+
+  {% if student_rows %}
+  <form method="POST">
+    {% csrf_token %}
+    <div class="max-marks-row">
+      <label>Max Marks:</label>
+      <input type="number" name="max_marks" id="max-marks" value="{% if student_rows.0.existing_mark %}{{ student_rows.0.existing_mark.max_marks|floatformat:'-1' }}{% else %}100{% endif %}" min="1" max="200" class="max-input" onchange="updateGrades()"/>
+    </div>
+
+    {% for row in student_rows %}
+    <div class="student-row">
+      <div class="s-avatar">{{ row.student.user.first_name|first|upper }}{{ row.student.user.last_name|first|upper }}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ row.student.roll_number }}</div>
+      </div>
+      <input type="number" name="marks_{{ row.student.id }}" class="marks-input" placeholder="-" min="0" step="0.5"
+             value="{% if row.existing_mark %}{{ row.existing_mark.marks_obtained|floatformat:'-1' }}{% endif %}" oninput="calcGrade(this)"/>
+      <div class="grade-badge" id="grade_{{ row.student.id }}">{% if row.existing_mark %}{{ row.existing_mark.grade }}{% else %}-{% endif %}</div>
+    </div>
+    {% endfor %}
+
+    <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Marks</button>
+  </form>
+
+  {% else %}
+    <div class="empty"><i class="fas fa-users" style="font-size:32px;display:block;margin-bottom:12px;color:#d1d5db"></i>No active students found.</div>
+  {% endif %}
+</div>
+
+<script>
+  function calcGrade(input){
+    const max = parseFloat(document.getElementById('max-marks').value) || 100;
+    const val = parseFloat(input.value);
+    const id = input.name.replace('marks_','');
+    const el = document.getElementById('grade_' + id);
+    if(isNaN(val) || !el){ return; }
+    const pct = (val / max) * 100;
+    let g = 'F';
+    if(pct >= 90) g = 'O';
+    else if(pct >= 80) g = 'A+';
+    else if(pct >= 70) g = 'A';
+    else if(pct >= 60) g = 'B+';
+    else if(pct >= 50) g = 'B';
+    else if(pct >= 40) g = 'C';
+    el.textContent = g;
+    el.style.color = pct >= 50 ? 'var(--teal)' : 'var(--red)';
+  }
+  function updateGrades(){
+    document.querySelectorAll('.marks-input').forEach(function (input) {
+      if (input.value) {
+        calcGrade(input);
+      }
+    });
+  }
+  updateGrades();
+</script>
+{% endblock %}

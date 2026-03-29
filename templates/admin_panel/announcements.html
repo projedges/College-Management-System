@@ -1,0 +1,37 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Announcements — Admin{% endblock %}
+{% block nav_ann %}on{% endblock %}
+{% block breadcrumb %} / Announcements{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+{% block page_sub %}Post notices and circulars visible to all users{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_announcement_add' %}" class="btn-add"><i class="fas fa-plus"></i> Post Announcement</a>
+{% endblock %}
+
+{% block content %}
+{% if announcements %}
+<div style="display:flex;flex-direction:column;gap:14px">
+  {% for ann in announcements %}
+  <div class="ap-card" style="padding:18px 22px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:var(--deep);margin-bottom:6px">{{ ann.title }}</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">{{ ann.message|truncatechars:200 }}</div>
+        <div style="font-size:11px;color:var(--light)">
+          <i class="fas fa-user" style="font-size:10px"></i> {{ ann.created_by.get_full_name|default:ann.created_by.username }}
+          &nbsp;·&nbsp;
+          <i class="fas fa-calendar" style="font-size:10px"></i> {{ ann.created_at|date:"d M Y, H:i" }}
+        </div>
+      </div>
+      <button class="btn-del" onclick="confirmDelete('{% url 'admin_announcement_delete' ann.pk %}','Delete this announcement?')" style="flex-shrink:0">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-bell-slash"></i><p>No announcements yet. <a href="{% url 'admin_announcement_add' %}" style="color:var(--teal)">Post one</a>.</p></div>
+{% endif %}
+{% include 'admin_panel/_confirm_modal.html' %}
+{% endblock %}

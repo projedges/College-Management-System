@@ -1,0 +1,423 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Student Dashboard - EduTrack{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+{% block page_sub %}{{ student.roll_number }} · {{ student.department.name }} · Semester {{ student.current_semester }}{% if college %} · {{ college.name }}{% endif %}{% endblock %}
+
+{% block sidebar_links %}
+<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
+<a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="#results" data-section-target="results" class="sb-link"><i class="fas fa-chart-bar"></i> Results</a>
+<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="#assignments" data-section-target="assignments" class="sb-link"><i class="fas fa-file-alt"></i> Assignments</a>
+<a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
+<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#support" data-section-target="support" class="sb-link"><i class="fas fa-headset"></i> Support</a>
+{% endblock %}
+
+{% block quick_nav %}
+<div class="quick-nav">
+  <a href="#profile" data-section-target="profile" class="quick-chip"><i class="fas fa-id-card"></i> Profile</a>
+  <a href="#attendance" data-section-target="attendance" class="quick-chip"><i class="fas fa-calendar-check"></i> Attendance</a>
+  <a href="#results" data-section-target="results" class="quick-chip"><i class="fas fa-chart-bar"></i> Results</a>
+  <a href="#timetable" data-section-target="timetable" class="quick-chip"><i class="fas fa-clock"></i> Timetable</a>
+  <a href="#fees" data-section-target="fees" class="quick-chip"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
+  <a href="#assignments" data-section-target="assignments" class="quick-chip"><i class="fas fa-file-alt"></i> Assignments</a>
+  <a href="#notices" data-section-target="notices" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
+  <a href="#support" data-section-target="support" class="quick-chip"><i class="fas fa-headset"></i> Support</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
+  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .d-title i{color:var(--teal)}
+  .att-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6}
+  .att-row:last-child{border-bottom:none}
+  .att-subj{flex:1;font-size:13px;font-weight:600;color:var(--deep)}
+  .att-sub{font-size:11px;color:var(--muted)}
+  .att-bar-bg{flex:2;background:#f3f4f6;border-radius:99px;height:8px;overflow:hidden}
+  .att-bar-fill{height:100%;border-radius:99px;transition:width .5s}
+  .att-pct{font-size:13px;font-weight:700;width:42px;text-align:right}
+  .att-count{font-size:11px;color:var(--muted);width:60px;text-align:right}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:860px){.two-col{grid-template-columns:1fr}}
+  .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
+  .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
+  .tt-subj{font-size:13px;font-weight:600;color:var(--deep)}
+  .tt-meta{font-size:11px;color:var(--muted)}
+  .tt-room{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;background:var(--border);padding:2px 8px;border-radius:6px}
+  .res-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6}
+  .res-row:last-child{border-bottom:none}
+  .asgn-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6}
+  .asgn-row:last-child{border-bottom:none}
+  .deadline-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;margin-left:auto}
+  .action-row{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 16px}
+  .mini-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none}
+  .mini-btn-teal{background:var(--teal);color:#fff}
+  .mini-btn-deep{background:var(--deep);color:#fff}
+  .mini-btn-gold{background:var(--gold);color:#fff}
+  .empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
+  .empty i{font-size:26px;display:block;margin-bottom:8px;color:#d1d5db}
+  .fee-status-paid{background:#d1fae5;color:#065f46}
+  .fee-status-pending{background:#fee2e2;color:#991b1b}
+  .fee-status-partial{background:#fef3c7;color:#92400e}
+  .dbadge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-calendar-check"></i></div>
+      <div class="s-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}-{% endif %}</div>
+      <div class="s-lbl">Overall Attendance</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-star"></i></div>
+      <div class="s-val">{% if cgpa %}{{ cgpa }}{% else %}-{% endif %}</div>
+      <div class="s-lbl">CGPA</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-file-alt"></i></div>
+      <div class="s-val">{{ pending_assignments|length }}</div>
+      <div class="s-lbl">Pending Assignments</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-indian-rupee-sign"></i></div>
+      <div class="s-val">{% if fee %}{{ fee.status }}{% else %}-{% endif %}</div>
+      <div class="s-lbl">Fee Status</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Snapshot</div>
+      <div class="section-meta">Quick look at attendance across current subjects.</div>
+      {% if attendance_data %}
+      <div class="content-scroll soft">
+        {% for a in attendance_data %}
+        <div class="att-row">
+          <div style="width:130px">
+            <div class="att-subj">{{ a.subject.name }}</div>
+            <div class="att-sub">{{ a.subject.code }}</div>
+          </div>
+          <div class="att-bar-bg">
+            {% if a.pct is not None %}
+            <div class="att-bar-fill" style="width:{{ a.pct }}%;background:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+            {% else %}
+            <div class="att-bar-fill" style="width:0%;background:#d1d5db"></div>
+            {% endif %}
+          </div>
+          <div class="att-pct" style="color:{% if a.pct is None %}var(--muted){% elif a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">
+            {% if a.pct is not None %}{{ a.pct }}%{% else %}N/A{% endif %}
+          </div>
+          <div class="att-count">{{ a.present }}/{{ a.total }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-clock"></i> Today's Classes</div>
+      <div class="section-meta">Your classes for today at a glance.</div>
+      {% if today_timetable %}
+      <div class="content-scroll soft">
+        {% for t in today_timetable %}
+        <div class="tt-row">
+          <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
+          <div>
+            <div class="tt-subj">{{ t.subject.name }}</div>
+            <div class="tt-meta">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
+          </div>
+          <div class="tt-room">{{ t.classroom.room_number }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="profile" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-id-card"></i> Student Profile</div>
+    <div class="section-meta">Keep your personal, academic, and emergency details updated.</div>
+    <div class="action-row">
+      <a href="{% url 'student_profile_edit' %}" class="mini-btn mini-btn-teal"><i class="fas fa-pen"></i> Edit Profile</a>
+      <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Download Result Report</a>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Name</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Department</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ student.department.name }}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Semester</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ student.current_semester }}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile %}{{ profile.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Blood Group</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</div></div></div>
+      </div>
+      <div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Address</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} · {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Aadhaar</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile %}{{ profile.aadhaar_number|slice:":4" }}********{% else %}Not added{% endif %}</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="attendance" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Subject-wise Attendance</div>
+    <div class="section-meta">Attendance in a focused view without the rest of the dashboard.</div>
+    {% if attendance_data %}
+    <div class="content-scroll">
+      {% for a in attendance_data %}
+      <div class="att-row">
+        <div style="width:130px">
+          <div class="att-subj">{{ a.subject.name }}</div>
+          <div class="att-sub">{{ a.subject.code }}</div>
+        </div>
+        <div class="att-bar-bg">
+          {% if a.pct is not None %}
+          <div class="att-bar-fill" style="width:{{ a.pct }}%;background:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+          {% else %}
+          <div class="att-bar-fill" style="width:0%;background:#d1d5db"></div>
+          {% endif %}
+        </div>
+        <div class="att-pct" style="color:{% if a.pct is None %}var(--muted){% elif a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">
+          {% if a.pct is not None %}{{ a.pct }}%{% else %}N/A{% endif %}
+        </div>
+        <div class="att-count">{{ a.present }}/{{ a.total }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="results" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results</div>
+    <div class="section-meta">Academic results in one place.</div>
+    <div class="action-row">
+      <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Download PDF Report</a>
+    </div>
+    {% if result_breakdown %}
+    <div class="content-scroll">
+      {% for item in result_breakdown %}
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div class="res-row" style="padding-top:0;border-bottom:none">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">Semester {% if item.result %}{{ item.result.semester }}{% else %}{{ item.semester }}{% endif %}</div>
+            {% if item.result %}
+            <div style="font-size:11px;color:var(--muted)">{{ item.result.percentage|floatformat:1 }}% · {{ item.result.total_marks|floatformat:0 }} marks</div>
+            {% else %}
+            <div style="font-size:11px;color:var(--muted)">Subject-wise marks available below</div>
+            {% endif %}
+          </div>
+          <div style="text-align:right">
+            {% if item.result %}
+            <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--teal)">{{ item.result.gpa }}</div>
+            <div style="font-size:10px;color:var(--muted)">GPA</div>
+            {% else %}
+            <div style="font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--gold)">Pending</div>
+            <div style="font-size:10px;color:var(--muted)">Summary</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if item.marks %}
+        <div style="margin-top:8px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+          {% for mark in item.marks %}
+          <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid #f3f4f6;background:{% cycle '#fff' '#fbfcfd' %}">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ mark.subject.name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ mark.subject.code }} · {{ mark.exam.name }}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;font-weight:700;color:var(--teal)">{{ mark.marks_obtained|floatformat:0 }}/{{ mark.max_marks|floatformat:0 }}</div>
+              <div style="font-size:11px;color:var(--muted)">Grade {{ mark.grade|default:"NA" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-chart-bar"></i>No results published yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="timetable" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-clock"></i> Today's Timetable</div>
+    <div class="section-meta">Focused daily schedule view.</div>
+    {% if today_timetable %}
+    <div class="content-scroll">
+      {% for t in today_timetable %}
+      <div class="tt-row">
+        <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
+        <div>
+          <div class="tt-subj">{{ t.subject.name }}</div>
+          <div class="tt-meta">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
+        </div>
+        <div class="tt-room">{{ t.classroom.room_number }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="assignments" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-file-alt"></i> Pending Assignments</div>
+    <div class="section-meta">Upcoming submissions in one clean list.</div>
+    {% if pending_assignments %}
+    <div class="content-scroll">
+      {% for a in pending_assignments %}
+      <div class="asgn-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }}</div>
+        </div>
+        <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="margin-left:auto"><i class="fas fa-upload"></i> Submit</a>
+        <span class="deadline-badge" style="background:rgba(239,68,68,.08);color:var(--red)">
+          Due {{ a.deadline|date:"d M" }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-check-circle"></i>All caught up!</div>
+    {% endif %}
+  </div>
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-cloud-upload-alt"></i> Submitted Assignments</div>
+    <div class="section-meta">Track submitted work and review status.</div>
+    {% if submitted_assignments %}
+    <div class="content-scroll">
+      {% for sub in submitted_assignments %}
+      <div class="asgn-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.assignment.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }} · Submitted {{ sub.submitted_at|date:"d M Y" }}</div>
+        </div>
+        <span class="deadline-badge" style="background:{% if sub.marks is not None %}rgba(16,185,129,.1){% else %}rgba(13,115,119,.08){% endif %};color:{% if sub.marks is not None %}var(--green){% else %}var(--teal){% endif %}">
+          {% if sub.marks is not None %}Scored {{ sub.marks }}{% else %}Under Review{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-file-circle-check"></i>No submissions yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="fees" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-indian-rupee-sign"></i> Fee Status</div>
+    <div class="section-meta">Your current fee breakdown.</div>
+    {% if fee %}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="font-size:13px;color:var(--muted)">Status</span>
+      <span class="dbadge fee-status-{{ fee.status|lower }}">{{ fee.get_status_display }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:13px;color:var(--muted)">Total Amount</span>
+      <span style="font-size:14px;font-weight:700;color:var(--deep)">Rs {{ fee.total_amount|floatformat:0 }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:13px;color:var(--muted)">Paid</span>
+      <span style="font-size:14px;font-weight:700;color:var(--teal)">Rs {{ fee.paid_amount|floatformat:0 }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <span style="font-size:13px;color:var(--muted)">Balance Due</span>
+      <span style="font-size:14px;font-weight:700;color:var(--red)">Rs {{ balance_due|floatformat:0 }}</span>
+    </div>
+    <div class="action-row">
+      {% if balance_due > 0 %}
+      <a href="{% url 'student_fee_payment' %}" class="mini-btn mini-btn-gold"><i class="fas fa-credit-card"></i> Pay Now</a>
+      {% endif %}
+      <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Result PDF</a>
+    </div>
+    {% with total=fee.total_amount %}
+    <div style="background:#f3f4f6;border-radius:8px;height:8px;overflow:hidden">
+      {% if total > 0 %}
+      {% widthratio fee.paid_amount total 100 as paid_pct %}
+      <div style="height:100%;width:{{ paid_pct }}%;background:var(--teal);border-radius:8px"></div>
+      {% endif %}
+    </div>
+    {% endwith %}
+    {% else %}
+    <div class="empty"><i class="fas fa-receipt"></i>No fee record found.</div>
+    {% endif %}
+  </div>
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-receipt"></i> Recent Payments</div>
+    <div class="section-meta">Recent successful payments and receipt access.</div>
+    {% if recent_payments %}
+    <div class="content-scroll">
+      {% for payment in recent_payments %}
+      <div class="asgn-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">Rs {{ payment.amount|floatformat:0 }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ payment.payment_method }} · {{ payment.transaction_id }}</div>
+        </div>
+        <a href="{% url 'student_payment_receipt' payment.pk %}" class="mini-btn mini-btn-teal" style="margin-left:auto"><i class="fas fa-eye"></i> Receipt</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-wallet"></i>No payments yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="notices" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
+    <div class="section-meta">Announcements in one focused stream.</div>
+    {% if announcements %}
+    <div class="content-scroll">
+      {% for ann in announcements %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="support" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-headset"></i> Help Desk</div>
+    <div class="section-meta">Raise access, fee, academic, or technical issues from one support page.</div>
+    <div class="action-row">
+      <a href="{% url 'helpdesk' %}" class="mini-btn mini-btn-teal"><i class="fas fa-paper-plane"></i> Open Help Desk</a>
+    </div>
+    <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:12px;padding:16px;font-size:13px;color:var(--muted);line-height:1.7">
+      Use the help desk if your login is not working, your fee balance looks wrong, a timetable slot is missing, or a result needs review.
+    </div>
+  </div>
+</section>
+{% endblock %}

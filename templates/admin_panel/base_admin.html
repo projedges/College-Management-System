@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block body %}
+<div style="display:flex;min-height:100vh">
+
+  <!-- SIDEBAR -->
+  <aside style="width:250px;background:var(--deep);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column">
+    <div style="padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="display:inline-flex;align-items:center;background:#fff;border-radius:8px;padding:6px 10px">
+        <img src="{% static 'students/images/logo.png' %}" style="height:38px;width:auto;max-width:150px;object-fit:contain"
+             onerror="this.parentElement.innerHTML='<span style=\'font-family:Outfit,sans-serif;font-size:16px;font-weight:900;color:var(--deep)\'>Edu<span style=\'color:var(--teal)\'>Track</span></span>'"/>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.8px;margin-top:10px">College Admin Panel</div>
+    </div>
+
+    <div style="padding:14px 10px;flex:1">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin-bottom:8px">Overview</div>
+      <a href="{% url 'admin_dashboard' %}" class="sb-link {% block nav_dashboard %}{% endblock %}"><i class="fas fa-home"></i> Dashboard</a>
+
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:14px 0 8px">Manage</div>
+      <a href="{% url 'admin_departments' %}" class="sb-link {% block nav_dept %}{% endblock %}"><i class="fas fa-building"></i> Departments</a>
+      <a href="{% url 'admin_registration_invites' %}" class="sb-link {% block nav_invites %}{% endblock %}"><i class="fas fa-link"></i> Invite Links</a>
+      <a href="{% url 'admin_registration_requests' %}" class="sb-link {% block nav_requests %}{% endblock %}"><i class="fas fa-inbox"></i> Requests</a>
+      <a href="{% url 'admin_students' %}" class="sb-link {% block nav_students %}{% endblock %}"><i class="fas fa-user-graduate"></i> Students</a>
+      <a href="{% url 'admin_faculty_list' %}" class="sb-link {% block nav_faculty %}{% endblock %}"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
+      <a href="{% url 'admin_hods' %}" class="sb-link {% block nav_hods %}{% endblock %}"><i class="fas fa-building-columns"></i> HODs</a>
+      <a href="{% url 'admin_subjects' %}" class="sb-link {% block nav_subjects %}{% endblock %}"><i class="fas fa-book"></i> Subjects</a>
+      <a href="{% url 'admin_academic_planner' %}" class="sb-link {% block nav_planner %}{% endblock %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
+      <a href="{% url 'admin_exams' %}" class="sb-link {% block nav_exams %}{% endblock %}"><i class="fas fa-file-pen"></i> Exams</a>
+
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:14px 0 8px">Finance & Comms</div>
+      <a href="{% url 'admin_fees' %}" class="sb-link {% block nav_fees %}{% endblock %}"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>
+      <a href="{% url 'admin_announcements' %}" class="sb-link {% block nav_ann %}{% endblock %}"><i class="fas fa-bell"></i> Announcements</a>
+      <a href="{% url 'admin_helpdesk' %}" class="sb-link {% block nav_helpdesk %}{% endblock %}"><i class="fas fa-headset"></i> Help Desk</a>
+    </div>
+
+    <div style="padding:14px;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+        <div style="width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#fff">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4)">College Admin</div>
+        </div>
+      </div>
+      <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;background:rgba(239,68,68,.12);color:#f87171;font-size:12px;font-weight:600;text-decoration:none"
+         onmouseover="this.style.background='rgba(239,68,68,.2)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main style="flex:1;padding:28px 32px;overflow-y:auto;min-width:0;background:var(--bg)">
+    <!-- Breadcrumb + title -->
+    <div style="margin-bottom:24px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+        <a href="{% url 'admin_dashboard' %}" style="color:var(--teal);text-decoration:none">Dashboard</a>
+        {% block breadcrumb %}{% endblock %}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <h1 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:3px">{% block page_title %}{% endblock %}</h1>
+          <p style="font-size:13px;color:var(--muted)">{% block page_sub %}{% endblock %}</p>
+        </div>
+        {% block page_action %}{% endblock %}
+      </div>
+    </div>
+
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" style="margin-bottom:18px">
+      <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}"></i>
+      {{ message }}
+    </div>
+    {% endfor %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<style>
+  .sb-link{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:8px;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;text-decoration:none;transition:all .2s;margin-bottom:2px}
+  .sb-link:hover{background:rgba(255,255,255,.07);color:#fff}
+  .sb-link.on{background:var(--teal);color:#fff}
+  .sb-link i{width:15px;text-align:center;font-size:13px}
+  .ap-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px}
+  .ap-table{width:100%;border-collapse:collapse;font-size:13px}
+  .ap-table th{text-align:left;padding:9px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafbfc}
+  .ap-table td{padding:11px 14px;border-bottom:1px solid #f3f4f6;color:var(--text);vertical-align:middle}
+  .ap-table tr:last-child td{border-bottom:none}
+  .ap-table tbody tr:hover td{background:#f9fafb}
+  .ap-badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600}
+  .badge-active{background:#d1fae5;color:#065f46}
+  .badge-graduated{background:rgba(13,115,119,.1);color:var(--teal)}
+  .badge-dropped{background:#fee2e2;color:#991b1b}
+  .badge-paid{background:#d1fae5;color:#065f46}
+  .badge-partial{background:#fef3c7;color:#92400e}
+  .badge-pending{background:#fee2e2;color:#991b1b}
+  .btn-add{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
+  .btn-add:hover{background:var(--teal-dk);transform:translateY(-1px)}
+  .btn-edit{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);font-size:12px;font-weight:600;text-decoration:none;transition:all .2s}
+  .btn-edit:hover{background:rgba(13,115,119,.15)}
+  .btn-del{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s}
+  .btn-del:hover{background:rgba(239,68,68,.15)}
+  .form-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:640px}
+  .form-group{margin-bottom:18px}
+  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .form-group label span{color:#ef4444}
+  .form-control{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:600px){.form-row{grid-template-columns:1fr}}
+  .form-hint{font-size:11px;color:var(--muted);margin-top:4px}
+  .btn-submit{padding:11px 24px;border-radius:9px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+  .btn-submit:hover{background:var(--teal-dk);transform:translateY(-1px)}
+  .btn-cancel{padding:11px 20px;border-radius:9px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:600;text-decoration:none;transition:all .2s;border:1.5px solid var(--border)}
+  .btn-cancel:hover{border-color:var(--muted)}
+  .filter-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+  .filter-select{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;outline:none;cursor:pointer}
+  .filter-select:focus{border-color:var(--teal)}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+  .empty-state i{font-size:36px;display:block;margin-bottom:12px;color:#d1d5db}
+  .empty-state p{font-size:14px}
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+  .stat-mini{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh)}
+  .stat-mini .n{font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:var(--deep)}
+  .stat-mini .l{font-size:12px;color:var(--muted);margin-top:2px}
+  .confirm-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;align-items:center;justify-content:center}
+  .confirm-modal.show{display:flex}
+  .confirm-box{background:#fff;border-radius:var(--r-lg);padding:28px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+</style>
+<script>{% block extra_js %}{% endblock %}</script>
+{% endblock %}

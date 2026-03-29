@@ -1,0 +1,56 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}HODs — Admin{% endblock %}
+{% block nav_hods %}on{% endblock %}
+{% block breadcrumb %} / HODs{% endblock %}
+{% block page_title %}Heads of Department{% endblock %}
+{% block page_sub %}One HOD per department{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_hod_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add HOD</a>
+{% endblock %}
+
+{% block content %}
+{% if hods %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Name</th><th>Emp ID</th><th>Department</th><th>Qualification</th><th>Experience</th><th>Phone</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for h in hods %}
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--deep)">{{ h.user.get_full_name|default:h.user.username }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ h.user.email }}</div>
+        </td>
+        <td style="font-weight:600;color:var(--teal)">{{ h.employee_id }}</td>
+        <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">{{ h.department.code }}</span></td>
+        <td style="color:var(--muted)">{{ h.qualification }}</td>
+        <td style="text-align:center">{{ h.experience_years }} yrs</td>
+        <td style="color:var(--muted)">{{ h.phone_number }}</td>
+        <td>
+          <button class="btn-del" onclick="confirmDelete('{% url 'admin_hod_delete' h.pk %}','Remove HOD {{ h.user.get_full_name }} from {{ h.department.code }}?')">
+            <i class="fas fa-trash"></i> Remove
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-building-columns"></i><p>No HODs assigned yet. <a href="{% url 'admin_hod_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
+{% endif %}
+
+<div style="margin-top:16px;padding:14px 16px;background:rgba(230,168,23,.07);border:1px solid rgba(230,168,23,.2);border-radius:var(--r);font-size:13px;color:#92400e">
+  <i class="fas fa-circle-info"></i> Departments without an HOD:
+  {% for d in departments %}
+    {% if not d.hod %}
+      <span style="font-weight:600">{{ d.code }}</span>{% if not forloop.last %}, {% endif %}
+    {% endif %}
+  {% empty %}
+    All departments have an HOD assigned.
+  {% endfor %}
+</div>
+
+{% include 'admin_panel/_confirm_modal.html' %}
+{% endblock %}

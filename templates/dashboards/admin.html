@@ -1,0 +1,498 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}College Admin Dashboard - EduTrack{% endblock %}
+{% block role_label %}College Admin{% endblock %}
+{% block page_title %}College Admin Workspace{% endblock %}
+{% block page_sub %}{% if college %}{{ college.name }} · {% endif %}Simplified daily operations for {{ request.user.get_full_name|default:request.user.username }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Overview</a>
+<a href="#workflow" data-section-target="workflow" class="sb-link"><i class="fas fa-compass"></i> Start Here</a>
+<a href="#students" data-section-target="students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
+<a href="#faculty" data-section-target="faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Staff</a>
+<a href="#academics" data-section-target="academics" class="sb-link"><i class="fas fa-book"></i> Academics</a>
+<a href="#finance" data-section-target="finance" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Finance</a>
+<a href="#requests" data-section-target="requests" class="sb-link"><i class="fas fa-inbox"></i> Requests{% if pending_requests %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px">{{ pending_requests }}</span>{% endif %}</a>
+<a href="#planner" data-section-target="planner" class="sb-link"><i class="fas fa-calendar-days"></i> Semester Planner</a>
+<a href="#reports" data-section-target="reports" class="sb-link"><i class="fas fa-file-pdf"></i> Reports</a>
+<a href="#announcements" data-section-target="announcements" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#helpdesk" data-section-target="helpdesk" class="sb-link"><i class="fas fa-headset"></i> Help Desk</a>
+<a href="/admin/" class="sb-link"><i class="fas fa-cog"></i> Django Admin</a>
+{% endblock %}
+
+{% block quick_nav %}
+<div class="quick-nav">
+  <a href="#workflow" data-section-target="workflow" class="quick-chip"><i class="fas fa-compass"></i> Start Here</a>
+  <a href="#students" data-section-target="students" class="quick-chip"><i class="fas fa-user-plus"></i> Add Student</a>
+  <a href="#requests" data-section-target="requests" class="quick-chip"><i class="fas fa-inbox"></i> Requests</a>
+  <a href="#planner" data-section-target="planner" class="quick-chip"><i class="fas fa-calendar-days"></i> Planner</a>
+  <a href="#faculty" data-section-target="faculty" class="quick-chip"><i class="fas fa-users"></i> Add Staff</a>
+  <a href="#reports" data-section-target="reports" class="quick-chip"><i class="fas fa-file-pdf"></i> Export</a>
+  <a href="#announcements" data-section-target="announcements" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
+  <a href="#helpdesk" data-section-target="helpdesk" class="quick-chip"><i class="fas fa-headset"></i> Support</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px}
+  .d-card-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .d-card-title i{color:var(--teal)}
+  .dtable{width:100%;border-collapse:collapse;font-size:13px}
+  .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
+  .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
+  .dtable tr:last-child td{border-bottom:none}
+  .dtable tbody tr:hover td{background:#f9fafb}
+  .dbadge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .dbadge-active{background:#d1fae5;color:#065f46}
+  .dbadge-warning{background:#fef3c7;color:#92400e}
+  .dbadge-red{background:#fee2e2;color:#991b1b}
+  .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;margin-bottom:24px}
+  .panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  .stack{display:flex;flex-direction:column;gap:20px}
+  .workflow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+  .workflow-card,.focus-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbfb 100%);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh)}
+  .workflow-card h3,.focus-card h3{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep);margin-bottom:8px}
+  .workflow-card p,.focus-card p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+  .step-pill{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(13,115,119,.1);color:var(--teal);font-size:12px;font-weight:800;margin-bottom:10px}
+  .qa-row{display:flex;flex-wrap:wrap;gap:10px}
+  .qa-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s}
+  .qa-btn:hover{opacity:.9;transform:translateY(-1px)}
+  .qa-teal{background:var(--teal);color:#fff}
+  .qa-gold{background:var(--gold);color:#fff}
+  .qa-deep{background:var(--deep);color:#fff}
+  .qa-red{background:#ef4444;color:#fff}
+  .qa-indigo{background:#6366f1;color:#fff}
+  .summary-list{display:grid;gap:12px}
+  .summary-item{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #f3f4f6}
+  .summary-item:last-child{border-bottom:none}
+  .hint-box{background:var(--surface2);border:1px dashed #bcd2db;border-radius:14px;padding:16px}
+  .hint-box ul{margin:10px 0 0 18px;color:var(--muted);font-size:13px;line-height:1.7}
+  .ann-item{padding:11px 0;border-bottom:1px solid #f3f4f6}
+  .ann-item:last-child{border-bottom:none}
+  .ann-title{font-size:13px;font-weight:600;color:var(--deep);margin-bottom:3px}
+  .ann-meta{font-size:11px;color:var(--muted)}
+  .empty{text-align:center;padding:32px 0;color:var(--muted);font-size:13px}
+  .empty i{font-size:28px;display:block;margin-bottom:8px;color:#d1d5db}
+  @media(max-width:960px){.hero-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="stat-grid" style="margin-bottom:24px">
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-user-graduate"></i></div>
+      <div class="s-val">{{ total_students }}</div>
+      <div class="s-lbl">Students</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div class="s-val">{{ total_faculty }}</div>
+      <div class="s-lbl">Faculty</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building"></i></div>
+      <div class="s-val">{{ total_departments }}</div>
+      <div class="s-lbl">Departments</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:#ef4444"><i class="fas fa-indian-rupee-sign"></i></div>
+      <div class="s-val">{{ pending_fees }}</div>
+      <div class="s-lbl">Fee Follow-ups</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-inbox"></i></div>
+      <div class="s-val">{{ pending_requests }}</div>
+      <div class="s-lbl">Pending Requests</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-link"></i></div>
+      <div class="s-val">{{ active_invites }}</div>
+      <div class="s-lbl">Active Invite Links</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-headset"></i></div>
+      <div class="s-val">{{ open_helpdesk_tickets }}</div>
+      <div class="s-lbl">Open Support Tickets</div>
+    </div>
+  </div>
+
+  <div class="hero-grid">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-bolt"></i> Daily Control Center</div>
+      <div class="section-meta">The fastest way to finish common admin work without hunting through lists.</div>
+      <div class="workflow-grid">
+        <div class="workflow-card">
+          <div class="step-pill">1</div>
+          <h3>Onboard Students</h3>
+          <p>Start with an invite link, then convert the verified student into a real account and add the fee record right away.</p>
+          <div class="qa-row">
+            <a href="{% url 'admin_registration_invites' %}" class="qa-btn qa-deep"><i class="fas fa-link"></i> Create Invite</a>
+            <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal"><i class="fas fa-user-plus"></i> Add Student</a>
+            <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-receipt"></i> Add Fee</a>
+          </div>
+        </div>
+        <div class="workflow-card">
+          <div class="step-pill">2</div>
+          <h3>Set Up Staff</h3>
+          <p>Create faculty first, then assign the HOD and principal roles where needed.</p>
+          <div class="qa-row">
+            <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold"><i class="fas fa-plus"></i> Add Faculty</a>
+            <a href="{% url 'admin_hod_add' %}" class="qa-btn qa-teal"><i class="fas fa-building-columns"></i> Add HOD</a>
+          </div>
+        </div>
+        <div class="workflow-card">
+          <div class="step-pill">3</div>
+          <h3>Publish Academic Updates</h3>
+          <p>Create exams and notices from one place once students and staff are ready.</p>
+          <div class="qa-row">
+            <a href="{% url 'admin_exam_add' %}" class="qa-btn qa-deep"><i class="fas fa-file-pen"></i> Create Exam</a>
+            <a href="{% url 'admin_announcement_add' %}" class="qa-btn qa-indigo"><i class="fas fa-bell"></i> Post Notice</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="d-card">
+        <div class="d-card-title"><i class="fas fa-hand-pointer"></i> Quick Launch</div>
+        <div class="qa-row">
+          <a href="{% url 'admin_registration_invites' %}" class="qa-btn qa-deep"><i class="fas fa-link"></i> Invite Links</a>
+          <a href="{% url 'admin_students' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Student List</a>
+          <a href="{% url 'admin_faculty_list' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Faculty List</a>
+          <a href="{% url 'admin_departments' %}" class="qa-btn qa-deep"><i class="fas fa-building"></i> Departments</a>
+          <a href="{% url 'admin_fees' %}" class="qa-btn qa-red"><i class="fas fa-wallet"></i> Fees</a>
+        </div>
+      </div>
+      <div class="d-card">
+        <div class="d-card-title"><i class="fas fa-lightbulb"></i> Make Data Entry Easier</div>
+        <div class="hint-box">
+          Add forms now auto-suggest usernames and starter passwords.
+        <ul>
+          <li>Students: roll numbers now follow year-college-branch-serial format automatically.</li>
+          <li>Faculty: username can follow employee ID.</li>
+          <li>HODs: employee ID and username patterns are suggested.</li>
+          <li>Use the export section to share summaries instead of copying rows manually.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="workflow" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>New Semester Setup</h3>
+      <p>Use this order when you're setting up a fresh academic cycle so the system stays consistent.</p>
+      <div class="hint-box">
+        1. Add departments if needed
+        2. Add subjects
+        3. Add faculty and HODs
+        4. Add students
+        5. Add fee records
+        6. Create exams and announcements
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>What Usually Causes Rework</h3>
+      <p>Most cleanup later comes from skipping one of these checks while creating records.</p>
+      <div class="hint-box">
+        <ul>
+          <li>Missing fee record after student creation</li>
+          <li>Wrong department while adding faculty or students</li>
+          <li>No HOD assigned to a department</li>
+          <li>Creating exams before subjects and semesters are ready</li>
+        </ul>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>One-Page Shortcuts</h3>
+      <p>Jump directly to the pages that usually matter in day-to-day college administration.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal">Student</a>
+        <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold">Faculty</a>
+        <a href="{% url 'admin_hod_add' %}" class="qa-btn qa-teal">HOD</a>
+        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red">Fee</a>
+        <a href="{% url 'admin_exam_add' %}" class="qa-btn qa-deep">Exam</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="students" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Student Onboarding Flow</h3>
+      <p>Create invite links first, review submitted requests, then convert approved students with generated roll numbers.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_registration_invites' %}" class="qa-btn qa-deep"><i class="fas fa-link"></i> Create Invite</a>
+        <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal"><i class="fas fa-user-plus"></i> Add Student</a>
+        <a href="{% url 'admin_students' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View Students</a>
+        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-receipt"></i> Add Fee</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Admin Tips</h3>
+      <p>The student add page now supports faster entry with suggested credentials and focused fields.</p>
+      <div class="hint-box">
+        <ul>
+          <li>Use roll number as the default username if you want logins to stay simple.</li>
+          <li>Keep department and semester accurate at creation time to avoid later corrections.</li>
+          <li>Export the filtered student list as CSV whenever another office needs raw data.</li>
+          <li>After onboarding, use the student list page for edits instead of re-entering data.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-card" style="margin-top:20px">
+    <div class="d-card-title"><i class="fas fa-user-graduate"></i> Recent Registrations</div>
+    {% if recent_students %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Sem</th><th>Status</th><th>Joined</th></tr></thead>
+        <tbody>
+          {% for s in recent_students %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
+            <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+            <td>{{ s.department.code }}</td>
+            <td style="text-align:center">{{ s.current_semester }}</td>
+            <td>
+              {% if s.status == 'ACTIVE' %}<span class="dbadge dbadge-active">Active</span>
+              {% elif s.status == 'GRADUATED' %}<span class="dbadge dbadge-warning">Graduated</span>
+              {% else %}<span class="dbadge dbadge-red">Dropped</span>{% endif %}
+            </td>
+            <td style="color:var(--muted)">{{ s.created_at|date:"d M Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-user-graduate"></i>No students registered yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="requests" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Controlled Student Onboarding</h3>
+      <p>Public users do not get direct student accounts anymore. College admin shares a one-time link, the student submits through it once, and admin converts valid requests into real accounts.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_registration_invites' %}" class="qa-btn qa-deep"><i class="fas fa-link"></i> Create Invite Link</a>
+        <a href="{% url 'admin_registration_requests' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Open Request Queue</a>
+        <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal"><i class="fas fa-user-plus"></i> Add Student Directly</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Suggested Review Flow</h3>
+      <p>Check the request, verify department and semester, then use the convert action to open a prefilled student form.</p>
+      <div class="hint-box">
+        <ul>
+          <li>Pending requests are safer than open public registration.</li>
+          <li>College admin keeps control over the final student record.</li>
+          <li>Each invite link is one-time and tied to one email address.</li>
+          <li>This avoids wrong departments, bad data, and duplicate accounts.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-card" style="margin-top:20px">
+    <div class="d-card-title"><i class="fas fa-inbox"></i> Recent Requests</div>
+    {% if recent_requests %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for item in recent_requests %}
+          <tr>
+            <td>{{ item.first_name }} {{ item.last_name }}</td>
+            <td>{{ item.email }}</td>
+            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}-{% endif %}</td>
+            <td>{{ item.get_status_display }}</td>
+            <td><a href="{% url 'admin_student_add' %}?request={{ item.pk }}" class="qa-btn qa-teal" style="padding:6px 12px;font-size:12px"><i class="fas fa-user-plus"></i> Convert</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-inbox"></i>No registration requests yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="planner" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Semester Planner</h3>
+      <p>Manage semester subjects, faculty assignment, availability, and timetable generation from one place.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_academic_planner' %}" class="qa-btn qa-deep"><i class="fas fa-calendar-days"></i> Open Planner</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>What It Handles</h3>
+      <div class="hint-box">
+        <ul>
+          <li>Add or remove subjects semester-wise.</li>
+          <li>Assign faculty to those subjects.</li>
+          <li>Capture faculty availability slots.</li>
+          <li>Regenerate timetable entries automatically.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="faculty" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Faculty Setup</h3>
+      <p>Add faculty first. That keeps subject allocation and department ownership cleaner later.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold"><i class="fas fa-plus"></i> Add Faculty</a>
+        <a href="{% url 'admin_faculty_list' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Manage Faculty</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Department Heads</h3>
+      <p>Once faculty records are stable, assign one HOD per department.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_hod_add' %}" class="qa-btn qa-teal"><i class="fas fa-building-columns"></i> Add HOD</a>
+        <a href="{% url 'admin_hods' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View HODs</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Principal Setup</h3>
+      <p>Use the Django admin only for the principal record, since there should be just one per college.</p>
+      <div class="qa-row">
+        <a href="/admin/students/principal/add/" class="qa-btn qa-gold"><i class="fas fa-user-tie"></i> Add Principal</a>
+        <a href="/admin/students/principal/" class="qa-btn qa-deep"><i class="fas fa-list"></i> View Principal</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="academics" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Structure First</h3>
+      <p>Departments and subjects are the base layer. Once they are right, the rest of the system becomes easier.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_department_add' %}" class="qa-btn qa-teal"><i class="fas fa-building"></i> Add Department</a>
+        <a href="{% url 'admin_subject_add' %}" class="qa-btn qa-gold"><i class="fas fa-book"></i> Add Subject</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Lists & Cleanup</h3>
+      <p>Use these pages when the college grows and you need to review or tidy the academic setup.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_departments' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Departments</a>
+        <a href="{% url 'admin_subjects' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Subjects</a>
+        <a href="{% url 'admin_exams' %}" class="qa-btn qa-deep"><i class="fas fa-file-pen"></i> Exams</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="finance" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Fee Workspace</h3>
+      <p>Record student fees and immediately use the fee list to track pending and partial balances.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-plus"></i> Add Fee Record</a>
+        <a href="{% url 'admin_fees' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Manage Fees</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Fee Summary</h3>
+      <div class="summary-list">
+        <div class="summary-item"><span>Total Collected</span><strong style="color:var(--teal)">Rs {{ fee_summary.total_collected|floatformat:0 }}</strong></div>
+        <div class="summary-item"><span>Total Pending</span><strong style="color:var(--red)">Rs {{ fee_summary.total_pending|floatformat:0 }}</strong></div>
+        <div class="summary-item"><span>Students Requiring Follow-up</span><strong>{{ pending_fees }}</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="reports" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Attendance Report</h3>
+      <p>Download a PDF summary of attendance performance department by department.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_report_pdf' 'attendance' %}" class="qa-btn qa-deep"><i class="fas fa-file-pdf"></i> Export Attendance PDF</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Payment Report</h3>
+      <p>Download a PDF with fee collection and outstanding balances across the college.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_report_pdf' 'payments' %}" class="qa-btn qa-red"><i class="fas fa-file-pdf"></i> Export Payment PDF</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Result Report</h3>
+      <p>Download a PDF summary of published student results and GPA records.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_report_pdf' 'results' %}" class="qa-btn qa-indigo"><i class="fas fa-file-pdf"></i> Export Result PDF</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="announcements" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-bell"></i> Announcement Workspace</div>
+    <div class="qa-row" style="margin-bottom:18px">
+      <a href="{% url 'admin_announcement_add' %}" class="qa-btn qa-indigo"><i class="fas fa-plus"></i> Post Announcement</a>
+      <a href="{% url 'admin_announcements' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Manage Announcements</a>
+    </div>
+    {% if recent_announcements %}
+      <div class="content-scroll">
+        {% for ann in recent_announcements %}
+        <div class="ann-item">
+          <div class="ann-title">{{ ann.title }}</div>
+          <div class="ann-meta">
+            <i class="fas fa-user" style="font-size:10px"></i> {{ ann.created_by.username }}
+            &nbsp;·&nbsp;
+            <i class="fas fa-calendar" style="font-size:10px"></i> {{ ann.created_at|date:"d M Y" }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No announcements yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="helpdesk" class="dashboard-pane">
+  <div class="panel-grid">
+    <div class="focus-card">
+      <h3>Help Desk Queue</h3>
+      <p>Track login issues, fee problems, onboarding questions, and general support requests from one screen.</p>
+      <div class="qa-row">
+        <a href="{% url 'admin_helpdesk' %}" class="qa-btn qa-deep"><i class="fas fa-headset"></i> Open Help Desk</a>
+        <a href="{% url 'helpdesk' %}" class="qa-btn qa-teal"><i class="fas fa-eye"></i> Public Support Form</a>
+      </div>
+    </div>
+    <div class="focus-card">
+      <h3>Current Queue Status</h3>
+      <div class="hint-box">
+        <ul>
+          <li>Open tickets needing action: {{ open_helpdesk_tickets }}</li>
+          <li>Use this for access issues when invite links are missing or expired.</li>
+          <li>This gives students and staff a clear fallback instead of messaging manually.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
