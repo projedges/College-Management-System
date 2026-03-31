@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Support Ticket #{{ ticket.id }} — EduTrack{% endblock %}
+{% block body %}
+<style>
+  :root{--teal:#0d7377;--deep:#071e26;--muted:#5a7080;--border:#d8e4ea;--surface2:#e8f0f3;--bg:#f2f6f8;--r:10px;--r-lg:18px;--sh:0 2px 14px rgba(7,30,38,.08)}
+  body{background:var(--bg);font-family:'Inter',sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px}
+  .back{display:inline-flex;align-items:center;gap:7px;color:var(--teal);font-size:13px;font-weight:600;text-decoration:none;margin-bottom:20px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:24px;margin-bottom:20px}
+  .ticket-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .ticket-title{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)}
+  .ticket-meta{font-size:12px;color:var(--muted);margin-top:4px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+  .badge-open{background:#fee2e2;color:#991b1b}
+  .badge-in_progress{background:#fef3c7;color:#92400e}
+  .badge-resolved{background:#d1fae5;color:#065f46}
+  .desc{font-size:14px;color:var(--deep);line-height:1.7;background:var(--surface2);border-radius:var(--r);padding:14px 16px}
+  .comment{padding:14px 0;border-bottom:1px solid #f3f4f6}
+  .comment:last-child{border-bottom:none}
+  .comment-author{font-size:12px;font-weight:700;color:var(--deep);margin-bottom:4px}
+  .comment-body{font-size:13px;color:#374151;line-height:1.6}
+  .comment-time{font-size:11px;color:var(--muted);margin-top:4px}
+  .admin-comment{background:rgba(13,115,119,.04);border-left:3px solid var(--teal);padding-left:12px;border-radius:0 var(--r) var(--r) 0}
+  textarea{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;resize:vertical;min-height:90px;outline:none;transition:border-color .2s}
+  textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;border:none;cursor:pointer;text-decoration:none;transition:all .2s}
+  .btn-teal{background:var(--teal);color:#fff}
+  .btn-teal:hover{background:#095c60}
+  .btn-ghost{background:var(--surface2);color:var(--deep);border:1.5px solid var(--border)}
+  .btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+  @media(max-width:600px){.wrap{padding:20px 14px}}
+</style>
+
+<div class="wrap">
+  <a href="{% url 'helpdesk' %}" class="back"><i class="fas fa-arrow-left"></i> Back to Help Desk</a>
+
+  <div class="card">
+    <div class="ticket-head">
+      <div>
+        <div class="ticket-title">{{ ticket.subject }}</div>
+        <div class="ticket-meta">
+          Ticket #{{ ticket.id }} &nbsp;·&nbsp; {{ ticket.get_issue_type_display }}
+          &nbsp;·&nbsp; {{ ticket.created_at|date:"d M Y H:i" }}
+          {% if ticket.college %}&nbsp;·&nbsp; {{ ticket.college.name }}{% endif %}
+        </div>
+      </div>
+      <span class="badge badge-{{ ticket.status|lower }}">{{ ticket.get_status_display }}</span>
+    </div>
+    <div class="desc">{{ ticket.description }}</div>
+
+    {% if is_owner and ticket.status != 'RESOLVED' %}
+    <form method="POST" style="margin-top:14px">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="status_update"/>
+      <input type="hidden" name="status" value="RESOLVED"/>
+      <button type="submit" class="btn btn-ghost" style="font-size:12px">
+        <i class="fas fa-check-circle"></i> Mark as Resolved
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:14px">
+      <i class="fas fa-comments" style="color:var(--teal)"></i> Conversation
+    </div>
+    {% if comments %}
+      {% for comment in comments %}
+      <div class="comment {% if comment.is_admin_reply %}admin-comment{% endif %}">
+        <div class="comment-author">
+          {% if comment.is_admin_reply %}<i class="fas fa-user-shield" style="color:var(--teal);font-size:10px"></i> Support Team{% else %}{{ comment.author.get_full_name|default:comment.author.username }}{% endif %}
+        </div>
+        <div class="comment-body">{{ comment.message }}</div>
+        <div class="comment-time">{{ comment.created_at|date:"d M Y H:i" }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px">
+        <i class="fas fa-comment-slash" style="font-size:24px;display:block;margin-bottom:8px;color:#d1d5db"></i>
+        No replies yet.
+      </div>
+    {% endif %}
+
+    {% if ticket.status != 'RESOLVED' %}
+    <form method="POST" style="margin-top:18px">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="comment"/>
+      <textarea name="message" placeholder="Write a reply…" required></textarea>
+      <div style="margin-top:10px">
+        <button type="submit" class="btn btn-teal"><i class="fas fa-paper-plane"></i> Send Reply</button>
+      </div>
+    </form>
+    {% else %}
+    <div style="margin-top:14px;padding:12px 16px;background:var(--surface2);border-radius:var(--r);font-size:13px;color:var(--muted)">
+      <i class="fas fa-lock"></i> This ticket is resolved. Reopen it to add more replies.
+      {% if is_owner %}
+      <form method="POST" style="display:inline;margin-left:10px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="status_update"/>
+        <input type="hidden" name="status" value="OPEN"/>
+        <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Reopen</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -43,13 +43,13 @@
 
 <div style="margin-top:16px;padding:14px 16px;background:rgba(230,168,23,.07);border:1px solid rgba(230,168,23,.2);border-radius:var(--r);font-size:13px;color:#92400e">
   <i class="fas fa-circle-info"></i> Departments without an HOD:
-  {% for d in departments %}
-    {% if not d.hod %}
+  {% if depts_without_hod %}
+    {% for d in depts_without_hod %}
       <span style="font-weight:600">{{ d.code }}</span>{% if not forloop.last %}, {% endif %}
-    {% endif %}
-  {% empty %}
+    {% endfor %}
+  {% else %}
     All departments have an HOD assigned.
-  {% endfor %}
+  {% endif %}
 </div>
 
 {% include 'admin_panel/_confirm_modal.html' %}

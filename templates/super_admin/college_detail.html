@@ -1,0 +1,99 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{{ college.name }} — Super Admin{% endblock %}
+{% block role_label %}Super Admin{% endblock %}
+{% block role_label_foot %}Super Admin{% endblock %}
+{% block page_title %}{{ college.name }}{% endblock %}
+{% block page_sub %}{{ college.code }}{% if college.city %} · {{ college.city }}{% endif %}{% if not college.is_active %} · <span style="color:var(--red);font-weight:700">Inactive</span>{% endif %}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'super_admin_dashboard' %}#colleges" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Colleges</a>
+<a href="{% url 'super_admin_college_edit' college.pk %}" class="sb-link"><i class="fas fa-pen"></i> Edit College</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-sitemap"></i></div>
+    <div class="s-val">{{ departments|length }}</div><div class="s-lbl">Departments</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-graduate"></i></div>
+    <div class="s-val">{{ total_students }}</div><div class="s-lbl">Students</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-chalkboard-teacher"></i></div>
+    <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Faculty</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-indian-rupee-sign"></i></div>
+    <div class="s-val">Rs {{ total_fees_collected|floatformat:0 }}</div><div class="s-lbl">Fees Collected</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-hourglass-half"></i></div>
+    <div class="s-val">Rs {{ total_fees_pending|floatformat:0 }}</div><div class="s-lbl">Fees Pending</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-sitemap"></i> Departments</div>
+    {% if departments %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Department</th><th>Code</th><th>Students</th><th>Faculty</th></tr></thead>
+        <tbody>
+          {% for d in departments %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
+            <td style="color:var(--teal);font-weight:600">{{ d.code }}</td>
+            <td style="text-align:center">{{ d.student_count }}</td>
+            <td style="text-align:center">{{ d.faculty_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-sitemap"></i>No departments yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-shield"></i> College Admins</div>
+    {% if admins %}
+    {% for a in admins %}
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">
+        {{ a.user.first_name|first|upper }}{{ a.user.last_name|first|upper }}
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.user.get_full_name|default:a.user.username }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ a.user.email }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty"><i class="fas fa-user-shield"></i>No admins assigned.</div>
+    {% endif %}
+    <div style="margin-top:12px">
+      <a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep" style="font-size:12px"><i class="fas fa-user-plus"></i> Add Admin</a>
+    </div>
+  </div>
+</div>
+
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
+  {% if recent_activity %}
+  <div class="content-scroll">
+    {% for log in recent_activity %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6;gap:12px">
+      <div style="font-size:13px;color:var(--deep)">{{ log.action }}</div>
+      <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.user.username }} · {{ log.timestamp|date:"d M H:i" }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-clock"></i>No activity for this college yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

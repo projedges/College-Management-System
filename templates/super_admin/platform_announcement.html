@@ -1,0 +1,66 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Platform Notices — Super Admin{% endblock %}
+{% block role_label %}Super Admin{% endblock %}
+{% block role_label_foot %}Super Admin{% endblock %}
+{% block page_title %}Platform Notices{% endblock %}
+{% block page_sub %}Broadcast announcements visible to all colleges and all roles{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'super_admin_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="two-col">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-bullhorn"></i> New Broadcast</div>
+    <div class="section-meta">This notice will appear in every college's announcement feed.</div>
+
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" style="margin-bottom:14px">
+      <i class="fas fa-circle-info"></i> {{ message }}
+    </div>
+    {% endfor %}
+
+    <form method="POST">
+      {% csrf_token %}
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Title <span style="color:var(--red)">*</span></label>
+        <input type="text" name="title" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" placeholder="e.g. Scheduled Maintenance on 15 April"/>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Message <span style="color:var(--red)">*</span></label>
+        <textarea name="message" rows="6" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Write the full announcement here..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-teal"><i class="fas fa-paper-plane"></i> Broadcast</button>
+        <a href="{% url 'super_admin_dashboard' %}" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-list"></i> All Platform Notices</div>
+    {% if recent %}
+    <div class="content-scroll">
+      {% for ann in recent %}
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ ann.title }}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:120 }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y H:i" }}</div>
+          </div>
+          <form method="POST" action="{% url 'super_admin_platform_announcement_delete' ann.pk %}" style="margin:0;flex-shrink:0" onsubmit="return confirm('Delete this announcement?')">
+            {% csrf_token %}
+            <button type="submit" style="padding:5px 9px;border-radius:7px;background:rgba(239,68,68,.08);color:var(--red);font-size:12px;border:none;cursor:pointer"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-bell-slash"></i>No platform notices yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

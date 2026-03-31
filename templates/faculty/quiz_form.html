@@ -1,0 +1,44 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Create Quiz — Faculty{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Create Quiz{% endblock %}
+{% block page_sub %}Set up a new quiz for one of your subjects{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_quiz_list' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Quizzes</a>
+{% endblock %}
+{% block dashboard_content %}
+<div class="d-card" style="max-width:640px">
+  <form method="POST">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Subject <span style="color:var(--red)">*</span></label>
+        <select name="subject" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Select subject</option>
+          {% for s in subjects %}<option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Duration (minutes) <span style="color:var(--red)">*</span></label>
+        <input type="number" name="duration_minutes" value="30" min="5" max="180" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Quiz Title <span style="color:var(--red)">*</span></label>
+      <input type="text" name="title" required placeholder="e.g. Unit 1 — Data Structures Quiz" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Description</label>
+      <textarea name="description" rows="3" placeholder="Instructions for students…" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical"></textarea>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Total Marks</label>
+      <input type="number" name="total_marks" value="10" min="1" step="0.5" style="width:140px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-arrow-right"></i> Create & Add Questions</button>
+      <a href="{% url 'faculty_quiz_list' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

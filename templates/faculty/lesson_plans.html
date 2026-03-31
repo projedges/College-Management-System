@@ -1,0 +1,119 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Lesson Plans — {{ subject.name }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Lesson Plans{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Semester {{ subject.semester }}{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}#subjects" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Subjects</a>
+{% endblock %}
+{% block extra_css %}
+<style>
+  .plan-row{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid #f3f4f6}
+  .plan-row:last-child{border-bottom:none}
+  .unit-badge{width:40px;height:40px;border-radius:10px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+  .plan-title{font-size:13px;font-weight:700;color:var(--deep);margin-bottom:3px}
+  .plan-meta{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .plan-topics{font-size:12px;color:var(--muted);line-height:1.5}
+  .status-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700}
+  .s-draft{background:#f3f4f6;color:var(--muted)}
+  .s-submitted{background:rgba(99,102,241,.1);color:#6366f1}
+  .s-approved{background:rgba(16,185,129,.1);color:var(--green)}
+  .s-revision{background:rgba(239,68,68,.08);color:var(--red)}
+  .add-form{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-top:24px}
+  .add-form h3{font-size:14px;font-weight:700;color:var(--deep);margin-bottom:16px}
+  .fg{margin-bottom:14px}
+  .fg label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px}
+  .fi{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff}
+  .fi:focus{border-color:var(--teal)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+</style>
+{% endblock %}
+{% block dashboard_content %}
+
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }}" style="margin-bottom:16px"><i class="fas fa-circle-info"></i> {{ message }}</div>
+{% endfor %}
+
+<div class="d-card">
+  <div class="d-card-title"><i class="fas fa-book-open"></i> Lesson Plan — {{ plans|length }} entries</div>
+  {% if plans %}
+    {% for plan in plans %}
+    <div class="plan-row">
+      <div class="unit-badge">U{{ plan.unit_number }}</div>
+      <div>
+        <div class="plan-title">{{ plan.unit_title }}</div>
+        <div class="plan-meta">
+          <span><i class="fas fa-calendar" style="color:var(--teal)"></i> Planned: {{ plan.planned_date|date:"d M Y" }}</span>
+          {% if plan.actual_date %}<span><i class="fas fa-check" style="color:var(--green)"></i> Done: {{ plan.actual_date|date:"d M Y" }}</span>{% endif %}
+          <span><i class="fas fa-clock" style="color:var(--muted)"></i> {{ plan.planned_hours }}h</span>
+          <span class="status-pill s-{{ plan.status|lower }}">{{ plan.get_status_display }}</span>
+        </div>
+        <div class="plan-topics">{{ plan.topics }}</div>
+        {% if plan.remarks %}<div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic">{{ plan.remarks }}</div>{% endif %}
+        {% if plan.file %}<div style="margin-top:5px"><a href="{{ plan.file.url }}" target="_blank" style="font-size:11px;color:var(--teal);font-weight:600"><i class="fas fa-paperclip"></i> Attachment</a></div>{% endif %}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        {% if not plan.actual_date %}
+        <form method="POST" style="margin:0">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="mark_done"/>
+          <input type="hidden" name="plan_id" value="{{ plan.pk }}"/>
+          <button type="submit" style="padding:4px 10px;border-radius:6px;background:rgba(16,185,129,.1);color:var(--green);font-size:11px;font-weight:600;border:none;cursor:pointer"><i class="fas fa-check"></i> Mark Done</button>
+        </form>
+        {% endif %}
+        <form method="POST" style="margin:0" onsubmit="return confirm('Remove this entry?')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete"/>
+          <input type="hidden" name="plan_id" value="{{ plan.pk }}"/>
+          <button type="submit" style="padding:4px 10px;border-radius:6px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:600;border:none;cursor:pointer"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty"><i class="fas fa-book-open"></i>No lesson plan entries yet. Add your first one below.</div>
+  {% endif %}
+</div>
+
+<div class="add-form">
+  <h3><i class="fas fa-plus" style="color:var(--teal)"></i> Add Lesson Plan Entry</h3>
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add"/>
+    <div class="grid-3">
+      <div class="fg">
+        <label>Unit No. <span style="color:var(--red)">*</span></label>
+        <input type="number" name="unit_number" min="1" max="20" value="1" required class="fi">
+      </div>
+      <div class="fg">
+        <label>Planned Hours <span style="color:var(--red)">*</span></label>
+        <input type="number" name="planned_hours" min="1" max="10" value="1" required class="fi">
+      </div>
+      <div class="fg">
+        <label>Planned Date <span style="color:var(--red)">*</span></label>
+        <input type="date" name="planned_date" required class="fi">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Unit Title <span style="color:var(--red)">*</span></label>
+      <input type="text" name="unit_title" required placeholder="e.g. Introduction to Sorting Algorithms" class="fi">
+    </div>
+    <div class="fg">
+      <label>Topics to Cover <span style="color:var(--red)">*</span></label>
+      <textarea name="topics" rows="3" required placeholder="List topics, subtopics, or learning outcomes…" class="fi" style="resize:vertical"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="fg">
+        <label>Remarks</label>
+        <input type="text" name="remarks" placeholder="Optional notes…" class="fi">
+      </div>
+      <div class="fg">
+        <label>Attachment <span style="font-weight:400;color:var(--muted)">(PDF/DOC)</span></label>
+        <input type="file" name="file" accept=".pdf,.doc,.docx,.ppt,.pptx" class="fi" style="padding:6px 10px">
+      </div>
+    </div>
+    <button type="submit" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add Entry</button>
+  </form>
+</div>
+{% endblock %}

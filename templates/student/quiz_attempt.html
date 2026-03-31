@@ -1,0 +1,78 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{{ quiz.title }}{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_sub %}{{ quiz.subject.name }} · {{ quiz.duration_minutes }} min · {{ quiz.total_marks }} marks{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}#quizzes" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+{% block extra_css %}
+<style>
+  .quiz-wrap{max-width:720px}
+  .timer-bar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--border);padding:10px 0;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between}
+  .timer{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--teal)}
+  .timer.warn{color:var(--red);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .q-block{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
+  .q-num{font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .q-text{font-size:14px;font-weight:600;color:var(--deep);margin-bottom:14px;line-height:1.5}
+  .opt-label{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;margin-bottom:8px;transition:all .2s;font-size:13px;color:var(--text)}
+  .opt-label:hover{border-color:var(--teal);background:rgba(13,115,119,.04)}
+  .opt-label input{accent-color:var(--teal);width:15px;height:15px;flex-shrink:0}
+  .opt-label input:checked + span{color:var(--teal);font-weight:600}
+  input[type=radio]:checked ~ .opt-label{border-color:var(--teal)}
+</style>
+{% endblock %}
+{% block dashboard_content %}
+<div class="quiz-wrap">
+  <div class="timer-bar">
+    <div>
+      <span style="font-size:12px;color:var(--muted)">Time Remaining</span>
+      <div class="timer" id="quiz-timer">{{ quiz.duration_minutes }}:00</div>
+    </div>
+    <div style="font-size:13px;color:var(--muted)">{{ questions|length }} question{{ questions|length|pluralize }}</div>
+  </div>
+
+  <form method="POST" id="quiz-form">
+    {% csrf_token %}
+    {% for q in questions %}
+    <div class="q-block">
+      <div class="q-num">Question {{ forloop.counter }} · {{ q.marks }} mark{{ q.marks|pluralize }}</div>
+      <div class="q-text">{{ q.text }}</div>
+      {% for opt in q.options.all %}
+      <label class="opt-label">
+        <input type="radio" name="q_{{ q.pk }}" value="{{ opt.pk }}"/>
+        <span>{{ opt.text }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button type="submit" class="qa-btn qa-teal" id="submit-btn"><i class="fas fa-paper-plane"></i> Submit Quiz</button>
+      <a href="{% url 'student_dashboard' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  var total = {{ quiz.duration_minutes }} * 60;
+  var el = document.getElementById('quiz-timer');
+  var form = document.getElementById('quiz-form');
+  var iv = setInterval(function(){
+    total--;
+    var m = Math.floor(total/60), s = total%60;
+    el.textContent = m + ':' + (s<10?'0':'') + s;
+    if(total <= 60) el.classList.add('warn');
+    if(total <= 0){ clearInterval(iv); form.submit(); }
+  }, 1000);
+
+  form.addEventListener('submit', function(){
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('submit-btn').textContent = 'Submitting…';
+    clearInterval(iv);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Quizzes — Faculty{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}My Quizzes{% endblock %}
+{% block page_sub %}Create and manage online quizzes for your subjects{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+{% block dashboard_content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:18px">
+  <a href="{% url 'faculty_quiz_create' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> New Quiz</a>
+</div>
+{% if quizzes %}
+<div class="d-card">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Title</th><th>Subject</th><th>Duration</th><th>Marks</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for q in quizzes %}
+        <tr>
+          <td style="font-weight:600;color:var(--deep)">{{ q.title }}</td>
+          <td style="color:var(--muted)">{{ q.subject.name }} ({{ q.subject.code }})</td>
+          <td>{{ q.duration_minutes }} min</td>
+          <td>{{ q.total_marks }}</td>
+          <td>
+            {% if q.is_active %}
+            <span class="dbadge dbadge-active">Active</span>
+            {% else %}
+            <span class="dbadge" style="background:#f3f4f6;color:var(--muted)">Draft</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{% url 'faculty_quiz_edit' q.pk %}" class="btn-sm btn-sm-teal"><i class="fas fa-pen"></i> Edit</a>
+              <a href="{% url 'faculty_quiz_results' q.pk %}" class="btn-sm btn-sm-deep"><i class="fas fa-chart-bar"></i> Results</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="d-card"><div class="empty"><i class="fas fa-circle-question"></i>No quizzes yet. Create your first one.</div></div>
+{% endif %}
+{% endblock %}

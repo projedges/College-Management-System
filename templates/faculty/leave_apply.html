@@ -1,0 +1,151 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Leave Application — Faculty{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Leave Application{% endblock %}
+{% block page_sub %}Apply for leave and suggest a substitute for your classes{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+{% block extra_css %}
+<style>
+  .leave-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .leave-type{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:3px}
+  .leave-dates{font-size:13px;font-weight:700;color:var(--deep)}
+  .leave-reason{font-size:12px;color:var(--muted);margin-top:3px}
+  .leave-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .slot-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:13px}
+  .slot-day{font-size:11px;font-weight:700;color:var(--teal);width:36px;flex-shrink:0}
+  .slot-time{font-size:12px;color:var(--muted);width:110px;flex-shrink:0}
+  .fg{margin-bottom:14px}
+  .fg label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .fi{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;background:#fff}
+  .fi:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .days-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(13,115,119,.08);color:var(--teal);padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;margin-top:6px}
+</style>
+{% endblock %}
+{% block dashboard_content %}
+
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }}" style="margin-bottom:16px"><i class="fas fa-circle-info"></i> {{ message }}</div>
+{% endfor %}
+
+<div class="two-col">
+
+  <!-- LEFT: Apply form -->
+  <div>
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-file-signature"></i> New Leave Application</div>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="apply"/>
+        <div class="fg">
+          <label>Leave Type <span style="color:var(--red)">*</span></label>
+          <select name="leave_type" class="fi">
+            <option value="CL">Casual Leave (CL)</option>
+            <option value="ML">Medical Leave (ML)</option>
+            <option value="EL">Earned Leave (EL)</option>
+            <option value="OD">On Duty (OD)</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="fg">
+            <label>From Date <span style="color:var(--red)">*</span></label>
+            <input type="date" name="from_date" required class="fi" id="from-date" onchange="calcDays()">
+          </div>
+          <div class="fg">
+            <label>To Date <span style="color:var(--red)">*</span></label>
+            <input type="date" name="to_date" required class="fi" id="to-date" onchange="calcDays()">
+          </div>
+        </div>
+        <div id="days-preview" style="margin:-8px 0 14px"></div>
+        <div class="fg">
+          <label>Reason <span style="color:var(--red)">*</span></label>
+          <textarea name="reason" rows="3" required class="fi" style="resize:vertical" placeholder="Briefly explain the reason for leave…"></textarea>
+        </div>
+        <div class="fg">
+          <label>Suggest Substitute <span style="font-weight:400;color:var(--muted)">(optional but recommended)</span></label>
+          <select name="suggested_substitute" class="fi">
+            <option value="">— No suggestion —</option>
+            {% for f in dept_faculty %}
+            <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }} ({{ f.designation }})</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px"><i class="fas fa-info-circle"></i> HOD will confirm the substitution after approving your leave.</div>
+        </div>
+        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
+      </form>
+    </div>
+
+    {% if timetable_slots %}
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-triangle-exclamation" style="color:var(--gold)"></i> Your Classes That Will Be Affected</div>
+      <div class="section-meta">These slots will need substitution coverage during your leave.</div>
+      {% for slot in timetable_slots %}
+      <div class="slot-row">
+        <div class="slot-day">{{ slot.day_of_week }}</div>
+        <div class="slot-time">{{ slot.start_time|time:"H:i" }} – {{ slot.end_time|time:"H:i" }}</div>
+        <div style="flex:1">
+          <span style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</span>
+          <span style="color:var(--muted);font-size:11px"> · {{ slot.subject.code }}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);background:var(--border);padding:2px 8px;border-radius:6px">{{ slot.classroom.room_number }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- RIGHT: My leave history -->
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-list-check"></i> My Leave History</div>
+    {% if my_leaves %}
+    <div class="content-scroll">
+      {% for leave in my_leaves %}
+      <div class="leave-card">
+        <div style="flex:1">
+          <div class="leave-type">{{ leave.get_leave_type_display }}</div>
+          <div class="leave-dates">{{ leave.from_date|date:"d M Y" }} → {{ leave.to_date|date:"d M Y" }} <span style="font-size:11px;color:var(--muted)">({{ leave.days }} day{{ leave.days|pluralize }})</span></div>
+          <div class="leave-reason">{{ leave.reason|truncatechars:80 }}</div>
+          {% if leave.suggested_substitute %}
+          <div class="leave-sub"><i class="fas fa-user-check" style="color:var(--teal)"></i> Suggested sub: {{ leave.suggested_substitute.user.get_full_name|default:leave.suggested_substitute.user.username }}</div>
+          {% endif %}
+          {% if leave.hod_remarks %}
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic"><i class="fas fa-comment"></i> HOD: {{ leave.hod_remarks }}</div>
+          {% endif %}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap;background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ leave.get_status_display }}</span>
+          {% if leave.status == 'PENDING' %}
+          <form method="POST" style="margin:0" onsubmit="return confirm('Withdraw this application?')">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="cancel"/>
+            <input type="hidden" name="leave_id" value="{{ leave.pk }}"/>
+            <button type="submit" style="padding:3px 9px;border-radius:6px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:600;border:none;cursor:pointer"><i class="fas fa-times"></i> Withdraw</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-check"></i>No leave applications yet.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function calcDays(){
+  var f=document.getElementById('from-date').value;
+  var t=document.getElementById('to-date').value;
+  var el=document.getElementById('days-preview');
+  if(f&&t){
+    var d=Math.round((new Date(t)-new Date(f))/(1000*60*60*24))+1;
+    if(d>0) el.innerHTML='<span class="days-badge"><i class="fas fa-calendar-days"></i> '+d+' day'+(d>1?'s':'')+'</span>';
+    else el.innerHTML='<span style="font-size:12px;color:var(--red)">To date must be on or after from date.</span>';
+  }
+}
+</script>
+{% endblock %}

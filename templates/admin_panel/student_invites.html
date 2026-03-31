@@ -46,10 +46,35 @@
 
 {% if created_link %}
 <div class="ap-card" style="margin-bottom:22px">
-  <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:10px">Latest Invite Link</div>
-  <div style="background:var(--surface2);border:1px dashed var(--border);padding:14px;border-radius:12px;font-size:13px;color:var(--text);word-break:break-all">{{ created_link }}</div>
-  <div class="form-hint" style="margin-top:8px">This link is one-time and tied to {{ created_invite.invited_email }}.</div>
+  <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:10px"><i class="fas fa-link" style="color:var(--teal)"></i> Invite Link Ready</div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div id="invite-link-box" style="flex:1;background:var(--surface2);border:1px dashed var(--border);padding:12px 14px;border-radius:10px;font-size:13px;color:var(--text);word-break:break-all;min-width:0">{{ created_link }}</div>
+    <button onclick="copyInviteLink()" id="copy-btn" style="padding:10px 16px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0">
+      <i class="fas fa-copy"></i> Copy Link
+    </button>
+  </div>
+  <div class="form-hint" style="margin-top:8px">One-time link for <strong>{{ created_invite.invited_email }}</strong>. Expires in 7 days.</div>
 </div>
+<script>
+function copyInviteLink() {
+  var text = document.getElementById('invite-link-box').textContent.trim();
+  var btn = document.getElementById('copy-btn');
+  navigator.clipboard.writeText(text).then(function() {
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    btn.style.background = 'var(--green)';
+    setTimeout(function(){ btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link'; btn.style.background = 'var(--teal)'; }, 2000);
+  }).catch(function() {
+    /* fallback for older browsers */
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(function(){ btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link'; }, 2000);
+  });
+}
+</script>
 {% endif %}
 
 <div class="ap-card">

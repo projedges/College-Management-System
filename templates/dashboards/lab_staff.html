@@ -1,0 +1,182 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Lab Staff Dashboard - EduTrack{% endblock %}
+{% block role_label %}Lab Technician{% endblock %}
+{% block role_label_foot %}Lab Technician{% endblock %}
+{% block page_title %}Lab Staff Dashboard{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endblock %}
+
+{% block sidebar_links %}
+<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-badge"></i> My Profile</a>
+<a href="#schedule" data-section-target="schedule" class="sb-link"><i class="fas fa-calendar-day"></i> Today's Schedule</a>
+<a href="#classrooms" data-section-target="classrooms" class="sb-link"><i class="fas fa-door-open"></i> Classrooms</a>
+<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#support" data-section-target="support" class="sb-link"><i class="fas fa-headset"></i> Support</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-door-open"></i></div>
+      <div class="s-val">{{ classrooms|length }}</div><div class="s-lbl">Classrooms</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-circle-dot"></i></div>
+      <div class="s-val">{{ active_lab_sessions|length }}</div><div class="s-lbl">Live Now</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-calendar-day"></i></div>
+      <div class="s-val">{{ today_schedule|length }}</div><div class="s-lbl">Classes Today</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-circle-dot" style="color:var(--red)"></i> Active Sessions Now</div>
+      {% if active_lab_sessions %}
+      <div class="table-scroll content-scroll soft">
+        <table class="dtable">
+          <thead><tr><th>Subject</th><th>Faculty</th><th>Room</th><th>Time</th></tr></thead>
+          <tbody>
+            {% for t in active_lab_sessions %}
+            <tr>
+              <td style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</td>
+              <td>{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
+              <td><span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">{{ t.classroom.room_number }}</span></td>
+              <td style="color:var(--muted);font-size:12px">{{ t.start_time|time:"H:i" }} – {{ t.end_time|time:"H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-mug-hot"></i>No active sessions right now.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
+      {% if announcements %}
+      <div class="content-scroll soft">
+        {% for ann in announcements %}
+        <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="profile" class="dashboard-pane">
+  <div class="d-card" style="max-width:640px">
+    <div style="display:flex;align-items:center;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.2);box-shadow:0 4px 14px rgba(13,115,119,.15);flex-shrink:0">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ role_name }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ college.name }}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Account Details</div>
+    <div class="summary-list">
+      <div class="summary-item"><span>Username</span><strong>{{ request.user.username }}</strong></div>
+      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
+      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="schedule" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-day"></i> Full Schedule for Today</div>
+    <div class="section-meta">All classes across all rooms today, in time order.</div>
+    {% if today_schedule %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for t in today_schedule %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal);white-space:nowrap">{{ t.start_time|time:"H:i" }} – {{ t.end_time|time:"H:i" }}</td>
+            <td style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</td>
+            <td>{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
+            <td><span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">{{ t.classroom.room_number }}</span></td>
+            <td>
+              {% if t in active_lab_sessions %}
+              <span style="background:rgba(239,68,68,.1);color:var(--red);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700"><i class="fas fa-circle" style="font-size:7px"></i> Live</span>
+              {% else %}
+              <span style="background:var(--surface2);color:var(--muted);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">Scheduled</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No classes scheduled today.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="classrooms" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-door-open"></i> All Classrooms</div>
+    {% if classrooms %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Room</th><th>Capacity</th></tr></thead>
+        <tbody>
+          {% for room in classrooms %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal)">{{ room.room_number }}</td>
+            <td>{{ room.capacity }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-door-open"></i>No classrooms found.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="notices" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
+    {% if announcements %}
+    <div class="content-scroll">
+      {% for ann in announcements %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="support" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-headset"></i> Help Desk</div>
+    <div class="section-meta">Raise access, technical, or facility issues.</div>
+    <div style="margin-bottom:14px">
+      <a href="{% url 'helpdesk' %}" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Open Help Desk</a>
+    </div>
+    <div class="hint-box">Use the help desk for login issues, room allocation problems, or any technical support needed for lab operations.</div>
+  </div>
+</section>
+{% endblock %}

@@ -11,7 +11,7 @@
 {% block extra_css %}
 <style>
   .att-form{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:700px}
-  .att-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:gap}
+  .att-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
   .date-input{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
   .date-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
   .student-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6}
@@ -36,8 +36,9 @@
 <div class="att-form">
   <div class="att-header">
     <div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Subject</div>
-      <div style="font-size:16px;font-weight:700;color:var(--deep)">{{ subject.name }} <span style="color:var(--muted);font-weight:400">({{ subject.code }})</span></div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subject · Semester {{ subject.semester }}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--deep)">{{ subject.name }} <span style="color:var(--muted);font-weight:400;font-size:13px">({{ subject.code }})</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ subject.department.name }} · {{ students|length }} student{{ students|length|pluralize }}</div>
     </div>
     <div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Date</div>

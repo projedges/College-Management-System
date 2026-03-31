@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>EduTrack — Academic Management Portal</title>
+  <meta name="description" content="EduTrack is a complete digital platform for managing college academics — attendance, results, timetables, fees, assignments, and communication in one secure place."/>
   {% load static %}
   <!-- SVG Favicon (replace with your own later) -->
   <link rel="icon" type="image/png" href="{% static 'students/images/favicon.png' %}"/>
@@ -36,7 +37,7 @@
   .nav.up{box-shadow:var(--sh-md)}
   .nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
   /* Logo: show image if it loads correctly, else show text */
-  .nav-logo-img{height:56px;width:auto;max-width:240px;object-fit:contain;display:block}
+  .nav-logo-img{height:88px;width:auto;max-width:320px;object-fit:contain;display:block}
   .nav-logo-txt{display:flex;flex-direction:column;line-height:1.2}
   .nav-logo-txt .nm{font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:var(--deep);letter-spacing:-.4px}
   .nav-logo-txt .nm span{color:var(--teal)}
@@ -54,7 +55,7 @@
   .ham span{width:22px;height:2px;background:var(--deep);border-radius:2px;transition:.3s}
 
   /* MOBILE MENU */
-  .mob{display:none;position:fixed;inset:66px 0 0;background:#fff;z-index:998;flex-direction:column;padding:20px 5%;gap:8px;border-top:1px solid var(--border);overflow-y:auto}
+  .mob{display:none;position:fixed;inset:72px 0 0;background:#fff;z-index:998;flex-direction:column;padding:20px 5%;gap:8px;border-top:1px solid var(--border);overflow-y:auto}
   .mob.open{display:flex}
   .mob a{padding:13px 16px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:500;color:var(--text);border:1px solid var(--border);transition:background .2s}
   .mob a:hover{background:var(--surface2)}
@@ -127,9 +128,10 @@
   .steps-bg{background:linear-gradient(160deg,var(--deep) 0%,var(--deep2) 100%);position:relative;overflow:hidden}
   .steps-bg .sec-h{color:#fff}.steps-bg .sec-p{color:rgba(255,255,255,.55)}.steps-bg .sec-tag{color:var(--gold)}
   .steps-deco{position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 80% 50%,rgba(13,115,119,.15) 0%,transparent 70%)}
-  .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;position:relative;z-index:1}
-  .steps-grid::before{content:'';position:absolute;top:30px;left:12%;right:12%;height:2px;background:linear-gradient(90deg,var(--teal),var(--gold),rgba(230,168,23,.1))}
-  .step{text-align:center;padding:14px}
+  .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;position:relative;z-index:1}
+  .step{text-align:center;padding:14px 20px;position:relative}
+  .step:not(:last-child)::after{content:'';position:absolute;top:26px;right:-1px;width:2px;height:28px;background:linear-gradient(180deg,var(--teal),var(--gold));opacity:.4;display:block}
+  @media(max-width:768px){.step:not(:last-child)::after{display:none}}
   .step-n{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));color:#fff;font-size:19px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 4px 16px rgba(13,115,119,.4)}
   .step h3{font-size:14px;font-weight:700;color:#fff;margin-bottom:6px}
   .step p{font-size:13px;color:rgba(255,255,255,.55);line-height:1.65}
@@ -152,8 +154,8 @@
   .footer{background:var(--deep);color:rgba(255,255,255,.6);padding:52px 5% 26px}
   .footer-grid{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:40px;margin-bottom:40px}
   .footer-brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-  .footer-logo-img{height:52px;width:auto;max-width:200px;object-fit:contain}
-  .footer-logo-wrap-box{display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:10px;padding:8px 14px;margin-bottom:14px}
+  .footer-logo-img{height:80px;width:auto;max-width:260px;object-fit:contain}
+  .footer-logo-wrap-box{display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;padding:10px 18px;margin-bottom:14px}
   .footer-logo-txt{display:flex;flex-direction:column;line-height:1.2}
   .footer-logo-txt .nm{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:#fff}
   .footer-logo-txt .nm span{color:var(--teal-lt)}
@@ -180,11 +182,43 @@
   /* RESPONSIVE */
   @media(max-width:1024px){.hero-visual{display:none}.hero{min-height:auto;padding:60px 5%}.footer-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:768px){.nav-links,.nav-acts{display:none}.ham{display:flex}.sbar{grid-template-columns:repeat(2,1fr)}.footer-grid{grid-template-columns:1fr}.footer-bottom{flex-direction:column;text-align:center}.cta-box{padding:36px 22px}.steps-grid::before{display:none}}
-  @media(max-width:480px){.hero-btns{flex-direction:column}.btn-hp,.btn-hs{justify-content:center}}
+  @media(max-width:640px){.feat-grid,.role-grid{grid-template-columns:1fr}.step{border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:20px}}
+  @media(max-width:480px){.hero-btns{flex-direction:column}.btn-hp,.btn-hs{justify-content:center}.hero h1{font-size:2.4rem}}
   </style>
 </head>
 <body>
 <canvas id="bg-canvas"></canvas>
+
+{% if platform_announcements %}
+<div id="announce-strip" style="background:linear-gradient(90deg,var(--teal-dk),var(--teal));color:#fff;padding:0;overflow:hidden;position:relative;z-index:100">
+  <div style="display:flex;align-items:stretch">
+    <div style="background:var(--gold);color:var(--deep);padding:10px 18px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <i class="fas fa-bullhorn"></i> Notice
+    </div>
+    <div style="overflow:hidden;flex:1;display:flex;align-items:center">
+      <div id="announce-ticker" style="display:flex;gap:0;white-space:nowrap;animation:ticker 28s linear infinite">
+        {% for ann in platform_announcements %}
+        <span style="padding:10px 40px;font-size:13px;font-weight:500;border-right:1px solid rgba(255,255,255,.15)">
+          <i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;opacity:.6"></i>{{ ann.title }}{% if ann.message %} — <span style="opacity:.8">{{ ann.message|truncatechars:80 }}</span>{% endif %}
+        </span>
+        {% endfor %}
+        {% for ann in platform_announcements %}
+        <span style="padding:10px 40px;font-size:13px;font-weight:500;border-right:1px solid rgba(255,255,255,.15)">
+          <i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;opacity:.6"></i>{{ ann.title }}{% if ann.message %} — <span style="opacity:.8">{{ ann.message|truncatechars:80 }}</span>{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    <button onclick="document.getElementById('announce-strip').style.display='none'" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:0 14px;cursor:pointer;font-size:14px;flex-shrink:0" title="Dismiss">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+</div>
+<style>
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+#announce-ticker:hover{animation-play-state:paused}
+</style>
+{% endif %}
 
 <!-- NAV -->
 <nav class="nav" id="nav">
@@ -203,7 +237,12 @@
     <a href="#how-it-works">How It Works</a>
   </div>
   <div class="nav-acts">
-    <a href="/login/" class="btn-ghost">Sign In</a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'dashboard' %}" class="btn-teal"><i class="fas fa-th-large" style="font-size:11px"></i> My Dashboard</a>
+    {% else %}
+    <a href="{% url 'helpdesk' %}" class="btn-ghost"><i class="fas fa-headset" style="font-size:11px"></i> Help</a>
+    <a href="{% url 'login' %}" class="btn-teal"><i class="fas fa-sign-in-alt" style="font-size:11px"></i> Sign In</a>
+    {% endif %}
   </div>
   <div class="ham" id="ham" onclick="toggleMob()"><span></span><span></span><span></span></div>
 </nav>
@@ -214,7 +253,13 @@
   <a href="#features">Features</a>
   <a href="#roles">Who Uses It</a>
   <a href="#how-it-works">How It Works</a>
-  <a href="/login/">Sign In</a>
+  {% if user.is_authenticated %}
+  <a href="{% url 'dashboard' %}" class="mob-p">Go to Dashboard</a>
+  {% else %}
+  <a href="{% url 'login' %}">Sign In</a>
+  <a href="{% url 'helpdesk' %}">Help Desk</a>
+  <a href="{% url 'register' %}" class="mob-p">Request Access</a>
+  {% endif %}
 </div>
 
 <!-- HERO -->
@@ -225,8 +270,11 @@
     <h1>Your Campus.<br><span class="ht">Smarter.</span> <span class="hg">Simpler.</span></h1>
     <p class="hero-desc">A complete digital platform for managing academics — attendance, results, timetables, fees, assignments, and communication, all in one secure place.</p>
     <div class="hero-btns">
-      <a href="/login/" class="btn-hp"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
+      <a href="{% url 'login' %}" class="btn-hp"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
       <a href="#features" class="btn-hs"><i class="fas fa-compass"></i> See What It Does</a>
+    </div>
+    <div style="margin-top:18px;font-size:13px;color:var(--muted)">
+      New student? <a href="{% url 'helpdesk' %}" style="color:var(--teal);font-weight:600">Contact Help Desk</a> to request access.
     </div>
   </div>
 
@@ -269,10 +317,10 @@
 
 <!-- STATS BAR -->
 <div class="sbar">
-  <div class="sbar-item reveal"><div class="n" data-target="1200">0</div><div class="l">Students Managed</div></div>
-  <div class="sbar-item reveal"><div class="n" data-target="80">0</div><div class="l">Faculty Members</div></div>
-  <div class="sbar-item reveal"><div class="n" data-target="12">0</div><div class="l">Departments</div></div>
-  <div class="sbar-item reveal"><div class="n" data-target="99">0</div><div class="l">% Uptime</div></div>
+  <div class="sbar-item reveal"><div class="n" data-target="{{ stats.colleges }}">0</div><div class="l">Active Colleges</div></div>
+  <div class="sbar-item reveal"><div class="n" data-target="{{ stats.students }}">0</div><div class="l">Students Enrolled</div></div>
+  <div class="sbar-item reveal"><div class="n" data-target="{{ stats.faculty }}">0</div><div class="l">Faculty Members</div></div>
+  <div class="sbar-item reveal"><div class="n" data-target="{{ stats.departments }}">0</div><div class="l">Departments</div></div>
 </div>
 
 <!-- FEATURES -->
@@ -336,16 +384,16 @@
   <div class="role-grid">
     <div class="rcard reveal">
       <div class="ricon bg-teal"><i class="fas fa-user-shield"></i></div>
-      <h3>Super Admin</h3>
-      <p>Creates colleges and college-admin entities, and oversees the platform globally.</p>
+      <h3>Admin</h3>
+      <p>Full control — users, departments, settings, reports, and system configuration.</p>
+    </div>
+    <div class="rcard reveal">
+      <div class="ricon" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-user-tie"></i></div>
+      <h3>Principal</h3>
+      <p>College-wide overview — departments, faculty, students, attendance health, and fee summaries.</p>
     </div>
     <div class="rcard reveal">
       <div class="ricon bg-gold"><i class="fas fa-building-columns"></i></div>
-      <h3>College Admin</h3>
-      <p>Manages students, staff, departments, fees, subjects, exams, and notices for one college.</p>
-    </div>
-    <div class="rcard reveal">
-      <div class="ricon bg-teal"><i class="fas fa-building-columns"></i></div>
       <h3>HOD</h3>
       <p>Department oversight, approval workflows, and faculty performance monitoring.</p>
     </div>
@@ -389,8 +437,8 @@
     <h2>Ready to <span>sign in?</span></h2>
     <p>Access your attendance, results, timetable, assignments, and fee details — all in one place.</p>
     <div class="cta-btns">
-      <a href="/login/" class="btn-cta-g"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
-      <a href="/helpdesk/" class="btn-cta-w"><i class="fas fa-headset"></i> Request Access Help</a>
+      <a href="{% url 'login' %}" class="btn-cta-g"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
+      <a href="{% url 'helpdesk' %}" class="btn-cta-w"><i class="fas fa-headset"></i> Contact Help Desk</a>
     </div>
   </div>
 </div>
@@ -419,14 +467,14 @@
     </div>
     <div class="fcol">
       <h4>Portal Access</h4>
-      <a href="/login/">Student Login</a>
-      <a href="/login/">Faculty Login</a>
-      <a href="/helpdesk/">Request Access Help</a>
+      <a href="{% url 'login' %}">Student Login</a>
+      <a href="{% url 'login' %}">Faculty Login</a>
+      <a href="{% url 'login' %}">HOD / Principal Login</a>
     </div>
     <div class="fcol">
       <h4>Support</h4>
-      <a href="#">Documentation</a>
-      <a href="/helpdesk/">IT Support</a>
+      <a href="{% url 'helpdesk' %}">Help Desk</a>
+      <a href="{% url 'password_reset' %}">Reset Password</a>
       <a href="#">Privacy Policy</a>
       <a href="#">Terms of Use</a>
     </div>
@@ -443,7 +491,7 @@
 (function(){
   const c=document.getElementById('bg-canvas'),ctx=c.getContext('2d');
   let W,H,pts=[];
-  const COLS=['#0d7377','#14a085','#e6a817','#071e26','#095c60'],N=65;
+  const COLS=['#0d7377','#14a085','#e6a817','#071e26','#095c60'],N=innerWidth<768?25:65;
   let mx=null,my=null;
   function resize(){W=c.width=innerWidth;H=c.height=innerHeight}
   addEventListener('resize',resize);resize();
@@ -514,12 +562,13 @@ document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
 
 // ── COUNTERS ──
 function runCounter(el){
-  const t=+el.dataset.target,isP=t===99;
+  const t=+el.dataset.target;
+  if(!t){el.textContent='0';return;}
   const step=t/(1600/16);let c=0;
   const iv=setInterval(()=>{
     c+=step;
-    if(c>=t){el.textContent=t+(isP?'%':'+');clearInterval(iv)}
-    else el.textContent=Math.floor(c)+(isP?'%':'+');
+    if(c>=t){el.textContent=t+'+';clearInterval(iv)}
+    else el.textContent=Math.floor(c)+'+';
   },16);
 }
 const co=new IntersectionObserver((entries)=>{

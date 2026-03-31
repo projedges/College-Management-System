@@ -1,39 +1,30 @@
 {% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Student Dashboard - EduTrack{% endblock %}
 {% block role_label %}Student{% endblock %}
+{% block role_label_foot %}Student{% endblock %}
 {% block page_title %}My Dashboard{% endblock %}
-{% block page_sub %}{{ student.roll_number }} · {{ student.department.name }} · Semester {{ student.current_semester }}{% if college %} · {{ college.name }}{% endif %}{% endblock %}
+{% block page_sub %}<span style="color:var(--teal); font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep); font-weight:600">{{ student.roll_number }}</span> · Sem {{ student.current_semester }} · {{ student.department.code }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#whats-new" data-section-target="whats-new" class="sb-link"><i class="fas fa-bolt"></i> What's New{% if new_assignments or new_quizzes %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">!</span>{% endif %}</a>
 <a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
 <a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
 <a href="#results" data-section-target="results" class="sb-link"><i class="fas fa-chart-bar"></i> Results</a>
+<a href="#academic-track" data-section-target="academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academic Track</a>
+<a href="#course-structure" data-section-target="course-structure" class="sb-link"><i class="fas fa-list-ol"></i> Course Structure</a>
+<a href="#internals" data-section-target="internals" class="sb-link"><i class="fas fa-table-list"></i> Internal Marks</a>
+<a href="#quizzes" data-section-target="quizzes" class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
 <a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
 <a href="#assignments" data-section-target="assignments" class="sb-link"><i class="fas fa-file-alt"></i> Assignments</a>
 <a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#notifications" data-section-target="notifications" class="sb-link"><i class="fas fa-inbox"></i> Notifications{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
 <a href="#support" data-section-target="support" class="sb-link"><i class="fas fa-headset"></i> Support</a>
-{% endblock %}
-
-{% block quick_nav %}
-<div class="quick-nav">
-  <a href="#profile" data-section-target="profile" class="quick-chip"><i class="fas fa-id-card"></i> Profile</a>
-  <a href="#attendance" data-section-target="attendance" class="quick-chip"><i class="fas fa-calendar-check"></i> Attendance</a>
-  <a href="#results" data-section-target="results" class="quick-chip"><i class="fas fa-chart-bar"></i> Results</a>
-  <a href="#timetable" data-section-target="timetable" class="quick-chip"><i class="fas fa-clock"></i> Timetable</a>
-  <a href="#fees" data-section-target="fees" class="quick-chip"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
-  <a href="#assignments" data-section-target="assignments" class="quick-chip"><i class="fas fa-file-alt"></i> Assignments</a>
-  <a href="#notices" data-section-target="notices" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
-  <a href="#support" data-section-target="support" class="quick-chip"><i class="fas fa-headset"></i> Support</a>
-</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
-  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-  .d-title i{color:var(--teal)}
   .att-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6}
   .att-row:last-child{border-bottom:none}
   .att-subj{flex:1;font-size:13px;font-weight:600;color:var(--deep)}
@@ -42,8 +33,6 @@
   .att-bar-fill{height:100%;border-radius:99px;transition:width .5s}
   .att-pct{font-size:13px;font-weight:700;width:42px;text-align:right}
   .att-count{font-size:11px;color:var(--muted);width:60px;text-align:right}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media(max-width:860px){.two-col{grid-template-columns:1fr}}
   .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
   .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
   .tt-subj{font-size:13px;font-weight:600;color:var(--deep)}
@@ -59,12 +48,14 @@
   .mini-btn-teal{background:var(--teal);color:#fff}
   .mini-btn-deep{background:var(--deep);color:#fff}
   .mini-btn-gold{background:var(--gold);color:#fff}
-  .empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
-  .empty i{font-size:26px;display:block;margin-bottom:8px;color:#d1d5db}
   .fee-status-paid{background:#d1fae5;color:#065f46}
   .fee-status-pending{background:#fee2e2;color:#991b1b}
   .fee-status-partial{background:#fef3c7;color:#92400e}
-  .dbadge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  @media(max-width:480px){
+    .att-row{flex-wrap:wrap}
+    .att-bar-bg{flex:none;width:100%;order:3}
+    .att-count{order:4}
+  }
 </style>
 {% endblock %}
 
@@ -151,23 +142,52 @@
   <div class="d-card">
     <div class="d-title"><i class="fas fa-id-card"></i> Student Profile</div>
     <div class="section-meta">Keep your personal, academic, and emergency details updated.</div>
-    <div class="action-row">
-      <a href="{% url 'student_profile_edit' %}" class="mini-btn mini-btn-teal"><i class="fas fa-pen"></i> Edit Profile</a>
-      <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Download Result Report</a>
+
+    <!-- Photo + identity header -->
+    <div style="display:flex;align-items:center;gap:20px;padding:16px 0 20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+      <div style="position:relative;flex-shrink:0">
+        {% if profile and profile.profile_photo %}
+          <img src="{{ profile.profile_photo.url }}" alt="Profile Photo"
+               style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--teal);box-shadow:0 4px 14px rgba(13,115,119,.2)"/>
+        {% else %}
+          <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.2);box-shadow:0 4px 14px rgba(13,115,119,.15)">
+            {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+          </div>
+        {% endif %}
+        <a href="{% url 'student_profile_edit' %}" title="Change photo"
+           style="position:absolute;bottom:2px;right:2px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 6px rgba(0,0,0,.2);text-decoration:none">
+          <i class="fas fa-camera"></i>
+        </a>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ student.roll_number }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ student.department.name }} · Semester {{ student.current_semester }}</div>
+        {% if profile and profile.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ profile.phone_number }}</div>{% endif %}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="{% url 'student_profile_edit' %}" class="mini-btn mini-btn-teal"><i class="fas fa-pen"></i> Edit Profile</a>
+        <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Result PDF</a>
+      </div>
     </div>
+
     <div class="two-col">
       <div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Name</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Department</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ student.department.name }}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Semester</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ student.current_semester }}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile %}{{ profile.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Personal</div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Email</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ request.user.email|default:"Not added" }}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Date of Birth</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Gender</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</div></div></div>
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Blood Group</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Nationality</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.nationality %}{{ profile.nationality }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Aadhaar</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} ****{% else %}Not added{% endif %}</div></div></div>
       </div>
       <div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Contact & Family</div>
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Address</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent / Guardian</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}){% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent and parent.phone_number %}{{ parent.phone_number }}{% else %}Not added{% endif %}</div></div></div>
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} · {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Aadhaar</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile %}{{ profile.aadhaar_number|slice:":4" }}********{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Category</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.category %}{{ profile.category }}{% else %}Not added{% endif %}</div></div></div>
       </div>
     </div>
   </div>
@@ -317,9 +337,7 @@
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.assignment.title }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }} · Submitted {{ sub.submitted_at|date:"d M Y" }}</div>
         </div>
-        <span class="deadline-badge" style="background:{% if sub.marks is not None %}rgba(16,185,129,.1){% else %}rgba(13,115,119,.08){% endif %};color:{% if sub.marks is not None %}var(--green){% else %}var(--teal){% endif %}">
-          {% if sub.marks is not None %}Scored {{ sub.marks }}{% else %}Under Review{% endif %}
-        </span>
+        <span class="deadline-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">Under Review</span>
       </div>
       {% endfor %}
     </div>
@@ -327,6 +345,24 @@
     <div class="empty"><i class="fas fa-file-circle-check"></i>No submissions yet.</div>
     {% endif %}
   </div>
+
+  {% if evaluated_assignments %}
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-star"></i> Graded Assignments</div>
+    <div class="section-meta">Results published by faculty.</div>
+    <div class="content-scroll">
+      {% for sub in evaluated_assignments %}
+      <div class="asgn-row">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.assignment.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }}</div>
+        </div>
+        <span class="deadline-badge" style="background:rgba(16,185,129,.1);color:var(--green);margin-left:auto">Scored {{ sub.marks }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </section>
 
 <section data-dashboard-pane="fees" class="dashboard-pane">
@@ -408,6 +444,28 @@
   </div>
 </section>
 
+<section data-dashboard-pane="notifications" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-inbox"></i> Notifications</div>
+    <div class="section-meta">System alerts, attendance warnings, and fee reminders.</div>
+    {% if notifications %}
+    <div class="content-scroll">
+      {% for notif in notifications %}
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:5px"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--deep);line-height:1.5">{{ notif.message }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ notif.created_at|date:"d M Y H:i" }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-check-circle"></i>No new notifications.</div>
+    {% endif %}
+  </div>
+</section>
+
 <section data-dashboard-pane="support" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-headset"></i> Help Desk</div>
@@ -420,4 +478,224 @@
     </div>
   </div>
 </section>
+
+<!-- WHAT'S NEW -->
+<section data-dashboard-pane="whats-new" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-bolt" style="color:var(--gold)"></i> What's New</div>
+    <div class="section-meta">Assignments, quizzes, and notices from the last 7 days.</div>
+
+    {% if new_assignments %}
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:8px"><i class="fas fa-file-alt"></i> New Assignments</div>
+      {% for a in new_assignments %}
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }} · Due {{ a.deadline|date:"d M Y" }}</div>
+        </div>
+        <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="padding:5px 12px;font-size:11px"><i class="fas fa-upload"></i> Submit</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if new_quizzes %}
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#6366f1;margin-bottom:8px"><i class="fas fa-circle-question"></i> Active Quizzes</div>
+      {% for q in new_quizzes %}
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ q.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} · {{ q.duration_minutes }} min · {{ q.total_marks }} marks</div>
+        </div>
+        {% if q.pk in attempted_quiz_ids %}
+        <span style="font-size:11px;font-weight:600;color:var(--green);background:rgba(16,185,129,.1);padding:3px 9px;border-radius:99px"><i class="fas fa-check"></i> Done</span>
+        {% else %}
+        <a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;padding:5px 12px;font-size:11px"><i class="fas fa-play"></i> Start</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if new_announcements %}
+    <div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px"><i class="fas fa-bell"></i> Recent Notices</div>
+      {% for ann in new_announcements %}
+      <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not new_assignments and not new_quizzes and not new_announcements %}
+    <div class="empty"><i class="fas fa-check-circle"></i>All caught up — nothing new in the last 7 days.</div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ACADEMIC TRACK -->
+<section data-dashboard-pane="academic-track" class="dashboard-pane">
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-chart-line"></i> CGPA Trend</div>
+      {% if semester_results %}
+      <div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:10px 0;margin-bottom:8px">
+        {% for r in semester_results %}
+        {% widthratio r.gpa 10 100 as bar_h %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--teal)">{{ r.gpa }}</div>
+          <div style="width:100%;background:{% if r.gpa >= 8 %}var(--teal){% elif r.gpa >= 6 %}var(--gold){% else %}var(--red){% endif %};border-radius:4px 4px 0 0;height:{{ bar_h }}px;min-height:8px;transition:height .5s"></div>
+          <div style="font-size:10px;color:var(--muted)">S{{ r.semester }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="font-size:12px;color:var(--muted);text-align:center">Cumulative GPA: <strong style="color:var(--teal)">{{ cgpa }}</strong></div>
+      {% else %}
+      <div class="empty"><i class="fas fa-chart-line"></i>No results published yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-calendar-check"></i> Attendance Health</div>
+      {% if attendance_data %}
+      {% for a in attendance_data %}
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f3f4f6">
+        <div style="flex:1;font-size:12px;font-weight:600;color:var(--deep)">{{ a.subject.code }}</div>
+        <div style="width:80px;background:#f3f4f6;border-radius:99px;height:6px">
+          <div style="height:6px;border-radius:99px;width:{% if a.pct %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;width:38px;text-align:right;color:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{% if a.pct %}{{ a.pct }}%{% else %}—{% endif %}</div>
+        {% if a.is_low %}<i class="fas fa-triangle-exclamation" style="color:var(--red);font-size:11px"></i>{% endif %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-xmark"></i>No data yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-graduation-cap"></i> Academic Standing</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px">
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ cgpa|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">CGPA</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if overall_attendance and overall_attendance >= 75 %}var(--teal){% else %}var(--red){% endif %}">{{ overall_attendance|default:"—" }}{% if overall_attendance %}%{% endif %}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Attendance</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">{{ student.current_semester }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Current Semester</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if fee and fee.status == 'PAID' %}var(--green){% else %}var(--red){% endif %}">{{ fee.get_status_display|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Fee Status</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COURSE STRUCTURE -->
+<section data-dashboard-pane="course-structure" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-list-ol"></i> Semester {{ student.current_semester }} — Course Structure</div>
+    <div class="section-meta">{{ student.department.name }} · All subjects this semester</div>
+    {% if course_subjects %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead>
+          <tr><th>#</th><th>Subject</th><th>Code</th><th>Credits</th><th>Faculty</th></tr>
+        </thead>
+        <tbody>
+          {% for subj in course_subjects %}
+          <tr>
+            <td style="color:var(--muted)">{{ forloop.counter }}</td>
+            <td style="font-weight:600;color:var(--deep)">{{ subj.name }}</td>
+            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ subj.code }}</span></td>
+            <td style="text-align:center;font-weight:600">{{ subj.weekly_hours }}</td>
+            <td style="color:var(--muted);font-size:12px">
+              {% for fs in subj.facultysubject_set.all %}{{ fs.faculty.user.get_full_name|default:fs.faculty.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-list-ol"></i>No subjects found for this semester.</div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- INTERNAL MARKS -->
+<section data-dashboard-pane="internals" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-table-list"></i> Internal Marks — Semester {{ student.current_semester }}</div>
+    <div class="section-meta">IA1 (30) + IA2 (30) + Assignment (20) + Attendance (5) = 85 total</div>
+    {% if internal_data %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead>
+          <tr><th>Subject</th><th>IA 1 /30</th><th>IA 2 /30</th><th>Assignment /20</th><th>Attendance /5</th><th>Total /85</th></tr>
+        </thead>
+        <tbody>
+          {% for row in internal_data %}
+          <tr>
+            <td>
+              <div style="font-weight:600;color:var(--deep)">{{ row.subject.name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ row.subject.code }}</div>
+            </td>
+            {% if row.im %}
+            <td style="text-align:center;font-weight:600">{% if row.im.ia1 is not None %}{{ row.im.ia1|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.ia2 is not None %}{{ row.im.ia2|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--teal)">{{ row.im.total|floatformat:1 }}</td>
+            {% else %}
+            <td colspan="5" style="text-align:center;color:var(--muted);font-size:12px">Not entered yet</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-table-list"></i>No subjects found for this semester.</div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- QUIZZES -->
+<section data-dashboard-pane="quizzes" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-circle-question"></i> Active Quizzes</div>
+    <div class="section-meta">Quizzes assigned to your subjects by faculty.</div>
+    {% if active_quizzes %}
+    {% for q in active_quizzes %}
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6">
+      <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ q.title }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} · {{ q.duration_minutes }} min · {{ q.total_marks }} marks</div>
+        {% if q.description %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ q.description|truncatechars:80 }}</div>{% endif %}
+      </div>
+      {% if q.pk in attempted_quiz_ids %}
+      <span style="font-size:12px;font-weight:700;color:var(--green);background:rgba(16,185,129,.1);padding:5px 12px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> Submitted</span>
+      {% else %}
+      <a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;white-space:nowrap"><i class="fas fa-play"></i> Start Quiz</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty"><i class="fas fa-circle-question"></i>No active quizzes right now.</div>
+    {% endif %}
+  </div>
+</section>
+
 {% endblock %}

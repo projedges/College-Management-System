@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <style>
-  body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);min-height:100vh;padding:40px 20px;display:flex;justify-content:center;align-items:flex-start}
   .support-wrap{width:100%;max-width:680px}
   .support-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:34px;box-shadow:0 8px 40px rgba(7,30,38,.12)}
   .support-card h2{font-family:'Outfit',sans-serif;font-size:24px;font-weight:800;color:var(--deep);margin-bottom:6px}
@@ -55,12 +55,19 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>College</label>
-          <select name="college">
-            {% for college in colleges %}
-            <option value="{{ college.pk }}" {% if initial_college and initial_college.pk == college.pk %}selected{% endif %}>{{ college.name }}</option>
-            {% endfor %}
-          </select>
+          <label>College <span style="font-weight:400;color:var(--muted)">(optional — select if you know)</span></label>
+          {% if user.is_authenticated and initial_college %}
+            <input type="text" value="{{ initial_college.name }}" disabled style="background:var(--surface2);color:var(--muted);cursor:not-allowed"/>
+            <input type="hidden" name="college" value="{{ initial_college.pk }}"/>
+          {% else %}
+            <select name="college">
+              <option value="" selected>— Not sure / General inquiry —</option>
+              {% for college in colleges %}
+              <option value="{{ college.pk }}">{{ college.name }}</option>
+              {% endfor %}
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:5px"><i class="fas fa-info-circle"></i> If you're unsure which college to select, leave this blank — the platform team will route your ticket.</div>
+          {% endif %}
         </div>
         <div class="form-group">
           <label>Issue Type</label>
