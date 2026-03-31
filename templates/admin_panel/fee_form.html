@@ -35,14 +35,7 @@
         <input type="number" name="paid_amount" class="form-control" value="{{ fee.paid_amount|default:0 }}" step="0.01"/>
       </div>
     </div>
-    <div class="form-group">
-      <label>Status</label>
-      <select name="status" class="form-control">
-        <option value="PENDING" {% if fee.status == 'PENDING' or not fee %}selected{% endif %}>Pending</option>
-        <option value="PARTIAL" {% if fee.status == 'PARTIAL' %}selected{% endif %}>Partial</option>
-        <option value="PAID" {% if fee.status == 'PAID' %}selected{% endif %}>Paid</option>
-      </select>
-    </div>
+    <div class="form-hint" style="margin-bottom:16px">Status is calculated automatically from the amounts above.</div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Save</button>
       <a href="{% url 'admin_fees' %}" class="btn-cancel">Cancel</a>

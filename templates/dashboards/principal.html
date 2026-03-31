@@ -1,42 +1,26 @@
 {% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Principal Dashboard - EduTrack{% endblock %}
 {% block role_label %}Principal{% endblock %}
+{% block role_label_foot %}Principal{% endblock %}
 {% block page_title %}Principal Dashboard{% endblock %}
-{% block page_sub %}{{ college.name }} · Principal Workspace{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-user-shield"></i> My Profile</a>
 <a href="#departments" data-section-target="departments" class="sb-link"><i class="fas fa-building"></i> Departments</a>
 <a href="#faculty" data-section-target="faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="#students" data-section-target="students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="#hods" data-section-target="hods" class="sb-link"><i class="fas fa-building-columns"></i> HODs</a>
+<a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fee Overview</a>
+<a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance Health</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
-{% endblock %}
-
-{% block quick_nav %}
-<div class="quick-nav">
-  <a href="#departments" data-section-target="departments" class="quick-chip"><i class="fas fa-building"></i> Departments</a>
-  <a href="#faculty" data-section-target="faculty" class="quick-chip"><i class="fas fa-users"></i> Faculty</a>
-  <a href="#students" data-section-target="students" class="quick-chip"><i class="fas fa-user-graduate"></i> Students</a>
-  <a href="#hods" data-section-target="hods" class="quick-chip"><i class="fas fa-building-columns"></i> HODs</a>
-  <a href="#notices" data-section-target="notices" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
-</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
-  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-  .d-title i{color:var(--teal)}
-  .dtable{width:100%;border-collapse:collapse;font-size:13px}
-  .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
-  .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
-  .dtable tr:last-child td{border-bottom:none}
-  .dtable tbody tr:hover td{background:#f9fafb}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media(max-width:860px){.two-col{grid-template-columns:1fr}}
-  .empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
-  .empty i{font-size:26px;display:block;margin-bottom:8px;color:#d1d5db}
+  .att-bar-bg{background:#f3f4f6;border-radius:99px;height:7px;overflow:hidden;min-width:80px}
+  .att-bar-fill{height:100%;border-radius:99px}
 </style>
 {% endblock %}
 
@@ -45,47 +29,50 @@
   <div class="stat-grid">
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building"></i></div>
-      <div class="s-val">{{ total_departments }}</div>
-      <div class="s-lbl">Departments</div>
+      <div class="s-val">{{ total_departments }}</div><div class="s-lbl">Departments</div>
     </div>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-chalkboard-teacher"></i></div>
-      <div class="s-val">{{ total_faculty }}</div>
-      <div class="s-lbl">Faculty</div>
+      <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Faculty</div>
     </div>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-user-graduate"></i></div>
-      <div class="s-val">{{ total_students }}</div>
-      <div class="s-lbl">Students</div>
+      <div class="s-val">{{ total_students }}</div><div class="s-lbl">Students</div>
     </div>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(99,102,241,.09);color:#6366f1"><i class="fas fa-building-columns"></i></div>
-      <div class="s-val">{{ total_hods }}</div>
-      <div class="s-lbl">HODs</div>
+      <div class="s-val">{{ total_hods }}</div><div class="s-lbl">HODs</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-indian-rupee-sign"></i></div>
+      <div class="s-val">Rs {{ total_collected|floatformat:0 }}</div><div class="s-lbl">Fees Collected</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-hourglass-half"></i></div>
+      <div class="s-val">{{ pending_fee_count }}</div><div class="s-lbl">Fee Follow-ups</div>
     </div>
   </div>
 
   <div class="two-col">
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-user-graduate"></i> Recent Students</div>
-      {% if recent_students %}
-      <div class="table-scroll content-scroll">
+      <div class="d-title"><i class="fas fa-building"></i> Department Overview</div>
+      {% if departments %}
+      <div class="table-scroll content-scroll soft">
         <table class="dtable">
-          <thead><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Semester</th></tr></thead>
+          <thead><tr><th>Department</th><th>Students</th><th>Faculty</th></tr></thead>
           <tbody>
-            {% for s in recent_students %}
+            {% for d in departments %}
             <tr>
-              <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
-              <td>{{ s.user.get_full_name|default:s.user.username }}</td>
-              <td>{{ s.department.code }}</td>
-              <td>{{ s.current_semester }}</td>
+              <td><div style="font-weight:600;color:var(--deep)">{{ d.name }}</div><div style="font-size:11px;color:var(--muted)">{{ d.code }}</div></td>
+              <td style="text-align:center">{{ d.student_count }}</td>
+              <td style="text-align:center">{{ d.faculty_count }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% else %}
-      <div class="empty"><i class="fas fa-user-graduate"></i>No students yet.</div>
+      <div class="empty"><i class="fas fa-building"></i>No departments.</div>
       {% endif %}
     </div>
 
@@ -107,16 +94,46 @@
   </div>
 </section>
 
+<section data-dashboard-pane="profile" class="dashboard-pane">
+  <div class="d-card" style="max-width:640px">
+    <div style="display:flex;align-items:center;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.2);box-shadow:0 4px 14px rgba(13,115,119,.15);flex-shrink:0">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ principal.employee_id }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Principal · {{ college.name }}</div>
+        {% if principal.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ principal.phone_number }}</div>{% endif %}
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Professional Details</div>
+    <div class="summary-list">
+      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
+      <div class="summary-item"><span>Qualification</span><strong>{{ principal.qualification }}</strong></div>
+      <div class="summary-item"><span>Experience</span><strong>{{ principal.experience_years }} years</strong></div>
+      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
+      <div class="summary-item"><span>Username</span><strong style="color:var(--muted)">{{ request.user.username }}</strong></div>
+    </div>
+  </div>
+</section>
+
 <section data-dashboard-pane="departments" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-building"></i> Departments</div>
+    <div class="d-title"><i class="fas fa-building"></i> All Departments</div>
     {% if departments %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Code</th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Students</th><th>Faculty</th><th>Est. Year</th></tr></thead>
         <tbody>
           {% for d in departments %}
-          <tr><td>{{ d.name }}</td><td>{{ d.code }}</td></tr>
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
+            <td style="color:var(--teal);font-weight:600">{{ d.code }}</td>
+            <td style="text-align:center">{{ d.student_count }}</td>
+            <td style="text-align:center">{{ d.faculty_count }}</td>
+            <td style="color:var(--muted)">{{ d.established_year|default:"-" }}</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -133,13 +150,14 @@
     {% if faculty_list %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Department</th><th>Designation</th></tr></thead>
+        <thead><tr><th>Name</th><th>Department</th><th>Designation</th><th>Experience</th></tr></thead>
         <tbody>
           {% for f in faculty_list %}
           <tr>
-            <td>{{ f.user.get_full_name|default:f.user.username }}</td>
+            <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
             <td>{{ f.department.code }}</td>
-            <td>{{ f.designation }}</td>
+            <td style="color:var(--muted)">{{ f.designation }}</td>
+            <td style="color:var(--muted)">{{ f.experience_years }} yrs</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -157,14 +175,15 @@
     {% if students_list %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Semester</th></tr></thead>
+        <thead><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Semester</th><th>Status</th></tr></thead>
         <tbody>
           {% for s in students_list %}
           <tr>
             <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
             <td>{{ s.user.get_full_name|default:s.user.username }}</td>
             <td>{{ s.department.code }}</td>
-            <td>{{ s.current_semester }}</td>
+            <td style="text-align:center">{{ s.current_semester }}</td>
+            <td><span style="background:{% if s.status == 'ACTIVE' %}#d1fae5{% elif s.status == 'GRADUATED' %}rgba(13,115,119,.1){% else %}#fee2e2{% endif %};color:{% if s.status == 'ACTIVE' %}#065f46{% elif s.status == 'GRADUATED' %}var(--teal){% else %}#991b1b{% endif %};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">{{ s.status }}</span></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -178,17 +197,18 @@
 
 <section data-dashboard-pane="hods" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-building-columns"></i> Heads Of Department</div>
+    <div class="d-title"><i class="fas fa-building-columns"></i> Heads of Department</div>
     {% if hod_list %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Department</th><th>Employee ID</th></tr></thead>
+        <thead><tr><th>Name</th><th>Department</th><th>Employee ID</th><th>Qualification</th></tr></thead>
         <tbody>
           {% for h in hod_list %}
           <tr>
-            <td>{{ h.user.get_full_name|default:h.user.username }}</td>
+            <td style="font-weight:600;color:var(--deep)">{{ h.user.get_full_name|default:h.user.username }}</td>
             <td>{{ h.department.code }}</td>
-            <td>{{ h.employee_id }}</td>
+            <td style="color:var(--teal);font-weight:600">{{ h.employee_id }}</td>
+            <td style="color:var(--muted)">{{ h.qualification }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -200,15 +220,64 @@
   </div>
 </section>
 
+<section data-dashboard-pane="fees" class="dashboard-pane">
+  <div class="stat-grid" style="margin-bottom:20px">
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-check-circle"></i></div>
+      <div class="s-val">Rs {{ total_collected|floatformat:0 }}</div><div class="s-lbl">Total Collected</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-hourglass-half"></i></div>
+      <div class="s-val">Rs {{ total_pending|floatformat:0 }}</div><div class="s-lbl">Total Pending</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-users"></i></div>
+      <div class="s-val">{{ pending_fee_count }}</div><div class="s-lbl">Students with Dues</div>
+    </div>
+  </div>
+  <div class="hint-box">Fee details are managed by the College Admin. This view shows a read-only summary for institutional oversight.</div>
+</section>
+
+<section data-dashboard-pane="attendance" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Health by Department</div>
+    <div class="section-meta">Average attendance across all subjects per department.</div>
+    {% if dept_attendance %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Department</th><th>Records</th><th>Avg Attendance</th></tr></thead>
+        <tbody>
+          {% for da in dept_attendance %}
+          <tr>
+            <td><div style="font-weight:600;color:var(--deep)">{{ da.dept.name }}</div><div style="font-size:11px;color:var(--muted)">{{ da.dept.code }}</div></td>
+            <td style="text-align:center;color:var(--muted)">{{ da.total }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="att-bar-bg" style="flex:1"><div class="att-bar-fill" style="width:{{ da.pct }}%;background:{% if da.pct >= 75 %}var(--teal){% elif da.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div></div>
+                <span style="font-size:12px;font-weight:700;color:{% if da.pct >= 75 %}var(--teal){% elif da.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ da.pct }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
+    {% endif %}
+  </div>
+</section>
+
 <section data-dashboard-pane="notices" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
     {% if announcements %}
     <div class="content-scroll">
       {% for ann in announcements %}
-      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
         <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">{{ ann.message|truncatechars:200 }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
       </div>
       {% endfor %}
     </div>

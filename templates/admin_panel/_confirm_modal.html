@@ -1,18 +1,17 @@
-<div id="confirmModal" class="confirm-modal" aria-hidden="true">
-  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+<div id="confirm-modal" class="confirm-modal" aria-hidden="true">
+  <div class="confirm-box" role="dialog" aria-modal="true">
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="width:44px;height:44px;border-radius:50%;background:rgba(239,68,68,.1);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <i class="fas fa-triangle-exclamation" style="font-size:18px"></i>
       </div>
       <div style="flex:1">
-        <h3 id="confirmTitle" style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);margin:0 0 8px">Confirm Action</h3>
-        <p id="confirmMessage" style="font-size:14px;line-height:1.6;color:var(--muted);margin:0">Are you sure you want to continue?</p>
+        <h3 style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep);margin:0 0 8px">Confirm Delete</h3>
+        <p id="confirm-msg" style="font-size:14px;line-height:1.6;color:var(--muted);margin:0">Are you sure you want to continue?</p>
       </div>
     </div>
-
     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px">
-      <button type="button" class="btn-cancel" onclick="closeConfirmModal()">Cancel</button>
-      <form id="confirmDeleteForm" method="POST" style="margin:0">
+      <button type="button" class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <form id="confirm-form" method="POST" style="margin:0">
         {% csrf_token %}
         <button type="submit" class="btn-del" style="padding:11px 18px">
           <i class="fas fa-trash"></i> Delete
@@ -21,40 +20,3 @@
     </div>
   </div>
 </div>
-
-<script>
-  function confirmDelete(actionUrl, message) {
-    var modal = document.getElementById('confirmModal');
-    var form = document.getElementById('confirmDeleteForm');
-    var text = document.getElementById('confirmMessage');
-    if (!modal || !form || !text) return;
-
-    form.action = actionUrl;
-    text.textContent = message || 'Are you sure you want to continue?';
-    modal.classList.add('show');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeConfirmModal() {
-    var modal = document.getElementById('confirmModal');
-    if (!modal) return;
-
-    modal.classList.remove('show');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  }
-
-  document.addEventListener('click', function (event) {
-    var modal = document.getElementById('confirmModal');
-    if (modal && event.target === modal) {
-      closeConfirmModal();
-    }
-  });
-
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      closeConfirmModal();
-    }
-  });
-</script>

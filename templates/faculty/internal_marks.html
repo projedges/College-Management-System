@@ -1,0 +1,83 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Internal Marks — {{ subject.name }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Internal Marks{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Semester {{ subject.semester }}{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+{% block extra_css %}
+<style>
+  .im-table{width:100%;border-collapse:collapse;font-size:13px}
+  .im-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);background:var(--surface2)}
+  .im-table td{padding:10px 12px;border-bottom:1px solid #f3f4f6}
+  .im-table tr:last-child td{border-bottom:none}
+  .im-input{width:72px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;text-align:center;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+  .im-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .total-cell{font-weight:700;color:var(--teal);font-size:14px}
+  .hint-row{background:rgba(13,115,119,.03);font-size:11px;color:var(--muted);padding:8px 12px;border-radius:var(--r);margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap}
+  .hint-row span{display:flex;align-items:center;gap:4px}
+</style>
+{% endblock %}
+{% block dashboard_content %}
+<div class="d-card">
+  <div class="hint-row">
+    <span><i class="fas fa-info-circle" style="color:var(--teal)"></i> IA1 / IA2: out of 30</span>
+    <span><i class="fas fa-file-alt" style="color:var(--gold)"></i> Assignment: out of 20</span>
+    <span><i class="fas fa-calendar-check" style="color:var(--green)"></i> Attendance: out of 5</span>
+    <span><i class="fas fa-sigma" style="color:var(--deep)"></i> Total: out of 85</span>
+  </div>
+  {% if rows %}
+  <form method="POST">
+    {% csrf_token %}
+    <div class="table-scroll">
+      <table class="im-table">
+        <thead>
+          <tr>
+            <th>Roll No.</th>
+            <th>Name</th>
+            <th>IA 1 <span style="font-weight:400">/30</span></th>
+            <th>IA 2 <span style="font-weight:400">/30</span></th>
+            <th>Assignment <span style="font-weight:400">/20</span></th>
+            <th>Attendance <span style="font-weight:400">/5</span></th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal)">{{ row.student.roll_number }}</td>
+            <td style="font-weight:500;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+            <td><input type="number" name="ia1_{{ row.student.id }}" class="im-input" min="0" max="30" step="0.5" placeholder="—" value="{% if row.im and row.im.ia1 is not None %}{{ row.im.ia1|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td><input type="number" name="ia2_{{ row.student.id }}" class="im-input" min="0" max="30" step="0.5" placeholder="—" value="{% if row.im and row.im.ia2 is not None %}{{ row.im.ia2|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td><input type="number" name="assignment_{{ row.student.id }}" class="im-input" min="0" max="20" step="0.5" placeholder="—" value="{% if row.im and row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td><input type="number" name="attendance_{{ row.student.id }}" class="im-input" min="0" max="5" step="0.5" placeholder="—" value="{% if row.im and row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td class="total-cell" id="total_{{ row.student.id }}">{% if row.im %}{{ row.im.total|floatformat:1 }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Internal Marks</button>
+      <a href="{% url 'faculty_dashboard' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty"><i class="fas fa-users"></i>No active students found for this subject.</div>
+  {% endif %}
+</div>
+<script>
+function calcTotal(sid){
+  var fields=['ia1','ia2','assignment','attendance'];
+  var total=0;
+  fields.forEach(function(f){
+    var el=document.querySelector('[name="'+f+'_'+sid+'"]');
+    var v=parseFloat(el?el.value:0);
+    if(!isNaN(v))total+=v;
+  });
+  var cell=document.getElementById('total_'+sid);
+  if(cell)cell.textContent=total>0?total.toFixed(1):'—';
+}
+</script>
+{% endblock %}

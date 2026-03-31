@@ -1,42 +1,25 @@
 {% extends 'dashboards/base_dashboard.html' %}
 {% block title %}HOD Dashboard - EduTrack{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
+{% block role_label_foot %}Head of Department{% endblock %}
 {% block page_title %}HOD Dashboard{% endblock %}
-{% block page_sub %}{{ dept.name }} ({{ dept.code }}){% if college %} · {{ college.name }}{% endif %}{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ dept.name }}</span>{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-user-tie"></i> My Profile</a>
 <a href="#faculty" data-section-target="faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
-<a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance Overview</a>
-<a href="#approvals" data-section-target="approvals" class="sb-link"><i class="fas fa-check-circle"></i> Approvals
-  {% if pending_approvals_count > 0 %}<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ pending_approvals_count }}</span>{% endif %}
-</a>
+<a href="#students" data-section-target="students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
+<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="#approvals" data-section-target="approvals" class="sb-link"><i class="fas fa-check-circle"></i> Approvals{% if pending_approvals_count > 0 %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ pending_approvals_count }}</span>{% endif %}</a>
 <a href="#history" data-section-target="history" class="sb-link"><i class="fas fa-history"></i> History</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
-{% endblock %}
-
-{% block quick_nav %}
-<div class="quick-nav">
-  <a href="#faculty" data-section-target="faculty" class="quick-chip"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
-  <a href="#attendance" data-section-target="attendance" class="quick-chip"><i class="fas fa-calendar-check"></i> Attendance</a>
-  <a href="#approvals" data-section-target="approvals" class="quick-chip"><i class="fas fa-check-circle"></i> Approvals</a>
-  <a href="#history" data-section-target="history" class="quick-chip"><i class="fas fa-history"></i> History</a>
-  <a href="#notices" data-section-target="notices" class="quick-chip"><i class="fas fa-bell"></i> Notices</a>
-</div>
+<a href="{% url 'hod_substitutions' %}" class="sb-link"><i class="fas fa-user-clock"></i> Substitutions</a>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
-  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-  .d-title i{color:var(--teal)}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media(max-width:860px){.two-col{grid-template-columns:1fr}}
-  .dtable{width:100%;border-collapse:collapse;font-size:13px}
-  .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
-  .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
-  .dtable tr:last-child td{border-bottom:none}
-  .dtable tbody tr:hover td{background:#f9fafb}
   .att-bar-bg{background:#f3f4f6;border-radius:99px;height:7px;overflow:hidden;min-width:80px}
   .att-bar-fill{height:100%;border-radius:99px}
   .approval-card{background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;border:1px solid var(--border)}
@@ -52,10 +35,9 @@
   .status-pending{background:#fef3c7;color:#92400e}
   .status-approved{background:#d1fae5;color:#065f46}
   .status-rejected{background:#fee2e2;color:#991b1b}
-  .empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
-  .empty i{font-size:26px;display:block;margin-bottom:8px;color:#d1d5db}
-  .hint-box{padding:14px 16px;border-radius:12px;background:linear-gradient(180deg,#f8fbfb 0%,#eef7f7 100%);border:1px solid rgba(13,115,119,.12);font-size:13px;color:var(--muted);line-height:1.6}
-  .mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
+  .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
+  .tt-room{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;background:var(--border);padding:2px 8px;border-radius:6px}
 </style>
 {% endblock %}
 
@@ -64,30 +46,40 @@
   <div class="stat-grid">
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-chalkboard-teacher"></i></div>
-      <div class="s-val">{{ total_faculty }}</div>
-      <div class="s-lbl">Faculty Members</div>
+      <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Faculty</div>
     </div>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-graduate"></i></div>
-      <div class="s-val">{{ total_students }}</div>
-      <div class="s-lbl">Students</div>
+      <div class="s-val">{{ total_students }}</div><div class="s-lbl">Students</div>
     </div>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-book"></i></div>
-      <div class="s-val">{{ total_subjects }}</div>
-      <div class="s-lbl">Subjects</div>
+      <div class="s-val">{{ total_subjects }}</div><div class="s-lbl">Subjects</div>
     </div>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-check-circle"></i></div>
-      <div class="s-val">{{ pending_approvals_count }}</div>
-      <div class="s-lbl">Pending Approvals</div>
+      <div class="s-val">{{ pending_approvals_count }}</div><div class="s-lbl">Pending Approvals</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-clock"></i></div>
+      <div class="s-val">{{ today_timetable|length }}</div><div class="s-lbl">Classes Today</div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="d-card" style="margin-bottom:20px">
+    <div class="d-title"><i class="fas fa-rocket"></i> Quick Actions</div>
+    <div class="qa-row">
+      <a href="#approvals" data-section-target="approvals" class="qa-btn qa-teal"><i class="fas fa-check-circle"></i> Review Approvals{% if pending_approvals_count > 0 %} ({{ pending_approvals_count }}){% endif %}</a>
+      <a href="{% url 'hod_substitutions' %}" class="qa-btn qa-deep"><i class="fas fa-user-clock"></i> Manage Substitutions</a>
+      <a href="#attendance" data-section-target="attendance" class="qa-btn" style="background:var(--surface2);color:var(--deep)"><i class="fas fa-calendar-check"></i> Attendance Overview</a>
+      <a href="#timetable" data-section-target="timetable" class="qa-btn" style="background:var(--surface2);color:var(--deep)"><i class="fas fa-clock"></i> Today's Timetable</a>
     </div>
   </div>
 
   <div class="two-col">
     <div class="d-card">
       <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty Snapshot</div>
-      <div class="section-meta">A quick look at the department team.</div>
       {% if faculty_list %}
       <div class="table-scroll content-scroll soft">
         <table class="dtable">
@@ -109,8 +101,7 @@
     </div>
 
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-check-circle"></i> Approval Snapshot</div>
-      <div class="section-meta">Requests submitted by faculty for leave, events, or department approvals appear here.</div>
+      <div class="d-title"><i class="fas fa-check-circle"></i> Pending Approvals</div>
       {% if pending_approvals %}
       <div class="content-scroll soft">
         {% for ap in pending_approvals %}
@@ -118,14 +109,41 @@
           <div class="approval-type">{{ ap.get_approval_type_display }}</div>
           <div class="approval-desc">{{ ap.description|truncatechars:100 }}</div>
           <div class="approval-meta">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} · {{ ap.created_at|date:"d M Y" }}</div>
+          <div class="approval-actions">
+            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
+            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="REJECTED"/><button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button></form>
+          </div>
         </div>
         {% endfor %}
       </div>
       {% else %}
-      <div class="hint-box">
-        No pending approvals right now. This area becomes active when faculty submit leave requests, event approvals, or course-related requests to the HOD.
-      </div>
+      <div class="hint-box">No pending approvals right now.</div>
       {% endif %}
+    </div>
+  </div>
+</section>
+
+<section data-dashboard-pane="profile" class="dashboard-pane">
+  <div class="d-card" style="max-width:640px">
+    <div style="display:flex;align-items:center;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.2);box-shadow:0 4px 14px rgba(13,115,119,.15);flex-shrink:0">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ hod.employee_id }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Head of Department · {{ dept.name }}</div>
+        {% if hod.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ hod.phone_number }}</div>{% endif %}
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Professional Details</div>
+    <div class="summary-list">
+      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
+      <div class="summary-item"><span>Qualification</span><strong>{{ hod.qualification }}</strong></div>
+      <div class="summary-item"><span>Experience</span><strong>{{ hod.experience_years }} years</strong></div>
+      <div class="summary-item"><span>Department</span><strong>{{ dept.name }} ({{ dept.code }})</strong></div>
+      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
+      <div class="summary-item"><span>Username</span><strong style="color:var(--muted)">{{ request.user.username }}</strong></div>
     </div>
   </div>
 </section>
@@ -133,17 +151,18 @@
 <section data-dashboard-pane="faculty" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty Members</div>
-    <div class="section-meta">Focused faculty view for larger departments.</div>
     {% if faculty_list %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Designation</th><th>Emp ID</th></tr></thead>
+        <thead><tr><th>Name</th><th>Designation</th><th>Qualification</th><th>Emp ID</th><th>Phone</th></tr></thead>
         <tbody>
           {% for f in faculty_list %}
           <tr>
             <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
             <td style="color:var(--muted)">{{ f.designation }}</td>
+            <td style="color:var(--muted)">{{ f.qualification }}</td>
             <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
+            <td style="color:var(--muted)">{{ f.phone_number }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -155,27 +174,73 @@
   </div>
 </section>
 
+<section data-dashboard-pane="students" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-graduate"></i> Active Students</div>
+    <div class="section-meta">All active students in {{ dept.name }}.</div>
+    {% if students_list %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for s in students_list %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
+            <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+            <td style="text-align:center">{{ s.current_semester }}</td>
+            <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">{{ s.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-user-graduate"></i>No active students.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="timetable" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-clock"></i> Today's Department Timetable</div>
+    <div class="section-meta">All classes scheduled for {{ dept.name }} today.</div>
+    {% if today_timetable %}
+    <div class="content-scroll">
+      {% for t in today_timetable %}
+      <div class="tt-row">
+        <div class="tt-time">{{ t.start_time|time:"H:i" }} – {{ t.end_time|time:"H:i" }}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
+        </div>
+        <div class="tt-room">{{ t.classroom.room_number }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
+    {% endif %}
+    <div style="margin-top:14px">
+      <a href="{% url 'hod_substitutions' %}" class="qa-btn qa-deep" style="font-size:12px"><i class="fas fa-user-clock"></i> Manage Substitutions</a>
+    </div>
+  </div>
+</section>
+
 <section data-dashboard-pane="attendance" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-calendar-check"></i> Subject Attendance Overview</div>
-    <div class="section-meta">Track subject health without the rest of the dashboard getting in the way.</div>
     {% if subject_attendance %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Subject</th><th>Sessions</th><th>Avg Attendance</th></tr></thead>
+        <thead><tr><th>Subject</th><th>Sessions</th><th>Attendance</th></tr></thead>
         <tbody>
           {% for sa in subject_attendance %}
           <tr>
-            <td>
-              <div style="font-weight:600;color:var(--deep)">{{ sa.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted)">{{ sa.subject.code }}</div>
-            </td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ sa.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ sa.subject.code }}</div></td>
             <td style="text-align:center">{{ sa.sessions }}</td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
-                <div class="att-bar-bg" style="flex:1">
-                  <div class="att-bar-fill" style="width:{{ sa.pct }}%;background:{% if sa.pct >= 75 %}var(--teal){% elif sa.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
-                </div>
+                <div class="att-bar-bg" style="flex:1"><div class="att-bar-fill" style="width:{{ sa.pct }}%;background:{% if sa.pct >= 75 %}var(--teal){% elif sa.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div></div>
                 <span style="font-size:12px;font-weight:700;color:{% if sa.pct >= 75 %}var(--teal){% elif sa.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ sa.pct }}%</span>
               </div>
             </td>
@@ -191,38 +256,19 @@
 </section>
 
 <section data-dashboard-pane="approvals" class="dashboard-pane">
-  <div class="mini-grid" style="margin-bottom:20px">
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-lightbulb"></i> How Approvals Work</div>
-      <div class="hint-box">
-        Faculty members are expected to create leave, event, or course requests. Once submitted, they appear here for HOD review. Right now the project has seeded examples in the database, but there is not yet a faculty-facing request submission screen.
-      </div>
-    </div>
+  <div class="two-col">
     <div class="d-card">
       <div class="d-title"><i class="fas fa-list-check"></i> Pending Queue</div>
-      <div class="section-meta">Approve or reject incoming requests here.</div>
       {% if pending_approvals %}
-      <div class="content-scroll soft">
+      <div class="content-scroll">
         {% for ap in pending_approvals %}
         <div class="approval-card">
           <div class="approval-type">{{ ap.get_approval_type_display }}</div>
           <div class="approval-desc">{{ ap.description|truncatechars:140 }}</div>
-          <div class="approval-meta">
-            <i class="fas fa-user" style="font-size:10px"></i> {{ ap.requested_by.get_full_name|default:ap.requested_by.username }}
-            &nbsp;·&nbsp;
-            <i class="fas fa-calendar" style="font-size:10px"></i> {{ ap.created_at|date:"d M Y" }}
-          </div>
+          <div class="approval-meta"><i class="fas fa-user" style="font-size:10px"></i> {{ ap.requested_by.get_full_name|default:ap.requested_by.username }} · {{ ap.created_at|date:"d M Y" }}</div>
           <div class="approval-actions">
-            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="APPROVED"/>
-              <button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button>
-            </form>
-            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="REJECTED"/>
-              <button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
-            </form>
+            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
+            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="REJECTED"/><button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button></form>
           </div>
         </div>
         {% endfor %}
@@ -231,17 +277,20 @@
       <div class="empty"><i class="fas fa-check-double"></i>No pending approvals.</div>
       {% endif %}
     </div>
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-lightbulb"></i> How Approvals Work</div>
+      <div class="hint-box">Faculty submit leave, event, or course requests. They appear here for HOD review. Use the Approve or Reject buttons to act on each request.</div>
+    </div>
   </div>
 </section>
 
 <section data-dashboard-pane="history" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-history"></i> Recent Approval History</div>
-    <div class="section-meta">Recent approval activity for this department.</div>
+    <div class="d-title"><i class="fas fa-history"></i> Approval History</div>
     {% if recent_approvals %}
     <div class="content-scroll">
       {% for ap in recent_approvals %}
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6;font-size:13px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6;gap:12px">
         <div>
           <span style="font-weight:600;color:var(--deep)">{{ ap.get_approval_type_display }}</span>
           <div style="font-size:11px;color:var(--muted)">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} · {{ ap.created_at|date:"d M Y" }}</div>
@@ -259,13 +308,13 @@
 <section data-dashboard-pane="notices" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
-    <div class="section-meta">Department-facing announcements in one focused view.</div>
     {% if announcements %}
     <div class="content-scroll">
       {% for ann in announcements %}
       <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
         <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ ann.created_at|date:"d M Y" }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
       </div>
       {% endfor %}
     </div>

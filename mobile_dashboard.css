@@ -1,0 +1,173 @@
+/* EduTrack Universal Mobile Dashboard Utilities */
+
+/* Smooth Pane Transitions */
+.dashboard-pane {
+    display: none;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dashboard-pane.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Interactive Lift for Cards */
+.d-card, .workflow-card, .focus-card, .stat-card, .pv-card {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease !important;
+}
+.d-card:hover, .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 45px rgba(7,30,38,0.1) !important;
+}
+
+.sb-link {
+    transition: background 0.2s ease, transform 0.1s active;
+}
+
+/* Sidebar Toggle Logic (Apply to .sidebar and .main-content) */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 100% !important;
+        height: auto !important;
+        position: relative !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border);
+    }
+    .main-content {
+        margin-left: 0 !important;
+        padding: 1rem !important;
+    }
+    .sidebar-nav {
+        display: flex;
+        overflow-x: auto;
+        padding: 12px;
+        gap: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .sidebar-nav a {
+        white-space: nowrap;
+        padding: 8px 16px !important;
+    }
+    .sb-link {
+        flex: 0 0 auto;
+        font-size: 13px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+    .sb-link.active {
+        background: var(--teal) !important;
+        color: #fff !important;
+    }
+}
+
+/* Grid & Card Stacking */
+@media (max-width: 768px) {
+    .stats-grid, .dashboard-grid, .role-grid, .feat-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    .card, .rcard, .fcard {
+        padding: 16px !important;
+    }
+}
+
+/* Responsive Data Tables */
+.table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 1.5rem;
+}
+
+/* Global Redundancy Suppressor */
+/* Programmatically hides horizontal navigation menus that mirror the sidebar in legacy templates */
+.quick-nav, .quick-chips, .dashboard-nav-chips, .nav-chips, .action-chips, .mobile-quick-nav, .dashboard-nav-bar {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Enhanced Stat Cards */
+.stat-card {
+    border-radius: 16px !important;
+    padding: 20px !important;
+}
+
+/* Tooltip Styles */
+.has-tooltip {
+    position: relative;
+    display: inline-block;
+}
+.has-tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: var(--deep);
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+    font-weight: 400;
+    pointer-events: none;
+}
+.has-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Modern Toast Notification System Overlay */
+.messages-toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+.toast-msg {
+    pointer-events: auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    border-left: 5px solid var(--teal);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    animation: toastSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes toastSlideIn {
+    from { opacity: 0; transform: translateX(100%) scale(0.9); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* Form & Button Adjustments */
+@media (max-width: 480px) {
+    .form-actions, .hero-btns {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

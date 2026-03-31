@@ -1,0 +1,61 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Substitutions — HOD{% endblock %}
+{% block role_label %}Head of Department{% endblock %}
+{% block role_label_foot %}Head of Department{% endblock %}
+{% block page_title %}Faculty Substitutions{% endblock %}
+{% block page_sub %}Assign substitute faculty for upcoming or today's classes{% endblock %}
+
+{% block dashboard_content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-clock"></i> Assign Substitution</div>
+    <form method="POST">
+      {% csrf_token %}
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Timetable Slot <span style="color:#ef4444">*</span></label>
+        <select name="slot_id" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required>
+          <option value="">Select slot</option>
+          {% for slot in slots %}
+          <option value="{{ slot.pk }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"H:i" }} — {{ slot.subject.name }} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Substitute Faculty <span style="color:#ef4444">*</span></label>
+        <select name="substitute_faculty_id" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required>
+          <option value="">Select faculty</option>
+          {% for f in faculty_list %}
+          <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Date <span style="color:#ef4444">*</span></label>
+        <input type="date" name="date" value="{{ today }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none" required/>
+      </div>
+      <button type="submit" class="btn btn-teal"><i class="fas fa-check"></i> Assign Substitution</button>
+    </form>
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-list-check"></i> Upcoming Substitutions</div>
+    {% if substitutions %}
+    <div class="content-scroll">
+      {% for sub in substitutions %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.timetable_slot.subject.name }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">
+          {{ sub.date|date:"d M Y" }} &nbsp;·&nbsp;
+          <span style="color:var(--red)">{{ sub.original_faculty.user.get_full_name|default:sub.original_faculty.user.username }}</span>
+          <i class="fas fa-arrow-right" style="font-size:9px;margin:0 4px"></i>
+          <span style="color:var(--teal)">{{ sub.substitute_faculty.user.get_full_name|default:sub.substitute_faculty.user.username }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-check"></i>No upcoming substitutions.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

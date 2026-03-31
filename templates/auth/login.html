@@ -7,7 +7,7 @@
   body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
   .auth-wrap{width:100%;max-width:420px}
   .auth-logo{text-align:center;margin-bottom:28px}
-  .auth-logo img{height:64px;width:auto;max-width:220px;object-fit:contain;display:block;margin:0 auto}
+  .auth-logo img{height:90px;width:auto;max-width:280px;object-fit:contain;display:block;margin:0 auto}
   .auth-logo .logo-txt{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)}
   .auth-logo .logo-txt span{color:var(--teal)}
   .auth-logo .logo-sub{font-size:12px;color:var(--muted);margin-top:2px;letter-spacing:.5px}
@@ -47,7 +47,7 @@
 
   <div class="auth-card">
     <h2>Welcome back</h2>
-    <p class="sub">Sign in to access your portal</p>
+    <p class="sub">Sign in with your assigned credentials to access your portal.</p>
 
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">
@@ -74,8 +74,19 @@
             <i class="fas fa-eye"></i>
           </button>
         </div>
-        <div style="margin-top:8px;text-align:right">
-          <a href="{% url 'password_reset' %}" style="font-size:12px;color:var(--teal);font-weight:600">Forgot password?</a>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);font-weight:500;user-select:none">
+          <input type="checkbox" name="remember_me" style="width:15px;height:15px;accent-color:var(--teal);cursor:pointer"/>
+          Remember me for 8 hours
+        </label>
+        <a href="{% url 'password_reset' %}" style="font-size:12px;color:var(--teal);font-weight:600">Forgot password?</a>
+      </div>
+      <div class="form-group">
+        <label>Security Check — What is <strong style="color:var(--teal)">{{ captcha_q }}</strong>?</label>
+        <div class="input-wrap">
+          <i class="fas fa-shield-halved lead-icon"></i>
+          <input type="number" name="captcha" placeholder="Enter the answer" required autocomplete="off" style="padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;width:100%;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--teal)';this.style.boxShadow='0 0 0 3px rgba(13,115,119,.1)'" onblur="this.style.borderColor='';this.style.boxShadow=''"/>
         </div>
       </div>
       <button type="submit" class="btn-submit">

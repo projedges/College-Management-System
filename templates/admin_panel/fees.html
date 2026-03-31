@@ -34,10 +34,10 @@
         <td style="font-weight:600;color:var(--deep)">{{ f.student.user.get_full_name|default:f.student.user.username }}</td>
         <td style="color:var(--teal);font-weight:600">{{ f.student.roll_number }}</td>
         <td>{{ f.student.department.code }}</td>
-        <td>₹{{ f.total_amount|floatformat:0 }}</td>
-        <td style="color:var(--green);font-weight:600">₹{{ f.paid_amount|floatformat:0 }}</td>
-        <td style="color:{% if f.total_amount > f.paid_amount %}var(--red){% else %}var(--green){% endif %};font-weight:600">
-          ₹{% widthratio f.paid_amount 1 1 %}{{ f.total_amount|floatformat:0 }}
+        <td>Rs {{ f.total_amount|floatformat:0 }}</td>
+        <td style="color:var(--green);font-weight:600">Rs {{ f.paid_amount|floatformat:0 }}</td>
+        <td style="color:{% if f.balance > 0 %}var(--red){% else %}var(--green){% endif %};font-weight:600">
+          Rs {{ f.balance|floatformat:0 }}
         </td>
         <td>
           {% if f.status == 'PAID' %}<span class="ap-badge badge-paid">Paid</span>

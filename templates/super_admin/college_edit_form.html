@@ -1,0 +1,87 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Edit College - EduTrack{% endblock %}
+{% block role_label %}Super Admin{% endblock %}
+{% block role_label_foot %}Super Admin{% endblock %}
+{% block page_title %}Edit College{% endblock %}
+{% block page_sub %}{{ college.name }} ({{ college.code }}){% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'super_admin_dashboard' %}#colleges" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Colleges</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pf-label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .pf-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s}
+  .pf-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .form-hint{font-size:11px;color:var(--muted);margin-top:4px}
+  @media(max-width:640px){.two-col{grid-template-columns:1fr !important}}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-card" style="max-width:760px">
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="d-title"><i class="fas fa-building"></i> Basic Information</div>
+    <div class="two-col" style="margin-bottom:18px">
+      <div>
+        <label class="pf-label">College Name <span style="color:var(--red)">*</span></label>
+        <input type="text" name="name" value="{{ college.name }}" required class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">College Code <span style="color:var(--red)">*</span></label>
+        <input type="text" name="code" value="{{ college.code }}" required class="pf-input"/>
+        <div class="form-hint">Uppercase, short identifier used in roll numbers and IDs.</div>
+      </div>
+      <div>
+        <label class="pf-label">City</label>
+        <input type="text" name="city" value="{{ college.city }}" class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">State</label>
+        <input type="text" name="state" value="{{ college.state }}" class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">Email</label>
+        <input type="email" name="email" value="{{ college.email|default:'' }}" class="pf-input" placeholder="contact@college.edu"/>
+      </div>
+      <div>
+        <label class="pf-label">Website</label>
+        <input type="url" name="website" value="{{ college.website|default:'' }}" class="pf-input" placeholder="https://college.edu"/>
+      </div>
+    </div>
+
+    <div class="d-title" style="margin-top:8px"><i class="fas fa-id-card"></i> ID Generation Rules</div>
+    <div class="two-col" style="margin-bottom:18px">
+      <div>
+        <label class="pf-label">Student ID Rule</label>
+        <input type="text" name="student_id_rule" value="{{ college.student_id_rule }}" class="pf-input"/>
+        <div class="form-hint">Tokens: {YEAR} {CODE} {DEPT} {SERIAL}</div>
+      </div>
+      <div>
+        <label class="pf-label">Faculty ID Rule</label>
+        <input type="text" name="faculty_id_rule" value="{{ college.faculty_id_rule }}" class="pf-input"/>
+        <div class="form-hint">Tokens: {CODE} {DEPT} {SERIAL}</div>
+      </div>
+    </div>
+
+    <div class="d-title" style="margin-top:8px"><i class="fas fa-image"></i> Logo</div>
+    <div style="margin-bottom:20px">
+      {% if college.logo %}
+      <div style="margin-bottom:10px">
+        <img src="{{ college.logo.url }}" alt="Current logo" style="height:60px;width:auto;border-radius:8px;border:1px solid var(--border);padding:4px;background:#fff"/>
+        <div class="form-hint">Current logo. Upload a new file to replace it.</div>
+      </div>
+      {% endif %}
+      <input type="file" name="logo" accept="image/*" class="pf-input" style="background:#fff"/>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Save Changes</button>
+      <a href="{% url 'super_admin_dashboard' %}#colleges" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

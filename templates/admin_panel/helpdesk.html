@@ -38,7 +38,11 @@
           <div style="font-size:11px;color:var(--muted)">{{ ticket.get_issue_type_display }} · {{ ticket.description|truncatechars:90 }}</div>
         </td>
         <td>{% if ticket.college %}{{ ticket.college.code }}{% else %}-{% endif %}</td>
-        <td>{{ ticket.get_status_display }}</td>
+        <td>
+          {% if ticket.status == 'OPEN' %}<span class="ap-badge badge-pending">Open</span>
+          {% elif ticket.status == 'IN_PROGRESS' %}<span class="ap-badge badge-partial">In Progress</span>
+          {% else %}<span class="ap-badge badge-paid">Resolved</span>{% endif %}
+        </td>
         <td>{{ ticket.created_at|date:"d M Y" }}</td>
         <td>
           <form method="POST" action="{% url 'admin_helpdesk_update' ticket.pk %}" style="display:flex;gap:8px;align-items:center">

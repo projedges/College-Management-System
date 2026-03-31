@@ -1,0 +1,39 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Quiz Results — {{ quiz.title }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Quiz Results{% endblock %}
+{% block page_sub %}{{ quiz.title }} · {{ quiz.subject.name }}{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_quiz_edit' quiz.pk %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Quiz</a>
+{% endblock %}
+{% block dashboard_content %}
+<div class="d-card">
+  <div class="d-card-title"><i class="fas fa-chart-bar"></i> Student Scores ({{ attempts|length }} submitted)</div>
+  {% if attempts %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Roll No.</th><th>Name</th><th>Score</th><th>Out of</th><th>%</th><th>Submitted</th></tr></thead>
+      <tbody>
+        {% for a in attempts %}
+        <tr>
+          <td style="font-weight:600;color:var(--teal)">{{ a.student.roll_number }}</td>
+          <td>{{ a.student.user.get_full_name|default:a.student.user.username }}</td>
+          <td style="font-weight:700;color:var(--deep)">{{ a.score|floatformat:1 }}</td>
+          <td style="color:var(--muted)">{{ quiz.total_marks }}</td>
+          <td>
+            {% if a.score is not None %}
+              {% widthratio a.score quiz.total_marks 100 as pct %}
+              <span style="font-weight:600;color:{% if pct >= 75 %}var(--green){% elif pct >= 50 %}var(--gold){% else %}var(--red){% endif %}">{{ pct }}%</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="color:var(--muted);font-size:12px">{{ a.submitted_at|date:"d M Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-hourglass"></i>No submissions yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

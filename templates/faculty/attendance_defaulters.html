@@ -1,0 +1,51 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Attendance Defaulters — {{ subject.name }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Attendance Defaulters{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Students below 75%{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+{% block dashboard_content %}
+<div class="d-card">
+  <div class="d-card-title"><i class="fas fa-triangle-exclamation" style="color:var(--red)"></i> Defaulter List</div>
+  {% if rows %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr><th>Roll No.</th><th>Name</th><th>Present</th><th>Total</th><th>Attendance %</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td style="font-weight:600;color:var(--teal)">{{ row.student.roll_number }}</td>
+          <td>{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+          <td>{{ row.present }}</td>
+          <td>{{ row.total }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:6px;background:#f3f4f6;border-radius:99px;min-width:60px">
+                <div style="height:6px;border-radius:99px;width:{{ row.pct }}%;background:{% if row.pct >= 75 %}var(--green){% elif row.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+              </div>
+              <span style="font-weight:700;color:{% if row.pct >= 75 %}var(--green){% elif row.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ row.pct }}%</span>
+            </div>
+          </td>
+          <td>
+            {% if row.total == 0 %}
+            <span class="dbadge" style="background:#f3f4f6;color:var(--muted)">No data</span>
+            {% elif row.is_defaulter %}
+            <span class="dbadge dbadge-red"><i class="fas fa-triangle-exclamation"></i> Defaulter</span>
+            {% else %}
+            <span class="dbadge dbadge-active"><i class="fas fa-check"></i> OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-users"></i>No student data found for this subject.</div>
+  {% endif %}
+</div>
+{% endblock %}

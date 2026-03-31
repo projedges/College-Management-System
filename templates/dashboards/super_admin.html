@@ -1,127 +1,313 @@
 {% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Super Admin Dashboard - EduTrack{% endblock %}
 {% block role_label %}Super Admin{% endblock %}
+{% block role_label_foot %}Super Admin{% endblock %}
 {% block page_title %}Super Admin Workspace{% endblock %}
-{% block page_sub %}Global control across colleges and college-admin entities{% endblock %}
+{% block page_sub %}Global control across all colleges and platform entities{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Overview</a>
 <a href="#colleges" data-section-target="colleges" class="sb-link"><i class="fas fa-building"></i> Colleges</a>
 <a href="#admins" data-section-target="admins" class="sb-link"><i class="fas fa-user-shield"></i> College Admins</a>
-<a href="#activity" data-section-target="activity" class="sb-link"><i class="fas fa-clock-rotate-left"></i> Activity</a>
+<a href="#announcements" data-section-target="announcements" class="sb-link"><i class="fas fa-bullhorn"></i> Platform Notices</a>
+<a href="#activity" data-section-target="activity" class="sb-link"><i class="fas fa-clock-rotate-left"></i> Activity Log</a>
 <a href="/admin/" class="sb-link"><i class="fas fa-cog"></i> Django Admin</a>
-{% endblock %}
-
-{% block quick_nav %}
-<div class="quick-nav">
-  <a href="{% url 'super_admin_college_add' %}" class="quick-chip"><i class="fas fa-plus"></i> Add College</a>
-  <a href="{% url 'super_admin_college_admin_add' %}" class="quick-chip"><i class="fas fa-user-plus"></i> Add College Admin</a>
-  <a href="#activity" data-section-target="activity" class="quick-chip"><i class="fas fa-clock-rotate-left"></i> Activity</a>
-</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .d-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;margin-bottom:22px}
-  .d-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--deep);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-  .d-title i{color:var(--teal)}
-  .panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
-  .focus-card{background:linear-gradient(180deg,#ffffff 0%,#f8fbfb 100%);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh)}
-  .focus-card h3{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep);margin-bottom:8px}
-  .focus-card p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px}
-  .qa-row{display:flex;flex-wrap:wrap;gap:10px}
-  .qa-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none}
-  .qa-teal{background:var(--teal);color:#fff}
-  .qa-deep{background:var(--deep);color:#fff}
-  .dtable{width:100%;border-collapse:collapse;font-size:13px}
-  .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
-  .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
-  .dtable tr:last-child td{border-bottom:none}
+  #sa-bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18}
+  .db-layout{position:relative;z-index:1}
+  .college-row-inactive{opacity:.55}
+  .sa-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600}
+  .sa-badge-active{background:#d1fae5;color:#065f46}
+  .sa-badge-inactive{background:#fee2e2;color:#991b1b}
 </style>
 {% endblock %}
 
 {% block dashboard_content %}
+
+<!-- canvas injected here, sits behind everything via fixed positioning -->
+<canvas id="sa-bg-canvas"></canvas>
+
+<!-- ── OVERVIEW ── -->
 <section data-dashboard-pane="dashboard" class="dashboard-pane active">
   <div class="stat-grid">
-    <div class="stat-card"><div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building"></i></div><div class="s-val">{{ total_colleges }}</div><div class="s-lbl">Colleges</div></div>
-    <div class="stat-card"><div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-shield"></i></div><div class="s-val">{{ total_college_admins }}</div><div class="s-lbl">College Admins</div></div>
-    <div class="stat-card"><div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-users"></i></div><div class="s-val">{{ total_users }}</div><div class="s-lbl">Total Users</div></div>
-  </div>
-  <div class="panel-grid">
-    <div class="focus-card">
-      <h3>Create a College</h3>
-      <p>Start by creating the college entity. That becomes the root for department, student, faculty, and announcement scoping.</p>
-      <div class="qa-row"><a href="{% url 'super_admin_college_add' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add College</a></div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building"></i></div>
+      <div class="s-val">{{ total_colleges }}</div><div class="s-lbl">Colleges</div>
     </div>
-    <div class="focus-card">
-      <h3>Create a College Admin</h3>
-      <p>Once the college exists, create the college admin account and attach it to that college.</p>
-      <div class="qa-row"><a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep"><i class="fas fa-user-plus"></i> Add College Admin</a></div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-user-shield"></i></div>
+      <div class="s-val">{{ total_college_admins }}</div><div class="s-lbl">College Admins</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-graduate"></i></div>
+      <div class="s-val">{{ total_students }}</div><div class="s-lbl">Total Students</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Total Faculty</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-sitemap"></i></div>
+      <div class="s-val">{{ total_departments }}</div><div class="s-lbl">Departments</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-users"></i></div>
+      <div class="s-val">{{ total_users }}</div><div class="s-lbl">Platform Users</div>
     </div>
   </div>
-</section>
 
-<section data-dashboard-pane="colleges" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-building"></i> Colleges</div>
-    <div class="qa-row" style="margin-bottom:16px"><a href="{% url 'super_admin_college_add' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add College</a></div>
-    <div class="table-scroll">
-      <table class="dtable">
-        <thead><tr><th>College</th><th>Code</th><th>City</th><th>Departments</th><th>Admins</th><th>Students</th></tr></thead>
-        <tbody>
-          {% for college in colleges %}
-          <tr>
-            <td>{{ college.name }}</td>
-            <td>{{ college.code }}</td>
-            <td>{{ college.city|default:"-" }}</td>
-            <td>{{ college.department_count }}</td>
-            <td>{{ college.admin_count }}</td>
-            <td>{{ college.student_count }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="hero-grid">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-rocket"></i> Fast-Track Actions</div>
+      <div class="qa-row" style="gap:10px;margin-top:8px">
+        <a href="{% url 'super_admin_college_add' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> New College</a>
+        <a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep"><i class="fas fa-user-plus"></i> New Admin</a>
+        <a href="{% url 'super_admin_platform_announcement' %}" class="qa-btn qa-indigo"><i class="fas fa-bullhorn"></i> Broadcast Notice</a>
+        <a href="/admin/" class="qa-btn" style="background:#4b5563;color:#fff"><i class="fas fa-cog"></i> Django Admin</a>
+      </div>
+      <div class="hint-box" style="margin-top:18px">
+        Always create the College entity before assigning an Admin. This ensures the admin is properly scoped to the institution's data from their first login.
+      </div>
+    </div>
+
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-bullhorn"></i> Latest Platform Notices</div>
+      {% if platform_announcements %}
+      <div class="content-scroll soft">
+        {% for ann in platform_announcements %}
+        <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y H:i" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No platform notices yet.</div>
+      {% endif %}
+      <div style="margin-top:12px">
+        <a href="{% url 'super_admin_platform_announcement' %}" class="qa-btn qa-indigo" style="font-size:12px"><i class="fas fa-arrow-right"></i> Manage Notices</a>
+      </div>
     </div>
   </div>
-</section>
 
-<section data-dashboard-pane="admins" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-user-shield"></i> College Admin Accounts</div>
-    <div class="qa-row" style="margin-bottom:16px"><a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep"><i class="fas fa-user-plus"></i> Add College Admin</a></div>
-    <div class="table-scroll">
-      <table class="dtable">
-        <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>College</th></tr></thead>
-        <tbody>
-          {% for item in college_admins %}
-          <tr>
-            <td>{{ item.user.get_full_name|default:item.user.username }}</td>
-            <td>{{ item.user.username }}</td>
-            <td>{{ item.user.email }}</td>
-            <td>{{ item.college.name }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section data-dashboard-pane="activity" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
+  <div class="d-card" style="margin-top:4px">
+    <div class="d-card-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
     {% if recent_activity %}
     <div class="content-scroll">
       {% for log in recent_activity %}
-      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ log.action }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ log.user.username }} · {{ log.timestamp|date:"d M Y H:i" }}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6;gap:12px">
+        <div style="font-size:13px;color:var(--deep)">{{ log.action }}</div>
+        <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.user.username }} · {{ log.timestamp|date:"d M H:i" }}</div>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <div style="font-size:13px;color:var(--muted)">No recent activity logged yet.</div>
+    <div class="empty"><i class="fas fa-clock"></i>No activity logged yet.</div>
     {% endif %}
   </div>
 </section>
+
+<!-- ── COLLEGES ── -->
+<section data-dashboard-pane="colleges" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-building"></i> All Colleges</div>
+    <div class="qa-row" style="margin-bottom:16px">
+      <a href="{% url 'super_admin_college_add' %}" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add College</a>
+    </div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead>
+          <tr><th>College</th><th>Code</th><th>City</th><th>Depts</th><th>Students</th><th>Faculty</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for c in colleges %}
+          <tr class="{% if not c.is_active %}college-row-inactive{% endif %}">
+            <td>
+              <a href="{% url 'super_admin_college_detail' c.pk %}" style="font-weight:700;color:var(--teal);text-decoration:none">{{ c.name }}</a>
+            </td>
+            <td style="font-weight:600">{{ c.code }}</td>
+            <td style="color:var(--muted)">{{ c.city|default:"-" }}</td>
+            <td style="text-align:center">{{ c.department_count }}</td>
+            <td style="text-align:center">{{ c.student_count }}</td>
+            <td style="text-align:center">{{ c.faculty_count }}</td>
+            <td>
+              {% if c.is_active %}
+              <span class="sa-badge sa-badge-active">Active</span>
+              {% else %}
+              <span class="sa-badge sa-badge-inactive">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <a href="{% url 'super_admin_college_edit' c.pk %}" class="btn-edit" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);font-size:12px;font-weight:600;text-decoration:none"><i class="fas fa-pen"></i> Edit</a>
+                <form method="POST" action="{% url 'super_admin_college_toggle' c.pk %}" style="margin:0">
+                  {% csrf_token %}
+                  <button type="submit" style="padding:5px 10px;border-radius:7px;background:{% if c.is_active %}rgba(239,68,68,.08){% else %}rgba(16,185,129,.08){% endif %};color:{% if c.is_active %}var(--red){% else %}var(--green){% endif %};font-size:12px;font-weight:600;border:none;cursor:pointer">
+                    {% if c.is_active %}<i class="fas fa-ban"></i> Disable{% else %}<i class="fas fa-check"></i> Enable{% endif %}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── COLLEGE ADMINS ── -->
+<section data-dashboard-pane="admins" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-user-shield"></i> College Admin Accounts</div>
+    <div class="qa-row" style="margin-bottom:16px">
+      <a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep"><i class="fas fa-user-plus"></i> Add College Admin</a>
+    </div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>College</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for item in college_admins %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ item.user.get_full_name|default:item.user.username }}</td>
+            <td style="color:var(--muted)">{{ item.user.username }}</td>
+            <td style="color:var(--muted)">{{ item.user.email }}</td>
+            <td>
+              <a href="{% url 'super_admin_college_detail' item.college.pk %}" style="color:var(--teal);font-weight:600;text-decoration:none">{{ item.college.name }}</a>
+            </td>
+            <td>
+              <form method="POST" action="{% url 'super_admin_college_admin_delete' item.pk %}" style="margin:0" onsubmit="return confirm('Remove admin {{ item.user.username }}? This cannot be undone.')">
+                {% csrf_token %}
+                <button type="submit" style="padding:5px 10px;border-radius:7px;background:rgba(239,68,68,.08);color:var(--red);font-size:12px;font-weight:600;border:none;cursor:pointer">
+                  <i class="fas fa-trash"></i> Remove
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── PLATFORM ANNOUNCEMENTS ── -->
+<section data-dashboard-pane="announcements" class="dashboard-pane">
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-bullhorn"></i> Broadcast Notice</div>
+      <div class="section-meta">Visible to all colleges, all roles.</div>
+      <form method="POST" action="{% url 'super_admin_platform_announcement' %}">
+        {% csrf_token %}
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Title</label>
+          <input type="text" name="title" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" placeholder="e.g. Platform Maintenance Notice"/>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Message</label>
+          <textarea name="message" rows="5" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Write the announcement here..."></textarea>
+        </div>
+        <button type="submit" class="qa-btn qa-indigo"><i class="fas fa-paper-plane"></i> Broadcast to All Colleges</button>
+      </form>
+    </div>
+
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-list"></i> Recent Platform Notices</div>
+      {% if platform_announcements %}
+      <div class="content-scroll">
+        {% for ann in platform_announcements %}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ ann.created_at|date:"d M Y H:i" }}</div>
+          </div>
+          <form method="POST" action="{% url 'super_admin_platform_announcement_delete' ann.pk %}" style="margin:0" onsubmit="return confirm('Delete this announcement?')">
+            {% csrf_token %}
+            <button type="submit" style="padding:4px 8px;border-radius:6px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;border:none;cursor:pointer"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No platform notices yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ── ACTIVITY LOG ── -->
+<section data-dashboard-pane="activity" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-clock-rotate-left"></i> Platform Activity Log</div>
+    <div class="section-meta">Last 15 login and logout events across all users.</div>
+    {% if recent_activity %}
+    <div class="content-scroll">
+      {% for log in recent_activity %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:12px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ log.action }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ log.user.username }}{% if log.ip_address %} · {{ log.ip_address }}{% endif %}</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.timestamp|date:"d M Y H:i" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top:12px">
+      <a href="/admin/students/activitylog/" class="qa-btn" style="background:#4b5563;color:#fff;font-size:12px"><i class="fas fa-shield-halved"></i> Full Audit in Django Admin</a>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-clock"></i>No activity logged yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+(function(){
+  const c=document.getElementById('sa-bg-canvas'),ctx=c.getContext('2d');
+  let W,H,pts=[];
+  const COLS=['#0d7377','#14a085','#095c60','#e6a817','#0b2d38'];
+  const N=innerWidth<768?20:45;
+  let mx=null,my=null;
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight}
+  addEventListener('resize',resize);resize();
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+  addEventListener('mouseleave',()=>{mx=my=null});
+  function P(){
+    this.x=Math.random()*W;this.y=Math.random()*H;
+    this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;
+    this.r=Math.random()*2+.5;
+    this.col=COLS[Math.floor(Math.random()*COLS.length)];
+    this.a=Math.random()*.4+.08;
+  }
+  P.prototype.tick=function(){
+    this.x+=this.vx;this.y+=this.vy;
+    if(this.x<0||this.x>W)this.vx*=-1;
+    if(this.y<0||this.y>H)this.vy*=-1;
+    if(mx!==null){
+      const dx=this.x-mx,dy=this.y-my,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<100){const f=.4*(1-d/100);this.vx+=f*dx/d;this.vy+=f*dy/d}
+    }
+    const sp=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
+    if(sp>0.9){this.vx*=.97;this.vy*=.97}
+  };
+  P.prototype.draw=function(){
+    ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle=this.col;ctx.globalAlpha=this.a;ctx.fill();
+  };
+  for(let i=0;i<N;i++)pts.push(new P());
+  function lines(){
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<110){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+        ctx.strokeStyle='#0d7377';ctx.globalAlpha=(1-d/110)*.08;ctx.lineWidth=.7;ctx.stroke()}
+    }
+  }
+  function loop(){ctx.clearRect(0,0,W,H);lines();pts.forEach(p=>{p.tick();p.draw()});ctx.globalAlpha=1;requestAnimationFrame(loop)}
+  loop();
+})();
+</script>
+
 {% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Edit Quiz — {{ quiz.title }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_sub %}{{ quiz.subject.name }} · {{ quiz.duration_minutes }} min · {{ quiz.total_marks }} marks{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'faculty_quiz_list' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Quizzes</a>
+{% endblock %}
+{% block extra_css %}
+<style>
+  .q-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+  .q-text{font-size:14px;font-weight:600;color:var(--deep);margin-bottom:8px}
+  .opt-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:4px}
+  .opt-correct{color:var(--green);font-weight:700}
+  .add-q-form{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-top:24px}
+  .add-q-form h3{font-size:14px;font-weight:700;color:var(--deep);margin-bottom:16px}
+  .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .fi{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none}
+  .fi:focus{border-color:var(--teal)}
+  .opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .opt-item{display:flex;align-items:center;gap:8px}
+  .opt-item input[type=text]{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none}
+  .opt-item input[type=text]:focus{border-color:var(--teal)}
+  .correct-label{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+</style>
+{% endblock %}
+{% block dashboard_content %}
+
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }}" style="margin-bottom:16px"><i class="fas fa-circle-info"></i> {{ message }}</div>
+{% endfor %}
+
+<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+  <form method="POST" style="margin:0">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="toggle_active"/>
+    <button type="submit" class="qa-btn {% if quiz.is_active %}qa-red{% else %}qa-teal{% endif %}">
+      <i class="fas fa-{% if quiz.is_active %}pause{% else %}play{% endif %}"></i>
+      {% if quiz.is_active %}Deactivate Quiz{% else %}Activate for Students{% endif %}
+    </button>
+  </form>
+  <a href="{% url 'faculty_quiz_results' quiz.pk %}" class="qa-btn qa-deep"><i class="fas fa-chart-bar"></i> View Results</a>
+</div>
+
+<div class="d-card">
+  <div class="d-card-title"><i class="fas fa-list-ol"></i> Questions ({{ questions|length }})</div>
+  {% if questions %}
+    {% for q in questions %}
+    <div class="q-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1">
+          <div class="q-text">Q{{ forloop.counter }}. {{ q.text }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">{{ q.get_question_type_display }} · {{ q.marks }} mark{{ q.marks|pluralize }}</div>
+          {% for opt in q.options.all %}
+          <div class="opt-row {% if opt.is_correct %}opt-correct{% endif %}">
+            <i class="fas fa-{% if opt.is_correct %}check-circle{% else %}circle{% endif %}" style="font-size:12px"></i>
+            {{ opt.text }}{% if opt.is_correct %} <span style="font-size:10px;background:rgba(16,185,129,.1);padding:1px 6px;border-radius:99px">Correct</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <form method="POST" style="margin:0" onsubmit="return confirm('Remove this question?')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_question"/>
+          <input type="hidden" name="q_id" value="{{ q.pk }}"/>
+          <button type="submit" style="padding:5px 10px;border-radius:7px;background:rgba(239,68,68,.08);color:var(--red);font-size:12px;border:none;cursor:pointer"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty"><i class="fas fa-circle-question"></i>No questions yet. Add one below.</div>
+  {% endif %}
+</div>
+
+<div class="add-q-form">
+  <h3><i class="fas fa-plus" style="color:var(--teal)"></i> Add Question</h3>
+  <form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_question"/>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Question Text <span style="color:var(--red)">*</span></label>
+      <textarea name="q_text" rows="2" required class="fi" style="resize:vertical" placeholder="Enter the question…"></textarea>
+    </div>
+    <div class="form-row-2" style="margin-bottom:12px">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Type</label>
+        <select name="q_type" class="fi" id="q-type-sel" onchange="toggleTF(this.value)">
+          <option value="MCQ">Multiple Choice (MCQ)</option>
+          <option value="TF">True / False</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Marks</label>
+        <input type="number" name="q_marks" value="1" min="0.5" step="0.5" class="fi">
+      </div>
+    </div>
+
+    <div id="mcq-opts">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Options <span style="font-weight:400;color:var(--muted)">(mark the correct one)</span></label>
+      <div class="opt-grid">
+        {% for i in "1234" %}
+        <div class="opt-item">
+          <input type="radio" name="correct_opt" value="{{ i }}" {% if forloop.first %}required{% endif %} style="accent-color:var(--teal)"/>
+          <input type="text" name="opt_{{ i }}" placeholder="Option {{ i }}" {% if forloop.counter <= 2 %}required{% endif %}/>
+          <span class="correct-label">Correct?</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div id="tf-opts" style="display:none">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Correct Answer</label>
+      <div style="display:flex;gap:16px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="correct_opt" value="1" style="accent-color:var(--teal)"/> True
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="correct_opt" value="2" style="accent-color:var(--teal)"/> False
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add Question</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function toggleTF(val){
+  document.getElementById('mcq-opts').style.display = val==='TF'?'none':'block';
+  document.getElementById('tf-opts').style.display = val==='TF'?'block':'none';
+  if(val==='TF'){
+    document.querySelectorAll('[name^="opt_"]').forEach(i=>i.removeAttribute('required'));
+    // pre-fill True/False options
+    var o1=document.querySelector('[name="opt_1"]'),o2=document.querySelector('[name="opt_2"]');
+    if(o1)o1.value='True';if(o2)o2.value='False';
+  } else {
+    document.querySelector('[name="opt_1"]').setAttribute('required','');
+    document.querySelector('[name="opt_2"]').setAttribute('required','');
+  }
+}
+</script>
+{% endblock %}
