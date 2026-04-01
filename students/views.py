@@ -2984,6 +2984,8 @@ def admin_hod_add(request):
             messages.error(request, 'Username already taken.')
         elif HOD.objects.filter(department_id=dept_id, is_active=True).exists():
             messages.error(request, 'This department already has an active HOD.')
+        elif HOD.objects.filter(employee_id=employee_id).exists():
+            messages.error(request, 'Employee Id already taken.')
         else:
             department = get_object_or_404(departments, pk=dept_id)
             user = User.objects.create_user(
