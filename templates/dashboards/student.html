@@ -6,6 +6,7 @@
 {% block page_sub %}<span style="color:var(--teal); font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep); font-weight:600">{{ student.roll_number }}</span> · Sem {{ student.current_semester }} · {{ student.department.code }}{% endblock %}
 
 {% block sidebar_links %}
+<p class="sb-nav-label">Menu</p>
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
 <a href="#whats-new" data-section-target="whats-new" class="sb-link"><i class="fas fa-bolt"></i> What's New{% if new_assignments or new_quizzes %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">!</span>{% endif %}</a>
 <a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
@@ -15,7 +16,8 @@
 <a href="#course-structure" data-section-target="course-structure" class="sb-link"><i class="fas fa-list-ol"></i> Course Structure</a>
 <a href="#internals" data-section-target="internals" class="sb-link"><i class="fas fa-table-list"></i> Internal Marks</a>
 <a href="#quizzes" data-section-target="quizzes" class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
-<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="#quiz-history" data-section-target="quiz-history" class="sb-link"><i class="fas fa-clock-rotate-left"></i> Quiz History</a>
+<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Timetable</a>
 <a href="#assignments" data-section-target="assignments" class="sb-link"><i class="fas fa-file-alt"></i> Assignments</a>
 <a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
@@ -51,10 +53,44 @@
   .fee-status-paid{background:#d1fae5;color:#065f46}
   .fee-status-pending{background:#fee2e2;color:#991b1b}
   .fee-status-partial{background:#fef3c7;color:#92400e}
+  /* Week timetable grid */
+  .week-tt-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .week-tt-day{background:var(--surface2);border-radius:12px;padding:10px;min-height:80px}
+  .week-tt-day-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .week-tt-day.today-col{background:rgba(13,115,119,.07);border:1px solid rgba(13,115,119,.2)}
+  .week-tt-slot{background:#fff;border-radius:8px;padding:7px 9px;margin-bottom:6px;border:1px solid var(--border);font-size:11px}
+  .week-tt-slot-time{font-weight:700;color:var(--teal);margin-bottom:2px}
+  .week-tt-slot-subj{font-weight:600;color:var(--deep);line-height:1.3}
+  .week-tt-slot-meta{color:var(--muted);margin-top:2px}
+  /* Predictor pill */
+  .pred-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-top:4px}
+  .pred-safe{background:#d1fae5;color:#065f46}
+  .pred-warn{background:#fee2e2;color:#991b1b}
+  /* Absence dates */
+  .absence-chip{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:#fee2e2;color:#991b1b;margin:2px}
+  /* Deadline urgency */
+  .dl-urgent{background:#fee2e2;color:#991b1b}
+  .dl-soon{background:#fef3c7;color:#92400e}
+  .dl-ok{background:#d1fae5;color:#065f46}
+  /* Semester tabs */
+  .sem-tab{padding:6px 14px;border-radius:99px;font-size:12px;font-weight:700;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;position:relative;z-index:1}
+  .sem-tab:hover{border-color:var(--teal);color:var(--teal);background:#fff}
+  .sem-tab-active{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .sem-pane{display:none}
+  .sem-pane-active{display:block}
+  .sem-stat-box{text-align:center;padding:14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)}
+  .sem-stat-val{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--deep)}
+  .sem-stat-lbl{font-size:11px;color:var(--muted);margin-top:4px}
+  /* Quiz history */
+  .qh-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6}
+  .qh-row:last-child{border-bottom:none}
+  .qh-score{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--teal);min-width:48px;text-align:right}
+  @media(max-width:860px){.week-tt-grid{grid-template-columns:repeat(3,1fr)}}
   @media(max-width:480px){
     .att-row{flex-wrap:wrap}
     .att-bar-bg{flex:none;width:100%;order:3}
     .att-count{order:4}
+    .week-tt-grid{grid-template-columns:repeat(2,1fr)}
   }
 </style>
 {% endblock %}
@@ -97,13 +133,9 @@
             <div class="att-sub">{{ a.subject.code }}</div>
           </div>
           <div class="att-bar-bg">
-            {% if a.pct is not None %}
-            <div class="att-bar-fill" style="width:{{ a.pct }}%;background:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
-            {% else %}
-            <div class="att-bar-fill" style="width:0%;background:#d1d5db"></div>
-            {% endif %}
+            <div class="att-bar-fill" style="width:{% if a.pct is not None %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct is None %}#d1d5db{% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}"></div>
           </div>
-          <div class="att-pct" style="color:{% if a.pct is None %}var(--muted){% elif a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">
+          <div class="att-pct" style="color:{% if a.pct is None %}var(--muted){% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}">
             {% if a.pct is not None %}{{ a.pct }}%{% else %}N/A{% endif %}
           </div>
           <div class="att-count">{{ a.present }}/{{ a.total }}</div>
@@ -120,7 +152,8 @@
       <div class="section-meta">Your classes for today at a glance.</div>
       {% if today_timetable %}
       <div class="content-scroll soft">
-        {% for t in today_timetable %}
+        {% for item in today_timetable %}
+        {% with t=item.slot %}
         <div class="tt-row">
           <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
           <div>
@@ -128,7 +161,11 @@
             <div class="tt-meta">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
           </div>
           <div class="tt-room">{{ t.classroom.room_number }}</div>
+          {% if item.att_status == 'PRESENT' %}<span style="font-size:10px;font-weight:700;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:99px">P</span>
+          {% elif item.att_status == 'ABSENT' %}<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fee2e2;padding:2px 7px;border-radius:99px">A</span>
+          {% elif item.att_status == 'LATE' %}<span style="font-size:10px;font-weight:700;color:#d97706;background:#fef3c7;padding:2px 7px;border-radius:99px">L</span>{% endif %}
         </div>
+        {% endwith %}
         {% endfor %}
       </div>
       {% else %}
@@ -167,7 +204,6 @@
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="{% url 'student_profile_edit' %}" class="mini-btn mini-btn-teal"><i class="fas fa-pen"></i> Edit Profile</a>
-        <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Result PDF</a>
       </div>
     </div>
 
@@ -194,28 +230,75 @@
 </section>
 
 <section data-dashboard-pane="attendance" class="dashboard-pane">
+  <!-- Eligibility Status Banner -->
+  {% if eligibility %}
+  <div style="margin-bottom:18px;padding:16px 20px;border-radius:var(--r-lg);border:1.5px solid {% if eligibility.eligible %}rgba(16,185,129,.3){% else %}rgba(239,68,68,.3){% endif %};background:{% if eligibility.eligible %}rgba(16,185,129,.05){% else %}rgba(239,68,68,.04){% endif %}">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="width:40px;height:40px;border-radius:50%;background:{% if eligibility.eligible %}rgba(16,185,129,.12){% else %}rgba(239,68,68,.1){% endif %};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
+        {% if eligibility.eligible %}<i class="fas fa-check-circle" style="color:#059669"></i>{% else %}<i class="fas fa-ban" style="color:#ef4444"></i>{% endif %}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:{% if eligibility.eligible %}#065f46{% else %}#991b1b{% endif %}">
+          {% if eligibility.eligible %}Eligible for Exams{% else %}Currently Ineligible for Exams{% endif %}
+          {% if eligibility.has_override %}<span style="font-size:11px;background:rgba(16,185,129,.15);color:#065f46;padding:2px 8px;border-radius:99px;margin-left:8px">Override Approved</span>{% endif %}
+        </div>
+        {% if eligibility.overall_pct is not None %}
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">
+          Overall: <strong>{{ eligibility.overall_pct }}%</strong>
+          (required: {{ eligibility.rule.effective_min_overall }}%)
+          {% if eligibility.rule.grace_pct > 0 %}<span style="color:var(--teal)"> · {{ eligibility.rule.grace_pct }}% grace applied</span>{% endif %}
+        </div>
+        {% endif %}
+        {% if not eligibility.eligible and eligibility.reasons %}
+        <div style="margin-top:6px">
+          {% for reason in eligibility.reasons %}<div style="font-size:11px;color:#991b1b">• {{ reason }}</div>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% if not eligibility.eligible and not eligibility.has_override %}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="{% url 'student_exemption_apply' %}" style="font-size:12px;padding:7px 14px;border-radius:8px;background:var(--teal);color:#fff;text-decoration:none;font-weight:600"><i class="fas fa-file-medical"></i> Apply Exemption</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="d-card">
     <div class="d-title"><i class="fas fa-calendar-check"></i> Subject-wise Attendance</div>
-    <div class="section-meta">Attendance in a focused view without the rest of the dashboard.</div>
+    <div class="section-meta">Attendance, predictor, and absence dates per subject. Required: {{ att_rule.effective_min_subject }}%{% if att_rule.grace_pct > 0 %} (after {{ att_rule.grace_pct }}% grace){% endif %}</div>
     {% if attendance_data %}
     <div class="content-scroll">
       {% for a in attendance_data %}
-      <div class="att-row">
-        <div style="width:130px">
-          <div class="att-subj">{{ a.subject.name }}</div>
-          <div class="att-sub">{{ a.subject.code }}</div>
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div class="att-row" style="border:none;padding:0;margin-bottom:6px">
+          <div style="width:140px">
+            <div class="att-subj">{{ a.subject.name }}</div>
+            <div class="att-sub">{{ a.subject.code }}</div>
+          </div>
+          <div class="att-bar-bg">
+            <div class="att-bar-fill" style="width:{% if a.total > 0 %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}"></div>
+          </div>
+          <div class="att-pct" style="color:{% if a.total == 0 %}var(--muted){% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}">
+            {% if a.total > 0 %}{{ a.pct }}%{% else %}N/A{% endif %}
+          </div>
+          <div class="att-count">{{ a.present }}/{{ a.total }}</div>
         </div>
-        <div class="att-bar-bg">
-          {% if a.pct is not None %}
-          <div class="att-bar-fill" style="width:{{ a.pct }}%;background:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
-          {% else %}
-          <div class="att-bar-fill" style="width:0%;background:#d1d5db"></div>
+        <!-- Predictor — uses rule-engine threshold -->
+        {% if a.total > 0 %}
+          {% if a.can_miss is not None %}
+            <span class="pred-pill pred-safe"><i class="fas fa-shield-check"></i> Can miss {{ a.can_miss }} more class{{ a.can_miss|pluralize }}</span>
+          {% elif a.classes_needed is not None %}
+            <span class="pred-pill pred-warn"><i class="fas fa-triangle-exclamation"></i> Attend {{ a.classes_needed }} consecutive class{{ a.classes_needed|pluralize }} to reach {{ a.threshold }}%</span>
           {% endif %}
+        {% endif %}
+        <!-- Absence dates -->
+        {% if a.absent_dates %}
+        <div style="margin-top:6px">
+          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Absent on: </span>
+          {% for d in a.absent_dates %}<span class="absence-chip">{{ d|date:"d M" }}</span>{% endfor %}
         </div>
-        <div class="att-pct" style="color:{% if a.pct is None %}var(--muted){% elif a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">
-          {% if a.pct is not None %}{{ a.pct }}%{% else %}N/A{% endif %}
-        </div>
-        <div class="att-count">{{ a.present }}/{{ a.total }}</div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -227,53 +310,143 @@
 
 <section data-dashboard-pane="results" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results</div>
-    <div class="section-meta">Academic results in one place.</div>
+    <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results — All Years</div>
+    <div class="section-meta">Every semester, every subject, every grade — in one place.</div>
     <div class="action-row">
       <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Download PDF Report</a>
     </div>
     {% if result_breakdown %}
-    <div class="content-scroll">
+    <!-- Semester tabs — oldest to newest -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px" id="sem-tabs">
       {% for item in result_breakdown %}
-      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
-        <div class="res-row" style="padding-top:0;border-bottom:none">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--deep)">Semester {% if item.result %}{{ item.result.semester }}{% else %}{{ item.semester }}{% endif %}</div>
-            {% if item.result %}
-            <div style="font-size:11px;color:var(--muted)">{{ item.result.percentage|floatformat:1 }}% · {{ item.result.total_marks|floatformat:0 }} marks</div>
-            {% else %}
-            <div style="font-size:11px;color:var(--muted)">Subject-wise marks available below</div>
-            {% endif %}
-          </div>
-          <div style="text-align:right">
-            {% if item.result %}
-            <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--teal)">{{ item.result.gpa }}</div>
-            <div style="font-size:10px;color:var(--muted)">GPA</div>
-            {% else %}
-            <div style="font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--gold)">Pending</div>
-            <div style="font-size:10px;color:var(--muted)">Summary</div>
-            {% endif %}
-          </div>
+      <button onclick="showSemPane('sem-{{ forloop.counter }}')" id="tab-sem-{{ forloop.counter }}"
+        class="sem-tab {% if forloop.first %}sem-tab-active{% endif %}">
+        Sem {{ item.semester }}
+        {% if item.result %}
+          <span style="font-size:10px;opacity:.8"> &middot; {{ item.result.gpa }} SGPA</span>
+        {% elif item.marks %}
+          <span style="font-size:10px;opacity:.6"> &middot; Pending</span>
+        {% endif %}
+      </button>
+      {% endfor %}
+    </div>
+
+    {% for item in result_breakdown %}
+    <div class="sem-pane {% if forloop.first %}sem-pane-active{% endif %}" id="sem-{{ forloop.counter }}">
+
+      <!-- Semester header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:15px;font-weight:800;color:var(--deep)">
+          Semester {{ item.semester }}
+          {% if item.result %}
+          <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px">{{ item.result.percentage|floatformat:1 }}% &middot; {{ item.result.total_marks|floatformat:0 }} marks</span>
+          {% endif %}
         </div>
-        {% if item.marks %}
-        <div style="margin-top:8px;border:1px solid var(--border);border-radius:12px;overflow:hidden">
-          {% for mark in item.marks %}
-          <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid #f3f4f6;background:{% cycle '#fff' '#fbfcfd' %}">
-            <div>
-              <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ mark.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted)">{{ mark.subject.code }} · {{ mark.exam.name }}</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:12px;font-weight:700;color:var(--teal)">{{ mark.marks_obtained|floatformat:0 }}/{{ mark.max_marks|floatformat:0 }}</div>
-              <div style="font-size:11px;color:var(--muted)">Grade {{ mark.grade|default:"NA" }}</div>
-            </div>
-          </div>
-          {% endfor %}
+        {% if item.result %}
+        <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:{% if item.result.percentage >= 60 %}rgba(13,115,119,.1);color:var(--teal){% elif item.result.percentage >= 40 %}rgba(230,168,23,.1);color:#b88510{% else %}rgba(239,68,68,.1);color:var(--red){% endif %}">
+          {% if item.result.percentage >= 60 %}PASS{% elif item.result.percentage >= 40 %}PASS (Low){% else %}FAIL{% endif %}
+        </span>
+        {% else %}
+        <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:rgba(100,116,139,.1);color:var(--muted)">Result Pending</span>
+        {% endif %}
+      </div>
+
+      <!-- Summary stats row -->
+      {% if item.result or item.best_subject %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:16px">
+        {% if item.result %}
+        <div class="sem-stat-box">
+          <div class="sem-stat-val" style="color:var(--teal)">{{ item.result.gpa }}</div>
+          <div class="sem-stat-lbl">SGPA</div>
+        </div>
+        <div class="sem-stat-box">
+          <div class="sem-stat-val">{{ item.result.percentage|floatformat:1 }}%</div>
+          <div class="sem-stat-lbl">Percentage</div>
+        </div>
+        <div class="sem-stat-box">
+          <div class="sem-stat-val">{{ item.result.total_marks|floatformat:0 }}</div>
+          <div class="sem-stat-lbl">Total Marks</div>
+        </div>
+        {% endif %}
+        {% if item.best_subject %}
+        <div class="sem-stat-box" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2)">
+          <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px"><i class="fas fa-arrow-trend-up"></i> Best</div>
+          <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ item.best_subject.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ item.best_subject.marks_obtained|floatformat:0 }}/{{ item.best_subject.max_marks|floatformat:0 }}</div>
+        </div>
+        <div class="sem-stat-box" style="background:rgba(239,68,68,.04);border-color:rgba(239,68,68,.15)">
+          <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px"><i class="fas fa-arrow-trend-down"></i> Needs Work</div>
+          <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ item.worst_subject.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ item.worst_subject.marks_obtained|floatformat:0 }}/{{ item.worst_subject.max_marks|floatformat:0 }}</div>
         </div>
         {% endif %}
       </div>
-      {% endfor %}
+      {% endif %}
+
+      <!-- Grade distribution pills -->
+      {% if item.grade_counts %}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        {% for grade, count in item.grade_counts.items %}
+        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:{% if grade == 'O' %}rgba(13,115,119,.12);color:var(--teal){% elif grade == 'A+' or grade == 'A' %}rgba(16,185,129,.12);color:#059669{% elif grade == 'B+' or grade == 'B' %}rgba(230,168,23,.12);color:#b88510{% elif grade == 'C' %}rgba(249,115,22,.12);color:#c2410c{% else %}rgba(239,68,68,.12);color:var(--red){% endif %}">{{ grade }} &times; {{ count }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Subject marks table -->
+      {% if item.marks %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Code</th>
+              <th>Exam</th>
+              <th>Marks</th>
+              <th>Grade</th>
+              <th>Score %</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mark in item.marks %}
+            {% if mark.max_marks > 0 %}{% widthratio mark.marks_obtained mark.max_marks 100 as spct %}{% else %}{% widthratio 0 1 100 as spct %}{% endif %}
+            <tr>
+              <td style="font-weight:600;color:var(--deep)">{{ mark.subject.name }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ mark.subject.code }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ mark.exam.name }}</td>
+              <td style="font-weight:700;color:{% if spct >= 40 %}var(--teal){% else %}var(--red){% endif %}">
+                {{ mark.marks_obtained|floatformat:0 }}/{{ mark.max_marks|floatformat:0 }}
+              </td>
+              <td>
+                <span class="dbadge {% if mark.grade == 'O' or mark.grade == 'A+' or mark.grade == 'A' %}dbadge-active{% elif mark.grade == 'F' %}dbadge-red{% else %}dbadge-warning{% endif %}">
+                  {{ mark.grade|default:"NA" }}
+                </span>
+              </td>
+              <td>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="flex:1;background:#f3f4f6;border-radius:99px;height:6px;min-width:60px">
+                    <div style="height:6px;border-radius:99px;width:{{ spct }}%;background:{% if spct >= 75 %}var(--teal){% elif spct >= 40 %}var(--gold){% else %}var(--red){% endif %}"></div>
+                  </div>
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);width:32px">{{ spct }}%</span>
+                </div>
+              </td>
+              <td>
+                {% if mark.grade == 'F' or spct < 40 %}
+                <a href="{% url 'student_reval_fee_pay' mark.pk %}" style="font-size:11px;padding:4px 8px;border-radius:6px;background:rgba(239,68,68,.1);color:#dc2626;text-decoration:none;font-weight:600;white-space:nowrap">
+                  <i class="fas fa-rotate-right"></i> Reval
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty" style="padding:16px 0"><i class="fas fa-hourglass"></i> Marks not entered yet for Semester {{ item.semester }}.</div>
+      {% endif %}
     </div>
+    {% endfor %}
     {% else %}
     <div class="empty"><i class="fas fa-chart-bar"></i>No results published yet.</div>
     {% endif %}
@@ -281,25 +454,115 @@
 </section>
 
 <section data-dashboard-pane="timetable" class="dashboard-pane">
+  <!-- Today strip — attendance status table -->
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-clock"></i> Today's Timetable</div>
-    <div class="section-meta">Focused daily schedule view.</div>
-    {% if today_timetable %}
-    <div class="content-scroll">
-      {% for t in today_timetable %}
-      <div class="tt-row">
-        <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
-        <div>
-          <div class="tt-subj">{{ t.subject.name }}</div>
-          <div class="tt-meta">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
-        </div>
-        <div class="tt-room">{{ t.classroom.room_number }}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Timetable</div>
+      <div style="display:flex;gap:10px;font-size:12px;color:var(--muted)">
+        <span><i class="fas fa-graduation-cap" style="color:var(--teal)"></i> Sem {{ student.current_semester }}</span>
+        <span><i class="fas fa-building" style="color:var(--teal)"></i> {{ student.department.code }}</span>
       </div>
-      {% endfor %}
+    </div>
+    <div class="section-meta">Your classes today with attendance status.</div>
+
+    {% if today_timetable or today_breaks %}
+    <div class="table-scroll">
+      <table class="dtable" style="min-width:500px">
+        <thead>
+          <tr>
+            <th style="width:90px">Time</th>
+            <th>Subject</th>
+            <th>Faculty</th>
+            <th>Room</th>
+            <th style="text-align:center;width:120px">Present (P) / Absent (A)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% comment %}Merge timetable slots and breaks sorted by start_time{% endcomment %}
+          {% for item in today_timetable %}
+          {% with t=item.slot %}
+          <tr>
+            <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
+              {{ t.start_time|time:"H:i" }}<br>
+              <span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"H:i" }}</span>
+            </td>
+            <td>
+              <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
+            </td>
+            <td style="font-size:12px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
+            <td style="font-size:12px">
+              <span style="font-weight:600;color:var(--deep)">{{ t.classroom.room_number }}</span>
+              {% if t.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ t.classroom.building }}</div>{% endif %}
+            </td>
+            <td style="text-align:center">
+              {% if item.att_status == 'PRESENT' %}
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#16a34a;background:#dcfce7;padding:4px 12px;border-radius:99px"><i class="fas fa-check"></i> P</span>
+              {% elif item.att_status == 'ABSENT' %}
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#dc2626;background:#fee2e2;padding:4px 12px;border-radius:99px"><i class="fas fa-times"></i> A</span>
+              {% elif item.att_status == 'LATE' %}
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#d97706;background:#fef3c7;padding:4px 12px;border-radius:99px"><i class="fas fa-clock"></i> L</span>
+              {% else %}
+                <span style="font-size:11px;color:var(--muted)">Not marked</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+          {% for brk in today_breaks %}
+          <tr style="background:#fef9c3">
+            <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
+              {{ brk.start_time|time:"H:i" }}<br>
+              <span style="font-weight:400">{{ brk.end_time|time:"H:i" }}</span>
+            </td>
+            <td colspan="3" style="font-size:12px;font-weight:600;color:#92400e">
+              <i class="fas fa-coffee"></i> {{ brk.label }}
+            </td>
+            <td style="text-align:center;font-size:11px;color:#92400e">—</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if today_timetable %}
+        <tfoot>
+          <tr style="background:var(--surface2)">
+            <td colspan="4" style="font-size:13px;font-weight:700;color:var(--deep);padding:10px 12px">Total Classes Today</td>
+            <td style="text-align:center;font-size:13px;font-weight:800;color:var(--teal)">{{ today_timetable|length }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
     </div>
     {% else %}
     <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
     {% endif %}
+  </div>
+  <!-- Full week grid -->
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Timetable</div>
+    <div class="section-meta">Mon – Sat at a glance. Today's column is highlighted.</div>
+    <div class="table-scroll">
+      <div class="week-tt-grid">
+        {% for day_code, day_label, slots in week_timetable_list %}
+        <div class="week-tt-day {% if day_code == today_day %}today-col{% endif %}">
+          <div class="week-tt-day-label">
+            {{ day_label|slice:":3" }}
+            {% if day_code == today_day %}<span style="font-size:9px;background:var(--teal);color:#fff;padding:1px 5px;border-radius:99px;margin-left:4px">Today</span>{% endif %}
+          </div>
+          {% if slots %}
+            {% for t in slots %}
+            <div class="week-tt-slot">
+              <div class="week-tt-slot-time">{{ t.start_time|time:"H:i" }}</div>
+              <div class="week-tt-slot-subj">{{ t.subject.name }}</div>
+              <div class="week-tt-slot-meta">{{ t.classroom.room_number }}</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="font-size:11px;color:var(--muted);text-align:center;padding:10px 0">—</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </section>
 
@@ -309,16 +572,20 @@
     <div class="section-meta">Upcoming submissions in one clean list.</div>
     {% if pending_assignments %}
     <div class="content-scroll">
-      {% for a in pending_assignments %}
+      {% for item in pending_assignments %}
       <div class="asgn-row">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ item.assignment.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ item.assignment.subject.name }} · Due {{ item.assignment.deadline|date:"d M, H:i" }}</div>
         </div>
-        <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="margin-left:auto"><i class="fas fa-upload"></i> Submit</a>
-        <span class="deadline-badge" style="background:rgba(239,68,68,.08);color:var(--red)">
-          Due {{ a.deadline|date:"d M" }}
-        </span>
+        <a href="{% url 'student_submit_assignment' item.assignment.pk %}" class="mini-btn mini-btn-teal"><i class="fas fa-upload"></i> Submit</a>
+        {% if item.urgency == 'urgent' %}
+          <span class="deadline-badge dl-urgent"><i class="fas fa-fire"></i> {{ item.assignment.deadline|timeuntil:now }}</span>
+        {% elif item.urgency == 'soon' %}
+          <span class="deadline-badge dl-soon"><i class="fas fa-hourglass-half"></i> {{ item.assignment.deadline|timeuntil:now }}</span>
+        {% else %}
+          <span class="deadline-badge dl-ok"><i class="fas fa-calendar"></i> {{ item.assignment.deadline|timeuntil:now }}</span>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -368,54 +635,73 @@
 <section data-dashboard-pane="fees" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-indian-rupee-sign"></i> Fee Status</div>
-    <div class="section-meta">Your current fee breakdown.</div>
-    {% if fee %}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <span style="font-size:13px;color:var(--muted)">Status</span>
-      <span class="dbadge fee-status-{{ fee.status|lower }}">{{ fee.get_status_display }}</span>
+    <div class="section-meta">Your fee summary across all semesters.</div>
+
+    {% if all_fees %}
+    <!-- All-semester fee summary table -->
+    <div style="margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:700">Semester</th>
+            <th style="padding:8px 10px;text-align:left;font-size:11px;color:var(--muted);font-weight:700">Academic Year</th>
+            <th style="padding:8px 10px;text-align:right;font-size:11px;color:var(--muted);font-weight:700">Total</th>
+            <th style="padding:8px 10px;text-align:right;font-size:11px;color:var(--muted);font-weight:700">Paid</th>
+            <th style="padding:8px 10px;text-align:right;font-size:11px;color:var(--muted);font-weight:700">Balance</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;color:var(--muted);font-weight:700">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in all_fees %}
+          <tr style="border-bottom:1px solid #f3f4f6">
+            <td style="padding:8px 10px;font-weight:600;color:var(--deep)">Sem {{ f.semester|default:"—" }}</td>
+            <td style="padding:8px 10px;color:var(--muted)">{{ f.academic_year|default:"—" }}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:600">Rs {{ f.total_amount|floatformat:0 }}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--teal);font-weight:600">Rs {{ f.paid_amount|floatformat:0 }}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:700;color:{% if f.status == 'PAID' %}var(--teal){% else %}var(--red){% endif %}">
+              Rs {{ f.balance_due|floatformat:0|default:"0" }}
+            </td>
+            <td style="padding:8px 10px;text-align:center">
+              <span class="dbadge fee-status-{{ f.status|lower }}">{{ f.get_status_display }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="font-size:13px;color:var(--muted)">Total Amount</span>
-      <span style="font-size:14px;font-weight:700;color:var(--deep)">Rs {{ fee.total_amount|floatformat:0 }}</span>
+
+    {% if total_fees_due > 0 %}
+    <div style="padding:10px 14px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="font-size:13px;font-weight:700;color:#991b1b"><i class="fas fa-triangle-exclamation"></i> Total Outstanding</span>
+      <span style="font-size:16px;font-weight:900;color:#dc2626">Rs {{ total_fees_due|floatformat:0 }}</span>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="font-size:13px;color:var(--muted)">Paid</span>
-      <span style="font-size:14px;font-weight:700;color:var(--teal)">Rs {{ fee.paid_amount|floatformat:0 }}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:13px;color:var(--muted)">Balance Due</span>
-      <span style="font-size:14px;font-weight:700;color:var(--red)">Rs {{ balance_due|floatformat:0 }}</span>
-    </div>
+    {% endif %}
+
     <div class="action-row">
-      {% if balance_due > 0 %}
-      <a href="{% url 'student_fee_payment' %}" class="mini-btn mini-btn-gold"><i class="fas fa-credit-card"></i> Pay Now</a>
-      {% endif %}
-      <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Result PDF</a>
+      <a href="{% url 'student_fee_payment' %}" class="mini-btn mini-btn-gold"><i class="fas fa-credit-card"></i> Pay Fees</a>
+      <a href="{% url 'student_supply_exam_register' %}" class="mini-btn mini-btn-deep"><i class="fas fa-pen-to-square"></i> Supply Exam</a>
     </div>
-    {% with total=fee.total_amount %}
-    <div style="background:#f3f4f6;border-radius:8px;height:8px;overflow:hidden">
-      {% if total > 0 %}
-      {% widthratio fee.paid_amount total 100 as paid_pct %}
-      <div style="height:100%;width:{{ paid_pct }}%;background:var(--teal);border-radius:8px"></div>
-      {% endif %}
-    </div>
-    {% endwith %}
     {% else %}
-    <div class="empty"><i class="fas fa-receipt"></i>No fee record found.</div>
+    <div class="empty"><i class="fas fa-receipt"></i>No fee records found. Contact admin.</div>
     {% endif %}
   </div>
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-receipt"></i> Recent Payments</div>
-    <div class="section-meta">Recent successful payments and receipt access.</div>
-    {% if recent_payments %}
+    <div class="d-title"><i class="fas fa-receipt"></i> Payment Timeline</div>
+    <div class="section-meta">Full payment history with running balance.</div>
+    {% if fee_timeline %}
     <div class="content-scroll">
-      {% for payment in recent_payments %}
-      <div class="asgn-row">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">Rs {{ payment.amount|floatformat:0 }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ payment.payment_method }} · {{ payment.transaction_id }}</div>
+      {% for entry in fee_timeline %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-check"></i></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">Rs {{ entry.payment.amount|floatformat:0 }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ entry.payment.payment_method }} · {{ entry.payment.transaction_id }} · {{ entry.payment.paid_at|default:entry.payment.created_at|date:"d M Y" }}</div>
         </div>
-        <a href="{% url 'student_payment_receipt' payment.pk %}" class="mini-btn mini-btn-teal" style="margin-left:auto"><i class="fas fa-eye"></i> Receipt</a>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:700;color:var(--teal)">Total paid: Rs {{ entry.running_total|floatformat:0 }}</div>
+          {% if fee %}<div style="font-size:10px;color:var(--muted)">Balance: Rs {{ fee.balance_due|floatformat:0 }}</div>{% endif %}
+        </div>
+        <a href="{% url 'student_payment_receipt' entry.payment.pk %}" class="mini-btn mini-btn-teal" style="padding:5px 10px;font-size:11px"><i class="fas fa-eye"></i></a>
       </div>
       {% endfor %}
     </div>
@@ -541,7 +827,7 @@
 <section data-dashboard-pane="academic-track" class="dashboard-pane">
   <div class="two-col">
     <div class="d-card">
-      <div class="d-card-title"><i class="fas fa-chart-line"></i> CGPA Trend</div>
+      <div class="d-card-title"><i class="fas fa-chart-line"></i> SGPA Trend — All Semesters</div>
       {% if semester_results %}
       <div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:10px 0;margin-bottom:8px">
         {% for r in semester_results %}
@@ -553,49 +839,96 @@
         </div>
         {% endfor %}
       </div>
-      <div style="font-size:12px;color:var(--muted);text-align:center">Cumulative GPA: <strong style="color:var(--teal)">{{ cgpa }}</strong></div>
+      <div style="font-size:12px;color:var(--muted);text-align:center">CGPA (weighted): <strong style="color:var(--teal)">{{ cgpa }}</strong></div>
+      {% with best=semester_results|dictsort:"gpa"|last %}
+      {% if best %}
+      <div style="margin-top:12px;padding:10px 14px;background:rgba(13,115,119,.06);border-radius:10px;border:1px solid rgba(13,115,119,.15);font-size:12px;color:var(--deep)">
+        <i class="fas fa-trophy" style="color:var(--gold);margin-right:6px"></i>
+        Best semester: <strong>Sem {{ best.semester }}</strong> with <strong style="color:var(--teal)">{{ best.gpa }} SGPA</strong>
+        ({{ best.percentage|floatformat:1 }}%)
+      </div>
+      {% endif %}
+      {% endwith %}
       {% else %}
       <div class="empty"><i class="fas fa-chart-line"></i>No results published yet.</div>
       {% endif %}
     </div>
 
     <div class="d-card">
-      <div class="d-card-title"><i class="fas fa-calendar-check"></i> Attendance Health</div>
-      {% if attendance_data %}
-      {% for a in attendance_data %}
-      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f3f4f6">
-        <div style="flex:1;font-size:12px;font-weight:600;color:var(--deep)">{{ a.subject.code }}</div>
-        <div style="width:80px;background:#f3f4f6;border-radius:99px;height:6px">
-          <div style="height:6px;border-radius:99px;width:{% if a.pct %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+      <div class="d-card-title"><i class="fas fa-calendar-check"></i> Attendance by Semester</div>
+      {% if att_by_semester %}
+      <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding:8px 0;margin-bottom:8px">
+        {% for row in att_by_semester %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:10px;font-weight:700;color:{% if row.pct >= 75 %}var(--teal){% elif row.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ row.pct }}%</div>
+          {% widthratio row.pct 100 100 as ah %}
+          <div style="width:100%;background:{% if row.pct >= 75 %}var(--teal){% elif row.pct >= 60 %}var(--gold){% else %}var(--red){% endif %};border-radius:4px 4px 0 0;height:{{ ah }}px;min-height:6px;opacity:.8"></div>
+          <div style="font-size:10px;color:var(--muted)">S{{ row.semester }}</div>
         </div>
-        <div style="font-size:12px;font-weight:700;width:38px;text-align:right;color:{% if a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{% if a.pct %}{{ a.pct }}%{% else %}—{% endif %}</div>
-        {% if a.is_low %}<i class="fas fa-triangle-exclamation" style="color:var(--red);font-size:11px"></i>{% endif %}
+        {% endfor %}
       </div>
-      {% endfor %}
+      <div style="font-size:11px;color:var(--muted);text-align:center">75% threshold required per subject</div>
       {% else %}
-      <div class="empty"><i class="fas fa-calendar-xmark"></i>No data yet.</div>
+      <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
       {% endif %}
     </div>
   </div>
 
+  <!-- Assignment score trend -->
+  {% if assignment_score_trend %}
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-file-pen"></i> Assignment Score Trend</div>
+    <div class="section-meta">All graded assignments over time.</div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Assignment</th><th>Subject</th><th>Score</th><th>Date</th><th>Feedback</th></tr></thead>
+        <tbody>
+          {% for a in assignment_score_trend %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ a.title }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ a.subject }}</td>
+            <td><span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--teal)">{{ a.marks|floatformat:1 }}</span></td>
+            <td style="font-size:12px;color:var(--muted)">{{ a.date|date:"d M Y" }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ a.feedback|default:"—"|truncatechars:50 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-graduation-cap"></i> Academic Standing</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px">
+    {% if on_probation %}
+    <div style="padding:10px 14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:12px;color:#991b1b;font-weight:600;margin-bottom:14px">
+      <i class="fas fa-triangle-exclamation"></i> Academic Probation — attendance below 75% or active backlogs detected.
+    </div>
+    {% endif %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px">
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
         <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ cgpa|default:"—" }}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">CGPA</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if overall_attendance and overall_attendance >= 75 %}var(--teal){% else %}var(--red){% endif %}">{{ overall_attendance|default:"—" }}{% if overall_attendance %}%{% endif %}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Attendance</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if overall_attendance and overall_attendance >= att_rule.effective_min_overall %}var(--teal){% else %}var(--red){% endif %}">{{ overall_attendance|default:"—" }}{% if overall_attendance %}%{% endif %}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Current Attendance</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">{{ student.current_semester }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Current Semester</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">Sem {{ student.current_semester }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Year {{ year_of_study }} of Study</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if fee and fee.status == 'PAID' %}var(--green){% else %}var(--red){% endif %}">{{ fee.get_status_display|default:"—" }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Fee Status</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if backlog_count == 0 %}var(--teal){% elif backlog_count <= 2 %}var(--gold){% else %}var(--red){% endif %}">{{ backlog_count }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Active Backlogs</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;color:{% if academic_standing == 'Distinction' or academic_standing == 'First Class' %}var(--teal){% elif academic_standing == 'At Risk' %}var(--red){% else %}var(--deep){% endif %}">{{ academic_standing|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Academic Class</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if fee and fee.status == 'PAID' %}var(--teal){% elif fee and fee.status == 'PARTIAL' %}var(--gold){% else %}var(--red){% endif %}">{{ fee.get_status_display|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Fee Status (Sem {{ fee.semester|default:"—" }})</div>
       </div>
     </div>
   </div>
@@ -605,28 +938,84 @@
 <section data-dashboard-pane="course-structure" class="dashboard-pane">
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-list-ol"></i> Semester {{ student.current_semester }} — Course Structure</div>
-    <div class="section-meta">{{ student.department.name }} · All subjects this semester</div>
+    <div class="section-meta">{{ student.department.name }} · All subjects this semester with L-T-P-C breakdown</div>
     {% if course_subjects %}
+    {% with total_credits=0 %}
     <div class="table-scroll">
-      <table class="dtable">
+      <table class="dtable" style="min-width:680px">
         <thead>
-          <tr><th>#</th><th>Subject</th><th>Code</th><th>Credits</th><th>Faculty</th></tr>
+          <tr>
+            <th>#</th>
+            <th>Course Code</th>
+            <th>Course Title</th>
+            <th style="text-align:center">Category</th>
+            <th style="text-align:center" title="Lecture hours/week">L</th>
+            <th style="text-align:center" title="Tutorial hours/week">T</th>
+            <th style="text-align:center" title="Practical hours/week">P</th>
+            <th style="text-align:center" title="Credits">C</th>
+            <th>Faculty</th>
+          </tr>
         </thead>
         <tbody>
           {% for subj in course_subjects %}
           <tr>
-            <td style="color:var(--muted)">{{ forloop.counter }}</td>
+            <td style="color:var(--muted);font-size:12px">{{ forloop.counter }}</td>
+            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px;white-space:nowrap">{{ subj.code }}</span></td>
             <td style="font-weight:600;color:var(--deep)">{{ subj.name }}</td>
-            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ subj.code }}</span></td>
-            <td style="text-align:center;font-weight:600">{{ subj.weekly_hours }}</td>
+            <td style="text-align:center">
+              <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;
+                background:{% if subj.category == 'PC' %}rgba(13,115,119,.1);color:var(--teal)
+                {% elif subj.category == 'PE' %}rgba(99,102,241,.1);color:#6366f1
+                {% elif subj.category == 'OE' %}rgba(230,168,23,.1);color:#b88510
+                {% elif subj.category == 'MC' %}rgba(239,68,68,.08);color:var(--red)
+                {% elif subj.category == 'PW' %}rgba(16,185,129,.1);color:#059669
+                {% elif subj.category == 'AC' %}rgba(100,116,139,.1);color:#475569
+                {% else %}rgba(100,116,139,.08);color:var(--muted){% endif %}">
+                {{ subj.category }}
+              </span>
+            </td>
+            <td style="text-align:center;font-weight:600;color:var(--deep)">{{ subj.lecture_hours }}</td>
+            <td style="text-align:center;color:var(--muted)">{{ subj.tutorial_hours }}</td>
+            <td style="text-align:center;color:var(--muted)">{{ subj.practical_hours }}</td>
+            <td style="text-align:center;font-weight:800;color:var(--teal)">{{ subj.credits }}</td>
             <td style="color:var(--muted);font-size:12px">
               {% for fs in subj.facultysubject_set.all %}{{ fs.faculty.user.get_full_name|default:fs.faculty.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
+        <tfoot>
+          <tr style="background:#f8fafc;border-top:2px solid var(--border)">
+            <td colspan="7" style="font-size:12px;font-weight:700;color:var(--muted);text-align:right;padding:10px 12px">Total Credits this Semester</td>
+            <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:var(--teal);padding:10px 12px">
+              {% with ns=0 %}{% for subj in course_subjects %}{% with ns=ns|add:subj.credits %}{% endwith %}{% endfor %}{{ course_subjects|length }}{% endwith %}
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
+      <span style="font-weight:700;color:var(--deep)">Legend:</span>
+      <span><strong>L</strong> = Lecture</span>
+      <span>·</span>
+      <span><strong>T</strong> = Tutorial</span>
+      <span>·</span>
+      <span><strong>P</strong> = Practical</span>
+      <span>·</span>
+      <span><strong>C</strong> = Credits</span>
+      <span>·</span>
+      <span><strong style="color:var(--teal)">PC</strong> = Program Core</span>
+      <span>·</span>
+      <span><strong style="color:#6366f1">PE</strong> = Program Elective</span>
+      <span>·</span>
+      <span><strong style="color:#b88510">OE</strong> = Open Elective</span>
+      <span>·</span>
+      <span><strong style="color:#059669">PW</strong> = Project Work</span>
+      <span>·</span>
+      <span><strong style="color:var(--red)">MC</strong> = Mandatory Course</span>
+    </div>
+    {% endwith %}
     {% else %}
     <div class="empty"><i class="fas fa-list-ol"></i>No subjects found for this semester.</div>
     {% endif %}
@@ -636,21 +1025,49 @@
 <!-- INTERNAL MARKS -->
 <section data-dashboard-pane="internals" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-table-list"></i> Internal Marks — Semester {{ student.current_semester }}</div>
-    <div class="section-meta">IA1 (30) + IA2 (30) + Assignment (20) + Attendance (5) = 85 total</div>
+    <div class="d-card-title"><i class="fas fa-table-list"></i> Internal Marks — All Semesters</div>
+    <div class="section-meta">IA1 + IA2 + Assignment + Attendance components across every semester.</div>
+    {% if all_internal_semesters %}
+    <!-- Semester tabs -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      {% for sem, rows in all_internal_list %}
+      <button onclick="showIntPane('int-sem-{{ sem }}')" id="int-tab-{{ sem }}"
+        class="sem-tab {% if sem == student.current_semester %}sem-tab-active{% elif forloop.first and student.current_semester not in all_internal_semesters %}sem-tab-active{% endif %}">
+        Sem {{ sem }}{% if sem == student.current_semester %} <span style="font-size:9px;opacity:.7">(current)</span>{% endif %}
+      </button>
+      {% endfor %}
+    </div>
+    {% for sem, rows in all_internal_list %}
+    <div class="sem-pane {% if sem == student.current_semester %}sem-pane-active{% elif forloop.first and student.current_semester not in all_internal_semesters %}sem-pane-active{% endif %}" id="int-sem-{{ sem }}">
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Subject</th><th>IA 1 /30</th><th>IA 2 /30</th><th>Assignment /20</th><th>Attendance /5</th><th>Total /85</th></tr></thead>
+          <tbody>
+            {% for im in rows %}
+            <tr>
+              <td><div style="font-weight:600;color:var(--deep)">{{ im.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ im.subject.code }}</div></td>
+              <td style="text-align:center;font-weight:600">{% if im.ia1 is not None %}{{ im.ia1|floatformat:1 }}{% else %}—{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.ia2 is not None %}{{ im.ia2|floatformat:1 }}{% else %}—{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.assignment_marks is not None %}{{ im.assignment_marks|floatformat:1 }}{% else %}—{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.attendance_marks is not None %}{{ im.attendance_marks|floatformat:1 }}{% else %}—{% endif %}</td>
+              <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--teal)">{{ im.total|floatformat:1 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <!-- Fallback: current semester only -->
     {% if internal_data %}
     <div class="table-scroll">
       <table class="dtable">
-        <thead>
-          <tr><th>Subject</th><th>IA 1 /30</th><th>IA 2 /30</th><th>Assignment /20</th><th>Attendance /5</th><th>Total /85</th></tr>
-        </thead>
+        <thead><tr><th>Subject</th><th>IA 1 /30</th><th>IA 2 /30</th><th>Assignment /20</th><th>Attendance /5</th><th>Total /85</th></tr></thead>
         <tbody>
           {% for row in internal_data %}
           <tr>
-            <td>
-              <div style="font-weight:600;color:var(--deep)">{{ row.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted)">{{ row.subject.code }}</div>
-            </td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ row.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ row.subject.code }}</div></td>
             {% if row.im %}
             <td style="text-align:center;font-weight:600">{% if row.im.ia1 is not None %}{{ row.im.ia1|floatformat:1 }}{% else %}—{% endif %}</td>
             <td style="text-align:center;font-weight:600">{% if row.im.ia2 is not None %}{{ row.im.ia2|floatformat:1 }}{% else %}—{% endif %}</td>
@@ -666,7 +1083,8 @@
       </table>
     </div>
     {% else %}
-    <div class="empty"><i class="fas fa-table-list"></i>No subjects found for this semester.</div>
+    <div class="empty"><i class="fas fa-table-list"></i>No internal marks yet.</div>
+    {% endif %}
     {% endif %}
   </div>
 </section>
@@ -698,4 +1116,88 @@
   </div>
 </section>
 
+<!-- QUIZ HISTORY -->
+<section data-dashboard-pane="quiz-history" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-clock-rotate-left"></i> Quiz History</div>
+    <div class="section-meta">All your past quiz attempts and scores.</div>
+    {% if quiz_history %}
+    <div class="content-scroll">
+      {% for attempt in quiz_history %}
+      <div class="qh-row">
+        <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ attempt.quiz.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ attempt.quiz.subject.name }} · Attempted {{ attempt.submitted_at|date:"d M Y, H:i" }}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="qh-score">{{ attempt.score|default:"0"|floatformat:1 }}</div>
+          <div style="font-size:10px;color:var(--muted)">/ {{ attempt.quiz.total_marks }} marks</div>
+        </div>
+        {% with pct=attempt.score|default:0 %}
+        <div style="width:52px;text-align:center">
+          {% if attempt.score and attempt.quiz.total_marks %}
+          {% widthratio attempt.score attempt.quiz.total_marks 100 as spct %}
+          <span class="dbadge {% if spct >= 75 %}dbadge-active{% elif spct >= 50 %}dbadge-warning{% else %}dbadge-red{% endif %}">{{ spct }}%</span>
+          {% endif %}
+        </div>
+        {% endwith %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-clock-rotate-left"></i>No quiz attempts yet.</div>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+(function() {
+  var notifLink = document.querySelector('a[data-section-target="notifications"]');
+  var notifBadge = notifLink ? notifLink.querySelector('span') : null;
+  if (!notifBadge) return;
+
+  function markNotificationsRead() {
+    fetch("{% url 'student_mark_notifications_read' %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    }).then(function() {
+      if (notifBadge) { notifBadge.remove(); notifBadge = null; }
+    });
+  }
+
+  var observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      if (m.target.dataset.dashboardPane === 'notifications' &&
+          m.target.classList.contains('active') && notifBadge) {
+        markNotificationsRead();
+      }
+    });
+  });
+  document.querySelectorAll('[data-dashboard-pane="notifications"]').forEach(function(el) {
+    observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+})();
+
+function showSemPane(id) {
+  document.querySelectorAll('.sem-pane').forEach(function(p){ p.classList.remove('sem-pane-active'); });
+  document.querySelectorAll('.sem-tab').forEach(function(t){ t.classList.remove('sem-tab-active'); });
+  var pane = document.getElementById(id);
+  if (pane) pane.classList.add('sem-pane-active');
+  document.querySelectorAll('.sem-tab').forEach(function(t){
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + id + "'") !== -1)
+      t.classList.add('sem-tab-active');
+  });
+}
+function showIntPane(id) {
+  document.querySelectorAll('[id^="int-sem-"]').forEach(function(p){ p.classList.remove('sem-pane-active'); });
+  document.querySelectorAll('[id^="int-tab-"]').forEach(function(t){ t.classList.remove('sem-tab-active'); });
+  var pane = document.getElementById(id);
+  if (pane) pane.classList.add('sem-pane-active');
+  var tabId = id.replace('int-sem-', 'int-tab-');
+  var tab = document.getElementById(tabId);
+  if (tab) tab.classList.add('sem-tab-active');
+}
 {% endblock %}

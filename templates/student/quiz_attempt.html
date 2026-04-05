@@ -57,21 +57,29 @@
 
 <script>
 (function(){
-  var total = {{ quiz.duration_minutes }} * 60;
+  var total = {{ seconds_remaining }};
   var el = document.getElementById('quiz-timer');
   var form = document.getElementById('quiz-form');
+  var submitted = false;
   var iv = setInterval(function(){
     total--;
     var m = Math.floor(total/60), s = total%60;
     el.textContent = m + ':' + (s<10?'0':'') + s;
     if(total <= 60) el.classList.add('warn');
-    if(total <= 0){ clearInterval(iv); form.submit(); }
+    if(total <= 0 && !submitted){
+      clearInterval(iv);
+      submitted = true;
+      el.textContent = '0:00';
+      form.submit();
+    }
   }, 1000);
 
   form.addEventListener('submit', function(){
-    document.getElementById('submit-btn').disabled = true;
-    document.getElementById('submit-btn').textContent = 'Submitting…';
+    if(submitted) return false;
+    submitted = true;
     clearInterval(iv);
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('submit-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
   });
 })();
 </script>

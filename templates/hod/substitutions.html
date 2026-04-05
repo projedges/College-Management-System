@@ -5,6 +5,21 @@
 {% block page_title %}Faculty Substitutions{% endblock %}
 {% block page_sub %}Assign substitute faculty for upcoming or today's classes{% endblock %}
 
+{% block sidebar_links %}
+<a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-home"></i> Dashboard</a>
+<a href="{% url 'hod_dashboard' %}#profile" class="sb-link"><i class="fas fa-user-tie"></i> My Profile</a>
+<a href="{% url 'hod_dashboard' %}#faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
+<a href="{% url 'hod_dashboard' %}#students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
+<a href="{% url 'hod_dashboard' %}#timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="{% url 'hod_dashboard' %}#attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="{% url 'hod_defaulters_report' %}" class="sb-link"><i class="fas fa-user-slash"></i> Defaulters Report</a>
+<a href="{% url 'hod_exemptions' %}" class="sb-link"><i class="fas fa-file-medical"></i> Exemption Requests</a>
+<a href="{% url 'hod_dashboard' %}#approvals" class="sb-link"><i class="fas fa-check-circle"></i> Approvals</a>
+<a href="{% url 'hod_dashboard' %}#history" class="sb-link"><i class="fas fa-history"></i> History</a>
+<a href="{% url 'hod_dashboard' %}#notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="{% url 'hod_substitutions' %}" class="sb-link active"><i class="fas fa-user-clock"></i> Substitutions</a>
+{% endblock %}
+
 {% block dashboard_content %}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
   <div class="d-card">
@@ -13,21 +28,24 @@
       {% csrf_token %}
       <div style="margin-bottom:14px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Timetable Slot <span style="color:#ef4444">*</span></label>
-        <select name="slot_id" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required>
+        <select name="slot_id" id="slot-select" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required onchange="filterSubFaculty(this.value)">
           <option value="">Select slot</option>
           {% for slot in slots %}
-          <option value="{{ slot.pk }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"H:i" }} — {{ slot.subject.name }} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
+          <option value="{{ slot.pk }}" data-faculty-id="{{ slot.faculty_id }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"H:i" }} — {{ slot.subject.name }}{% if slot.section %} [Sec {{ slot.section }}]{% endif %} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
           {% endfor %}
         </select>
       </div>
       <div style="margin-bottom:14px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Substitute Faculty <span style="color:#ef4444">*</span></label>
-        <select name="substitute_faculty_id" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required>
-          <option value="">Select faculty</option>
+        <select name="substitute_faculty_id" id="sub-faculty-select" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required>
+          <option value="">Select slot first</option>
           {% for f in faculty_list %}
-          <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }}</option>
+          <option value="{{ f.pk }}" data-faculty-id="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }}</option>
           {% endfor %}
         </select>
+        <div id="sub-faculty-hint" style="font-size:11px;color:var(--muted);margin-top:4px;display:none">
+          <i class="fas fa-circle-info"></i> The original faculty is excluded from this list.
+        </div>
       </div>
       <div style="margin-bottom:18px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Date <span style="color:#ef4444">*</span></label>
@@ -58,4 +76,52 @@
     {% endif %}
   </div>
 </div>
+
+{% block extra_js %}
+<script>
+// Server-provided map: slot PK → original faculty PK
+var SLOT_FACULTY_MAP = {{ slot_faculty_json }};
+
+function filterSubFaculty(slotId) {
+  var subSelect = document.getElementById('sub-faculty-select');
+  var hint      = document.getElementById('sub-faculty-hint');
+
+  // Reset — show all, clear selection
+  subSelect.value = '';
+  Array.from(subSelect.options).forEach(function(opt) {
+    opt.hidden   = false;
+    opt.disabled = false;
+  });
+
+  if (!slotId) {
+    subSelect.options[0].text = 'Select slot first';
+    hint.style.display = 'none';
+    return;
+  }
+
+  subSelect.options[0].text = 'Select substitute faculty';
+
+  var originalFacultyPk = SLOT_FACULTY_MAP[String(slotId)];
+  if (originalFacultyPk === undefined) return;
+
+  Array.from(subSelect.options).forEach(function(opt) {
+    // opt.value is the Faculty PK as string — compare as integers
+    if (parseInt(opt.value, 10) === originalFacultyPk) {
+      opt.hidden   = true;
+      opt.disabled = true;
+      if (opt.selected) opt.selected = false;
+    }
+  });
+
+  hint.style.display = 'block';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var slotSelect = document.getElementById('slot-select');
+  if (slotSelect && slotSelect.value) {
+    filterSubFaculty(slotSelect.value);
+  }
+});
+</script>
+{% endblock %}
 {% endblock %}

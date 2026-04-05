@@ -55,6 +55,7 @@
         <div style="font-size:11px;color:var(--muted)">{{ row.student.roll_number }}</div>
       </div>
       <input type="number" name="marks_{{ row.student.id }}" class="marks-input" placeholder="-" min="0" step="0.5"
+             id="marks_{{ row.student.id }}"
              value="{% if row.existing_mark %}{{ row.existing_mark.marks_obtained|floatformat:'-1' }}{% endif %}" oninput="calcGrade(this)"/>
       <div class="grade-badge" id="grade_{{ row.student.id }}">{% if row.existing_mark %}{{ row.existing_mark.grade }}{% else %}-{% endif %}</div>
     </div>
@@ -75,7 +76,10 @@
     const id = input.name.replace('marks_','');
     const el = document.getElementById('grade_' + id);
     if(isNaN(val) || !el){ return; }
-    const pct = (val / max) * 100;
+    // Enforce max client-side
+    if(val > max){ input.value = max; input.style.borderColor='var(--red)'; }
+    else { input.style.borderColor=''; }
+    const pct = (Math.min(val, max) / max) * 100;
     let g = 'F';
     if(pct >= 90) g = 'O';
     else if(pct >= 80) g = 'A+';

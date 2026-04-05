@@ -242,24 +242,21 @@
 <section data-dashboard-pane="activity" class="dashboard-pane">
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-clock-rotate-left"></i> Platform Activity Log</div>
-    <div class="section-meta">Last 15 login and logout events across all users.</div>
+    <div class="section-meta">Super-admin actions only. College user activity is private to each college.</div>
     {% if recent_activity %}
     <div class="content-scroll">
       {% for log in recent_activity %}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:12px">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ log.action }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ log.user.username }}{% if log.ip_address %} · {{ log.ip_address }}{% endif %}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ log.user.username }}</div>
         </div>
         <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.timestamp|date:"d M Y H:i" }}</div>
       </div>
       {% endfor %}
     </div>
-    <div style="margin-top:12px">
-      <a href="/admin/students/activitylog/" class="qa-btn" style="background:#4b5563;color:#fff;font-size:12px"><i class="fas fa-shield-halved"></i> Full Audit in Django Admin</a>
-    </div>
     {% else %}
-    <div class="empty"><i class="fas fa-clock"></i>No activity logged yet.</div>
+    <div class="empty"><i class="fas fa-clock"></i>No platform-level activity logged yet.</div>
     {% endif %}
   </div>
 </section>

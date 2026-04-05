@@ -11,7 +11,7 @@
 {% block dashboard_content %}
 <div class="card" style="max-width:820px">
   <div style="background:var(--surface2);border:1px dashed #bcd2db;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--muted);line-height:1.7">
-    The default starter password is filled in. The college admin will control everything inside the selected college only.
+    Leave the password blank to generate a strong temporary password. The college admin will only control the selected college.
   </div>
   <form method="POST">
     {% csrf_token %}
@@ -20,7 +20,7 @@
       <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Last Name</label><input type="text" name="last_name" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
       <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Email</label><input type="email" name="email" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
       <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Username</label><input type="text" name="username" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
-      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Password</label><input type="text" name="password" value="College@1234" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Temporary Password</label><input type="text" name="password" placeholder="Leave blank to auto-generate" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
       <div>
         <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College</label>
         <select name="college" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px">

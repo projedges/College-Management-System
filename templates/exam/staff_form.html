@@ -1,0 +1,81 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Add Exam Staff{% endblock %}
+{% block page_title %}Add Exam Staff Member{% endblock %}
+{% block page_sub %}Create a new examination department account{% endblock %}
+{% block nav_staff %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:640px">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-plus"></i> New Exam Staff Account</div>
+    <form method="POST">
+      {% csrf_token %}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">First Name *</label>
+          <input type="text" name="first_name" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Last Name *</label>
+          <input type="text" name="last_name" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Username *</label>
+          <input type="text" name="username" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Email</label>
+          <input type="email" name="email" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Employee ID *</label>
+          <input type="text" name="employee_id" required placeholder="e.g. EXAM-001" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Phone</label>
+          <input type="text" name="phone_number" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Exam Role *</label>
+        <select name="exam_role" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''">
+          {% for value, label in roles %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">COE and Deputy COE have full access. Section Officers are scoped to departments.</div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Department Scope <span style="font-size:11px;font-weight:400;color:var(--muted)">(for Section Officers — leave blank for all)</span></label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          {% for d in departments %}
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+            <input type="checkbox" name="departments" value="{{ d.pk }}" style="accent-color:#7c3aed"/>
+            {{ d.name }} ({{ d.code }})
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:5px">Password <span style="font-size:11px;font-weight:400;color:var(--muted)">(leave blank to auto-generate)</span></label>
+        <input type="text" name="password" placeholder="Leave blank to auto-generate" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor=''"/>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn-purple"><i class="fas fa-user-plus"></i> Create Staff Account</button>
+        <a href="{% url 'exam_staff_list' %}" style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;background:var(--surface2);color:var(--deep);font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid var(--border)">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

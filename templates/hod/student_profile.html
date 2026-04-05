@@ -1,0 +1,196 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{{ student.user.get_full_name }} — HOD View{% endblock %}
+{% block role_label %}Head of Department{% endblock %}
+{% block role_label_foot %}Head of Department{% endblock %}
+{% block page_title %}{{ student.user.get_full_name|default:student.user.username }}{% endblock %}
+{% block page_sub %}{{ student.roll_number }} · {{ dept.name }} · Semester {{ student.current_semester }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-home"></i> Dashboard</a>
+<a href="{% url 'hod_dashboard' %}#profile" class="sb-link"><i class="fas fa-user-tie"></i> My Profile</a>
+<a href="{% url 'hod_dashboard' %}#faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
+<a href="{% url 'hod_dashboard' %}#students" class="sb-link active"><i class="fas fa-user-graduate"></i> Students</a>
+<a href="{% url 'hod_dashboard' %}#timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="{% url 'hod_dashboard' %}#attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="{% url 'hod_defaulters_report' %}" class="sb-link"><i class="fas fa-user-slash"></i> Defaulters Report</a>
+<a href="{% url 'hod_exemptions' %}" class="sb-link"><i class="fas fa-file-medical"></i> Exemption Requests</a>
+<a href="{% url 'hod_dashboard' %}#approvals" class="sb-link"><i class="fas fa-check-circle"></i> Approvals</a>
+<a href="{% url 'hod_dashboard' %}#history" class="sb-link"><i class="fas fa-history"></i> History</a>
+<a href="{% url 'hod_dashboard' %}#notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="{% url 'hod_substitutions' %}" class="sb-link"><i class="fas fa-user-clock"></i> Substitutions</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .att-bar-bg{background:#f3f4f6;border-radius:99px;height:8px;overflow:hidden;min-width:80px}
+  .att-bar-fill{height:100%;border-radius:99px}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- Back link -->
+<div style="margin-bottom:20px">
+  <a href="{% url 'hod_dashboard' %}#students" style="font-size:13px;color:var(--muted);text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+    <i class="fas fa-arrow-left" style="font-size:11px"></i> Back to Students
+  </a>
+</div>
+
+<!-- Identity card -->
+<div class="d-card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:#fff;flex-shrink:0">
+      {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">{{ student.user.get_full_name|default:student.user.username }}</div>
+      <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:2px">{{ student.roll_number }}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ dept.name }} · Semester {{ student.current_semester }} · Admitted {{ student.admission_year }}</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <!-- Eligibility badge -->
+      {% if elig.eligible %}
+      <span style="padding:6px 14px;border-radius:99px;background:#d1fae5;color:#065f46;font-size:12px;font-weight:700"><i class="fas fa-check-circle"></i> Exam Eligible</span>
+      {% else %}
+      <span style="padding:6px 14px;border-radius:99px;background:#fee2e2;color:#991b1b;font-size:12px;font-weight:700"><i class="fas fa-ban"></i> Ineligible</span>
+      {% endif %}
+      <!-- Status badge -->
+      <span style="padding:6px 14px;border-radius:99px;background:{% if student.status == 'ACTIVE' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};font-size:12px;font-weight:700">{{ student.status }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="stat-grid" style="margin-bottom:20px">
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-calendar-check"></i></div>
+    <div class="s-val">{% if overall_pct is not None %}{{ overall_pct }}%{% else %}—{% endif %}</div>
+    <div class="s-lbl">Overall Attendance</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-star"></i></div>
+    <div class="s-val">{% if cgpa %}{{ cgpa }}{% else %}—{% endif %}</div>
+    <div class="s-lbl">CGPA</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-file-alt"></i></div>
+    <div class="s-val">{{ pending_assignments }}</div>
+    <div class="s-lbl">Pending Assignments</div>
+  </div>
+  <div class="stat-card">
+    <div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-indian-rupee-sign"></i></div>
+    <div class="s-val">{% if fee %}{{ fee.status }}{% else %}—{% endif %}</div>
+    <div class="s-lbl">Fee Status</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <!-- Attendance -->
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance — Semester {{ student.current_semester }}</div>
+    {% if attendance_data %}
+    {% for a in attendance_data %}
+    <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ a.subject.code }}</div>
+        </div>
+        <div style="text-align:right">
+          <span style="font-size:13px;font-weight:700;color:{% if a.pct is None %}var(--muted){% elif a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">
+            {% if a.pct is not None %}{{ a.pct }}%{% else %}N/A{% endif %}
+          </span>
+          <div style="font-size:11px;color:var(--muted)">{{ a.present }}/{{ a.total }}</div>
+        </div>
+      </div>
+      <div class="att-bar-bg">
+        <div class="att-bar-fill" style="width:{% if a.pct %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct is None %}#d1d5db{% elif a.pct >= 75 %}var(--teal){% elif a.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not elig.eligible and elig.reasons %}
+    <div style="margin-top:12px;padding:10px 14px;background:#fff8f8;border-radius:8px;border:1px solid #fecaca">
+      {% for reason in elig.reasons %}
+      <div style="font-size:12px;color:#991b1b"><i class="fas fa-triangle-exclamation" style="font-size:10px"></i> {{ reason }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Results + Fee -->
+  <div>
+    <div class="d-card" style="margin-bottom:20px">
+      <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results</div>
+      {% if results %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Sem</th><th>SGPA</th><th>%</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for r in results %}
+            <tr>
+              <td style="font-weight:600;color:var(--deep)">{{ r.semester }}</td>
+              <td style="font-weight:700;color:var(--teal)">{{ r.gpa }}</td>
+              <td>{{ r.percentage|floatformat:1 }}%</td>
+              <td>
+                {% if r.percentage >= 60 %}<span class="dbadge dbadge-active">Pass</span>
+                {% elif r.percentage >= 40 %}<span class="dbadge dbadge-warning">Pass (Low)</span>
+                {% else %}<span class="dbadge dbadge-red">Fail</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-chart-bar"></i>No results yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-indian-rupee-sign"></i> Fee Summary</div>
+      {% if fee %}
+      <div class="summary-list">
+        <div class="summary-item"><span>Total Amount</span><strong>₹{{ fee.total_amount|floatformat:0 }}</strong></div>
+        <div class="summary-item"><span>Paid</span><strong style="color:var(--teal)">₹{{ fee.paid_amount|floatformat:0 }}</strong></div>
+        <div class="summary-item">
+          <span>Balance</span>
+          <strong style="color:{% if fee.status == 'PAID' %}var(--teal){% else %}var(--red){% endif %}">
+            ₹{{ fee.total_amount|floatformat:0 }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Status</span>
+          <span class="dbadge {% if fee.status == 'PAID' %}dbadge-active{% elif fee.status == 'PARTIAL' %}dbadge-warning{% else %}dbadge-red{% endif %}">{{ fee.status }}</span>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-receipt"></i>No fee record.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent absences -->
+{% if recent_absences %}
+<div class="d-card" style="margin-top:4px">
+  <div class="d-title"><i class="fas fa-calendar-xmark"></i> Recent Absences</div>
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Subject</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for att in recent_absences %}
+        <tr>
+          <td style="font-weight:600;color:var(--deep)">{{ att.session.subject.name }}</td>
+          <td style="color:var(--muted)">{{ att.session.date|date:"d M Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

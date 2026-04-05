@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Request Eligibility Override{% endblock %}
+{% block body %}
+<div style="max-width:520px;margin:60px auto;padding:0 16px">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px">
+    <h2 style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);margin-bottom:4px">Request Eligibility Override</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px">You are currently ineligible for <strong>{{ exam.name }}</strong>. Submit a request for the exam cell to review.</p>
+
+    <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:18px">
+      <div style="font-size:13px;font-weight:600;color:#991b1b;margin-bottom:6px"><i class="fas fa-ban"></i> Ineligibility Reasons</div>
+      {% for reason in elig.reasons %}
+      <div style="font-size:12px;color:#991b1b">• {{ reason }}</div>
+      {% endfor %}
+      {% if elig.overall_pct is not None %}
+      <div style="font-size:12px;color:#991b1b;margin-top:6px">Overall attendance: <strong>{{ elig.overall_pct }}%</strong> (required: {{ elig.rule.effective_min_overall }}%)</div>
+      {% endif %}
+    </div>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Reason for Override Request <span style="color:#ef4444">*</span></label>
+        <textarea name="reason" rows="4" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Explain why you should be granted eligibility despite low attendance…"></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" style="padding:10px 20px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer"><i class="fas fa-paper-plane"></i> Submit Request</button>
+        <a href="{% url 'student_dashboard' %}" style="padding:10px 18px;border-radius:9px;background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid var(--border)">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

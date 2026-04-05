@@ -1,40 +1,51 @@
 {% extends 'dashboards/base_dashboard.html' %}
 {% block title %}College Admin Dashboard{% endblock %}
+{% block dashboard_default_section %}overview{% endblock %}
+{% block dashboard_section_aliases %}{"academics":"departments"}{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}College Admin Workspace{% endblock %}
 {% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span>{% if college %} · <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endif %}{% endblock %}
 
 {% block sidebar_links %}
-<a href="#overview"      data-section-target="overview"      class="sb-link active"><i class="fas fa-home"></i> Overview</a>
+<p class="sb-nav-label">Overview</p>
+<a href="#overview"      data-section-target="overview"      class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
 <a href="#profile"       data-section-target="profile"       class="sb-link"><i class="fas fa-user-circle"></i> My Profile</a>
 <a href="#workflow"      data-section-target="workflow"       class="sb-link"><i class="fas fa-compass"></i> Start Here</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Manage</p>
+<a href="#departments"   data-section-target="departments"   class="sb-link"><i class="fas fa-building"></i> Departments</a>
+<a href="#requests"      data-section-target="requests"      class="sb-link"><i class="fas fa-inbox"></i> Invite &amp; Requests{% if pending_requests %} <span style="margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ pending_requests }}</span>{% endif %}</a>
 <a href="#students"      data-section-target="students"      class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
-<a href="#faculty"       data-section-target="faculty"       class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Staff</a>
+<a href="#bulk"          data-section-target="bulk"          class="sb-link"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
+<a href="#faculty"       data-section-target="faculty"       class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="#academics"     data-section-target="academics"     class="sb-link"><i class="fas fa-book"></i> Academics</a>
-<a href="#requests"      data-section-target="requests"      class="sb-link"><i class="fas fa-inbox"></i> Requests{% if pending_requests %} <span style="margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ pending_requests }}</span>{% endif %}</a>
-<a href="#planner"       data-section-target="planner"       class="sb-link"><i class="fas fa-calendar-days"></i> Planner</a>
+<a href="#planner"       data-section-target="planner"       class="sb-link"><i class="fas fa-calendar-days"></i> Semester Planner</a>
+<a href="#exams"         data-section-target="exams"         class="sb-link"><i class="fas fa-file-pen"></i> Exams</a>
 
-<p class="sb-nav-label" style="margin-top:12px">Finance & Comms</p>
-<a href="#finance"       data-section-target="finance"       class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Finance</a>
-<a href="#announcements" data-section-target="announcements" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<p class="sb-nav-label" style="margin-top:12px">Finance &amp; Comms</p>
+<a href="#finance"       data-section-target="finance"       class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>
+<a href="#announcements" data-section-target="announcements" class="sb-link"><i class="fas fa-bell"></i> Announcements</a>
 <a href="#helpdesk"      data-section-target="helpdesk"      class="sb-link"><i class="fas fa-headset"></i> Help Desk{% if open_helpdesk_tickets %} <span style="margin-left:auto;background:var(--gold);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ open_helpdesk_tickets }}</span>{% endif %}</a>
 
-<p class="sb-nav-label" style="margin-top:12px">Tools</p>
-<a href="#reports"       data-section-target="reports"       class="sb-link"><i class="fas fa-file-pdf"></i> Reports</a>
-<a href="{% url 'admin_departments' %}" class="sb-link"><i class="fas fa-building"></i> Departments</a>
-<a href="{% url 'admin_students' %}" class="sb-link"><i class="fas fa-list"></i> All Students</a>
-<a href="{% url 'admin_faculty_list' %}" class="sb-link"><i class="fas fa-list"></i> All Faculty</a>
-<a href="{% url 'admin_fees' %}" class="sb-link"><i class="fas fa-receipt"></i> Fee Records</a>
-<a href="{% url 'admin_helpdesk' %}" class="sb-link"><i class="fas fa-headset"></i> Help Desk Page</a>
+<p class="sb-nav-label" style="margin-top:12px">Reports</p>
+<a href="#reports"       data-section-target="reports"       class="sb-link"><i class="fas fa-download"></i> Export Reports</a>
+
+<p class="sb-nav-label" style="margin-top:12px">Platform</p>
+<a href="{% url 'admin_contact_support' %}" class="sb-link"><i class="fas fa-headset"></i> Contact Platform Support</a>
 {% endblock %}
 
 {% block extra_css %}
 <style>
   .dashboard-pane{display:none}.dashboard-pane.active{display:block}
   section.dashboard-pane::before{content:"";position:fixed;top:50%;left:50%;width:40vw;height:40vw;transform:translate(-50%,-50%);background:url('{% if college and college.logo %}{{ college.logo.url }}{% else %}https://img.icons8.com/ios-filled/500/000000/university.png{% endif %}') no-repeat center;background-size:contain;opacity:.03;z-index:-1;pointer-events:none}
+  .hd-tab{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+  .hd-tab:hover{border-color:var(--teal);color:var(--teal)}
+  .hd-tab-active{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .hd-count{font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;background:rgba(255,255,255,.25)}
+  .btn-sm{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .2s;border:none;cursor:pointer}
+  .btn-sm-teal{background:var(--teal);color:#fff}.btn-sm-teal:hover{background:var(--teal-dk)}
+  .btn-sm-deep{background:var(--deep);color:#fff}.btn-sm-deep:hover{background:var(--deep2)}
 </style>
 {% endblock %}
 
@@ -95,15 +106,53 @@
     </div>
   </div>
 
+  <!-- Task Inbox -->
+  {% if pending_requests > 0 or open_helpdesk_tickets > 0 or exams_without_schedule > 0 %}
+  <div style="margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+    {% if pending_requests > 0 %}
+    <a href="#requests" data-section-target="requests" style="text-decoration:none">
+      <div style="padding:16px 18px;background:rgba(99,102,241,.06);border:1.5px solid rgba(99,102,241,.2);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;transition:all .2s" onmouseover="this.style.background='rgba(99,102,241,.1)'" onmouseout="this.style.background='rgba(99,102,241,.06)'">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.12);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-inbox"></i></div>
+        <div>
+          <div style="font-size:20px;font-weight:900;color:#6366f1;font-family:'Outfit',sans-serif">{{ pending_requests }}</div>
+          <div style="font-size:12px;color:var(--muted)">Pending Admissions</div>
+        </div>
+      </div>
+    </a>
+    {% endif %}
+    {% if open_helpdesk_tickets > 0 %}
+    <a href="#helpdesk" data-section-target="helpdesk" style="text-decoration:none">
+      <div style="padding:16px 18px;background:rgba(239,68,68,.05);border:1.5px solid rgba(239,68,68,.2);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='rgba(239,68,68,.05)'">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-headset"></i></div>
+        <div>
+          <div style="font-size:20px;font-weight:900;color:var(--red);font-family:'Outfit',sans-serif">{{ open_helpdesk_tickets }}</div>
+          <div style="font-size:12px;color:var(--muted)">Open Support Tickets</div>
+        </div>
+      </div>
+    </a>
+    {% endif %}
+    {% if exams_without_schedule > 0 %}
+    <a href="#exams" data-section-target="exams" style="text-decoration:none">
+      <div style="padding:16px 18px;background:rgba(230,168,23,.06);border:1.5px solid rgba(230,168,23,.25);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;transition:all .2s" onmouseover="this.style.background='rgba(230,168,23,.12)'" onmouseout="this.style.background='rgba(230,168,23,.06)'">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(230,168,23,.12);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-file-pen"></i></div>
+        <div>
+          <div style="font-size:20px;font-weight:900;color:var(--gold);font-family:'Outfit',sans-serif">{{ exams_without_schedule }}</div>
+          <div style="font-size:12px;color:var(--muted)">Exams Need Setup</div>
+        </div>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
   <div class="d-card" style="margin-top:20px">
-    <div class="d-card-title"><i class="fas fa-headset"></i> Recent Support Tickets</div>
-    {% if recent_helpdesk_tickets %}
+    <div class="d-card-title"><i class="fas fa-headset"></i> Recent Support Tickets</div>    {% if recent_helpdesk_tickets %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
         <thead><tr><th>Subject</th><th>Category</th><th>Submitted By</th><th>Status</th><th>Date</th></tr></thead>
         <tbody>
           {% for ticket in recent_helpdesk_tickets %}
-          <tr>
+          <tr style="cursor:pointer" onclick="window.location='{% url 'ticket_detail' ticket.pk %}'">
             <td style="font-weight:600">{{ ticket.subject }}</td>
             <td style="font-size:11px;color:var(--muted)">{{ ticket.get_issue_type_display }}</td>
             <td>{{ ticket.name }}</td>
@@ -140,12 +189,20 @@
     </div>
   </div>
 
+  <div class="hint-box" style="margin-top:20px">
+    <strong>Profile settings</strong> — contact your platform administrator to update account details.
+    <div style="margin-top:10px">
+      <a href="{% url 'admin_contact_support' %}" class="qa-btn qa-teal" style="font-size:12px;padding:8px 16px"><i class="fas fa-headset"></i> Contact Platform Support</a>
+    </div>
+  </div>
+
+  <!-- Color palette -->
   <div class="d-card" style="max-width:640px;margin-top:20px">
     <div class="d-card-title"><i class="fas fa-palette"></i> Dashboard Colors</div>
-    <div class="section-meta">Customize the color theme for your college's dashboards.</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-      {% for preset in presets %}
-      <button type="button" onclick="applyPreset('{{ preset.primary }}','{{ preset.accent }}','{{ preset.deep }}')" title="{{ preset.name }}"
+    <div class="section-meta">Customize the color theme for your college. Saved colors apply on next page load for all users.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      {% for preset in color_presets %}
+      <button type="button" onclick="pickPreset('{{ preset.primary }}','{{ preset.accent }}','{{ preset.deep }}')"
               style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);transition:all .2s"
               onmouseover="this.style.borderColor='{{ preset.primary }}'" onmouseout="this.style.borderColor='var(--border)'">
         <div style="display:flex;gap:3px">
@@ -155,32 +212,38 @@
         </div>{{ preset.name }}
       </button>
       {% endfor %}
+      <button type="button" onclick="pickPreset('#0d7377','#e6a817','#071e26')"
+              style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 14px;border:2px dashed #d1d5db;border-radius:10px;background:#fafafa;cursor:pointer;font-size:11px;font-weight:700;color:#6b7280;transition:all .2s"
+              onmouseover="this.style.borderColor='#6b7280'" onmouseout="this.style.borderColor='#d1d5db'">
+        <i class="fas fa-rotate-left" style="font-size:15px;color:#9ca3af"></i>Reset
+      </button>
     </div>
-    <form method="post" action="{% url 'admin_save_colors' %}">
+    <form method="POST" action="{% url 'admin_save_colors' %}">
       {% csrf_token %}
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Primary</label>
           <div style="display:flex;align-items:center;gap:6px">
-            <input type="color" id="pc_picker" value="{{ branding.primary_color|default:'#0d7377' }}" oninput="document.getElementById('pc_text').value=this.value" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
-            <input type="text" name="primary_color" id="pc_text" value="{{ branding.primary_color|default:'#0d7377' }}" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('pc_picker').value=this.value" style="width:90px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" maxlength="7">
+            <input type="color" id="pc_pick" value="{{ branding.primary_color|default:'#0d7377' }}" oninput="document.getElementById('pc_txt').value=this.value" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+            <input type="text" name="primary_color" id="pc_txt" value="{{ branding.primary_color|default:'#0d7377' }}" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('pc_pick').value=this.value" style="width:90px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" maxlength="7">
           </div>
         </div>
         <div>
           <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Accent</label>
           <div style="display:flex;align-items:center;gap:6px">
-            <input type="color" id="ac_picker" value="{{ branding.accent_color|default:'#e6a817' }}" oninput="document.getElementById('ac_text').value=this.value" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
-            <input type="text" name="accent_color" id="ac_text" value="{{ branding.accent_color|default:'#e6a817' }}" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('ac_picker').value=this.value" style="width:90px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" maxlength="7">
+            <input type="color" id="ac_pick" value="{{ branding.accent_color|default:'#e6a817' }}" oninput="document.getElementById('ac_txt').value=this.value" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+            <input type="text" name="accent_color" id="ac_txt" value="{{ branding.accent_color|default:'#e6a817' }}" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('ac_pick').value=this.value" style="width:90px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" maxlength="7">
           </div>
         </div>
         <div>
-          <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Sidebar</label>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Sidebar <span style="font-size:10px;font-weight:400;color:var(--muted)">(must be dark)</span></label>
           <div style="display:flex;align-items:center;gap:6px">
-            <input type="color" id="dc_picker" value="{{ branding.sidebar_deep|default:'#071e26' }}" oninput="document.getElementById('dc_text').value=this.value" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
-            <input type="text" name="sidebar_deep" id="dc_text" value="{{ branding.sidebar_deep|default:'#071e26' }}" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('dc_picker').value=this.value" style="width:90px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" maxlength="7">
+            <input type="color" id="dc_pick" value="{{ branding.sidebar_deep|default:'#071e26' }}" oninput="document.getElementById('dc_txt').value=this.value;checkSidebarDark(this.value)" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+            <input type="text" name="sidebar_deep" id="dc_txt" value="{{ branding.sidebar_deep|default:'#071e26' }}" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)){document.getElementById('dc_pick').value=this.value;checkSidebarDark(this.value)}" style="width:90px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" maxlength="7">
+            <span id="dc_warn" style="display:none;font-size:11px;color:#ef4444;font-weight:600"><i class="fas fa-triangle-exclamation"></i> Too light</span>
           </div>
         </div>
-        <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Save Colors</button>
+        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Colors</button>
       </div>
     </form>
   </div>
@@ -214,39 +277,35 @@
 
 <!-- STUDENTS -->
 <section data-dashboard-pane="students" class="dashboard-pane">
-  <div class="panel-grid">
-    <div class="focus-card">
-      <h3>Student Onboarding</h3>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_registration_invites' %}" class="qa-btn qa-deep"><i class="fas fa-link"></i> Create Invite</a>
-        <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal"><i class="fas fa-user-plus"></i> Add Student</a>
-        <a href="{% url 'admin_students' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View All</a>
-        <a href="{% url 'admin_bulk_import' %}" class="qa-btn qa-indigo"><i class="fas fa-cloud-upload"></i> Bulk Import</a>
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-user-graduate"></i> Students{% if all_students_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_students_total }})</span>{% endif %}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Student</a>
+        <a href="{% url 'admin_bulk_import' %}" class="qa-btn qa-indigo" style="font-size:12px;padding:7px 14px"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
+        <a href="{% url 'admin_students_export_csv' %}" class="qa-btn qa-deep" style="font-size:12px;padding:7px 14px"><i class="fas fa-file-csv"></i> Export CSV</a>
       </div>
     </div>
-    <div class="focus-card">
-      <h3>Export & Reports</h3>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_students_export_csv' %}" class="qa-btn qa-deep"><i class="fas fa-file-csv"></i> Export CSV</a>
-        <a href="{% url 'admin_report_pdf' 'attendance' %}" class="qa-btn qa-deep"><i class="fas fa-file-pdf"></i> Attendance PDF</a>
-      </div>
+    {% if all_students_full %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <input type="text" id="stu-search" placeholder="Search by name or roll no…" oninput="filterTable('stu-search','stu-tbody','stu-count')"
+        style="flex:1;min-width:200px;max-width:300px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <span id="stu-count" style="font-size:12px;color:var(--muted)"></span>
     </div>
-  </div>
-  <div class="d-card" style="margin-top:20px">
-    <div class="d-card-title"><i class="fas fa-user-graduate"></i> Recent Registrations</div>
-    {% if recent_students %}
-    <div class="table-scroll content-scroll">
+    <div class="table-scroll" style="max-height:420px;overflow-y:auto">
       <table class="dtable">
-        <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Sem</th><th>Status</th><th>Joined</th></tr></thead>
-        <tbody>
-          {% for s in recent_students %}
-          <tr>
+        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Sem</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+        <tbody id="stu-tbody">
+          {% for s in all_students_full %}
+          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_student_edit' s.pk %}'">
             <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
             <td>{{ s.user.get_full_name|default:s.user.username }}</td>
             <td>{{ s.department.code }}</td>
             <td style="text-align:center">{{ s.current_semester }}</td>
             <td>{% if s.status == 'ACTIVE' %}<span class="dbadge dbadge-active">Active</span>{% else %}<span class="dbadge dbadge-red">{{ s.status }}</span>{% endif %}</td>
-            <td style="color:var(--muted)">{{ s.created_at|date:"d M Y" }}</td>
+            <td style="color:var(--muted);font-size:12px">{{ s.created_at|date:"d M Y" }}</td>
+            <td><a href="{% url 'admin_student_edit' s.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -258,49 +317,163 @@
 
 <!-- STAFF -->
 <section data-dashboard-pane="faculty" class="dashboard-pane">
-  <div class="panel-grid">
-    <div class="focus-card">
-      <h3>Faculty</h3>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold"><i class="fas fa-plus"></i> Add Faculty</a>
-        <a href="{% url 'admin_faculty_list' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Manage</a>
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-chalkboard-teacher"></i> Faculty{% if all_faculty_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_faculty_total }})</span>{% endif %}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Faculty</a>
+        <a href="{% url 'admin_hod_add' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-building-columns"></i> Add HOD</a>
       </div>
     </div>
-    <div class="focus-card">
-      <h3>HODs</h3>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_hod_add' %}" class="qa-btn qa-teal"><i class="fas fa-building-columns"></i> Add HOD</a>
-        <a href="{% url 'admin_hods' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View HODs</a>
-      </div>
+    {% if all_faculty_full %}
+    <div style="margin-bottom:12px">
+      <input type="text" id="fac-search" placeholder="Search by name, dept or emp ID…" oninput="filterTable('fac-search','fac-tbody','fac-count')"
+        style="width:100%;max-width:320px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <span id="fac-count" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
     </div>
-    <div class="focus-card">
-      <h3>Principal</h3>
-      <p>Managed via Django admin — one per college.</p>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="/admin/students/principal/add/" class="qa-btn qa-gold"><i class="fas fa-user-tie"></i> Add Principal</a>
-      </div>
+    <div class="table-scroll" style="max-height:420px;overflow-y:auto">
+      <table class="dtable">
+        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Name</th><th>Dept</th><th>Designation</th><th>Emp ID</th><th>Phone</th><th></th></tr></thead>
+        <tbody id="fac-tbody">
+          {% for f in all_faculty_full %}
+          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_faculty_edit' f.pk %}'">
+            <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
+            <td>{{ f.department.code }}</td>
+            <td style="color:var(--muted)">{{ f.designation }}</td>
+            <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
+            <td style="color:var(--muted)">{{ f.phone_number|default:"—" }}</td>
+            <td><a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}<div class="empty"><i class="fas fa-chalkboard-teacher"></i>No faculty yet.</div>{% endif %}
+  </div>
+  {% if all_hods_full %}
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-building-columns"></i> Heads of Department</div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Department</th><th>Emp ID</th><th>Qualification</th></tr></thead>
+        <tbody>
+          {% for h in all_hods_full %}
+          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_hod_add' %}'">
+            <td style="font-weight:600;color:var(--deep)">{{ h.user.get_full_name|default:h.user.username }}</td>
+            <td>{{ h.department.name }}</td>
+            <td style="color:var(--teal);font-weight:600">{{ h.employee_id }}</td>
+            <td style="color:var(--muted)">{{ h.qualification }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ACADEMICS (redirects to departments) -->
+<section data-dashboard-pane="academics" class="dashboard-pane"></section>
+
+<!-- DEPARTMENTS -->
+<section data-dashboard-pane="departments" class="dashboard-pane">
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-building"></i> Departments</div>
+      <a href="{% url 'admin_department_add' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Department</a>
+    </div>
+    {% if all_departments %}
+    <div style="margin-bottom:12px">
+      <input type="text" id="dept-search" placeholder="Search departments…" oninput="filterTable('dept-search','dept-tbody','dept-count')"
+        style="width:100%;max-width:320px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <span id="dept-count" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+    </div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Name</th><th>Code</th><th>Students</th><th>Faculty</th><th>Subjects</th><th></th></tr></thead>
+        <tbody id="dept-tbody">
+          {% for d in all_departments %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
+            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ d.code }}</span></td>
+            <td style="text-align:center">{{ d.student_count }}</td>
+            <td style="text-align:center">{{ d.faculty_count }}</td>
+            <td style="text-align:center">{{ d.subject_count }}</td>
+            <td><a href="{% url 'admin_department_edit' d.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px"><i class="fas fa-pen"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty"><i class="fas fa-building"></i>No departments yet.</div>{% endif %}
+  </div>
+
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-book"></i> Subjects{% if all_subjects_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_subjects_total }})</span>{% endif %}</div>
+      <a href="{% url 'admin_subject_add' %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Subject</a>
+    </div>
+    {% if all_subjects %}
+    <!-- Subject filters -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <input type="text" id="subj-search" placeholder="Search subjects…" oninput="filterSubjects()"
+        style="flex:1;min-width:180px;max-width:280px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <select id="subj-dept-filter" onchange="filterSubjects()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+        <option value="">All Departments</option>
+        {% for d in all_departments %}<option value="{{ d.code }}">{{ d.code }}</option>{% endfor %}
+      </select>
+      <select id="subj-sem-filter" onchange="filterSubjects()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+        <option value="">All Semesters</option>
+        {% for i in "12345678" %}<option value="{{ i }}">Sem {{ i }}</option>{% endfor %}
+      </select>
+      <span id="subj-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
+      <button onclick="clearSubjFilters()" id="subj-clear" style="display:none;padding:6px 12px;border-radius:7px;background:var(--surface2);border:1.5px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer">Clear</button>
+    </div>
+    <div class="table-scroll" style="max-height:420px;overflow-y:auto">
+      <table class="dtable">
+        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Subject</th><th>Code</th><th>Dept</th><th>Semester</th><th>Hrs/Wk</th><th></th></tr></thead>
+        <tbody id="subj-tbody">
+          {% for s in all_subjects %}
+          <tr data-name="{{ s.name|lower }}" data-code="{{ s.code|lower }}" data-dept="{{ s.department.code }}" data-sem="{{ s.semester }}">
+            <td style="font-weight:600;color:var(--deep)">{{ s.name }}</td>
+            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ s.code }}</span></td>
+            <td>{{ s.department.code }}</td>
+            <td style="text-align:center">{{ s.semester }}</td>
+            <td style="text-align:center">{{ s.weekly_hours }}</td>
+            <td>
+              <form method="POST" action="{% url 'admin_subject_delete' s.pk %}" style="display:inline" onsubmit="return confirm('Delete subject?')">
+                {% csrf_token %}<button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div id="subj-empty" style="display:none;text-align:center;padding:24px 0;color:var(--muted);font-size:13px"><i class="fas fa-search" style="display:block;font-size:22px;margin-bottom:8px;color:#d1d5db"></i>No subjects match your filters.</div>
+    </div>
+    {% else %}<div class="empty"><i class="fas fa-book"></i>No subjects yet.</div>{% endif %}
   </div>
 </section>
 
-<!-- ACADEMICS -->
-<section data-dashboard-pane="academics" class="dashboard-pane">
+<!-- BULK IMPORT -->
+<section data-dashboard-pane="bulk" class="dashboard-pane">
   <div class="panel-grid">
     <div class="focus-card">
-      <h3>Departments & Subjects</h3>
+      <h3>Bulk Import Students</h3>
+      <p>Upload a CSV file to create multiple student accounts at once.</p>
       <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_department_add' %}" class="qa-btn qa-teal"><i class="fas fa-building"></i> Add Dept</a>
-        <a href="{% url 'admin_departments' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View Depts</a>
-        <a href="{% url 'admin_subject_add' %}" class="qa-btn qa-gold"><i class="fas fa-book"></i> Add Subject</a>
-        <a href="{% url 'admin_subjects' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View Subjects</a>
+        <a href="{% url 'admin_bulk_import' %}" class="qa-btn qa-indigo"><i class="fas fa-cloud-upload-alt"></i> Upload CSV</a>
+        <a href="{% url 'admin_sample_csv' %}?type=student" class="qa-btn" style="background:#4b5563;color:#fff;font-size:11px"><i class="fas fa-download"></i> Download Template</a>
       </div>
     </div>
     <div class="focus-card">
-      <h3>Exams & Planner</h3>
+      <h3>Export &amp; Promote</h3>
       <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_exam_add' %}" class="qa-btn qa-deep"><i class="fas fa-file-pen"></i> Add Exam</a>
-        <a href="{% url 'admin_exams' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> View Exams</a>
-        <a href="{% url 'admin_academic_planner' %}" class="qa-btn qa-indigo"><i class="fas fa-calendar-days"></i> Semester Planner</a>
+        <a href="{% url 'admin_students_export_csv' %}" class="qa-btn qa-deep"><i class="fas fa-file-csv"></i> Export CSV</a>
+        <a href="{% url 'admin_students_bulk_promote' %}" class="qa-btn qa-teal"><i class="fas fa-arrow-up"></i> Bulk Promote</a>
       </div>
     </div>
   </div>
@@ -308,34 +481,82 @@
 
 <!-- REQUESTS -->
 <section data-dashboard-pane="requests" class="dashboard-pane">
-  <div class="panel-grid">
-    <div class="focus-card">
-      <h3>Registration Requests</h3>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_registration_invites' %}" class="qa-btn qa-deep"><i class="fas fa-link"></i> Invite Links</a>
-        <a href="{% url 'admin_registration_requests' %}" class="qa-btn qa-deep"><i class="fas fa-inbox"></i> Request Queue</a>
-        <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal"><i class="fas fa-user-plus"></i> Add Directly</a>
-      </div>
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-link"></i> Create Invite Link</div>
+      <form method="POST" action="{% url 'admin_registration_invites' %}">
+        {% csrf_token %}
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Student Email</label>
+          <input type="email" name="invited_email" required placeholder="student@email.com" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none"/>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Department</label>
+          <select name="department" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none">
+            <option value="">Any department</option>
+            {% for d in all_departments %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Admission Year</label>
+            <input type="number" name="admission_year" placeholder="2024" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none"/>
+          </div>
+          <div style="flex:1">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Semester</label>
+            <select name="current_semester" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none">
+              <option value="">Any</option>
+              {% for i in "12345678" %}<option value="{{ i }}">Sem {{ i }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="qa-btn qa-deep" style="margin-top:14px;width:100%;justify-content:center"><i class="fas fa-paper-plane"></i> Send Invite</button>
+      </form>
     </div>
-    <div class="focus-card">
-      <h3>How It Works</h3>
-      <div class="hint-box"><ul><li>Share invite link with students</li><li>Student submits registration form</li><li>Admin reviews and converts to account</li><li>Roll number is auto-generated</li></ul></div>
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-link"></i> Active Invite Links</div>
+      {% if all_invites %}
+      <div class="content-scroll">
+        {% for inv in all_invites %}
+        <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ inv.invited_email }}</div>
+          <div style="font-size:11px;color:var(--muted)">
+            {% if inv.department %}{{ inv.department.code }}{% else %}Any dept{% endif %} ·
+            {% if inv.used_at %}<span style="color:var(--teal)">Used</span>{% else %}<span style="color:var(--green)">Active</span>{% endif %}
+            · {{ inv.created_at|date:"d M Y" }}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:7px;flex-wrap:wrap">
+            <input type="text" readonly value="{{ inv.registration_url }}" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);background:#f8fafc">
+            <button type="button" class="btn-sm btn-sm-deep" style="padding:4px 10px;font-size:11px" onclick="navigator.clipboard.writeText('{{ inv.registration_url|escapejs }}');this.innerHTML='<i class=&quot;fas fa-check&quot;></i> Copied';setTimeout(()=>this.innerHTML='<i class=&quot;fas fa-copy&quot;></i> Copy',1200)"><i class="fas fa-copy"></i> Copy</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty"><i class="fas fa-link"></i>No invites yet.</div>{% endif %}
     </div>
   </div>
-  <div class="d-card" style="margin-top:20px">
-    <div class="d-card-title"><i class="fas fa-inbox"></i> Recent Requests</div>
-    {% if recent_requests %}
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-inbox"></i> Registration Requests</div>
+      <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-user-plus"></i> Add Directly</a>
+    </div>
+    {% if all_requests %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Action</th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
         <tbody>
-          {% for item in recent_requests %}
+          {% for item in all_requests %}
           <tr>
-            <td>{{ item.first_name }} {{ item.last_name }}</td>
-            <td>{{ item.email }}</td>
-            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}-{% endif %}</td>
-            <td>{{ item.get_status_display }}</td>
-            <td><a href="{% url 'admin_student_add' %}?request={{ item.pk }}" class="qa-btn qa-teal" style="padding:5px 10px;font-size:12px"><i class="fas fa-user-plus"></i> Convert</a></td>
+            <td style="font-weight:600;color:var(--deep)">{{ item.first_name }} {{ item.last_name }}</td>
+            <td style="color:var(--muted);font-size:12px">{{ item.email }}</td>
+            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}—{% endif %}</td>
+            <td>
+              <span class="dbadge {% if item.status == 'CONVERTED' %}dbadge-active{% elif item.status == 'REJECTED' %}dbadge-red{% elif item.status == 'NEEDS_CORRECTION' %}dbadge-warning{% else %}dbadge-warning{% endif %}">
+                {{ item.get_status_display }}
+              </span>
+            </td>
+            <td style="color:var(--muted);font-size:12px">{{ item.created_at|date:"d M Y" }}</td>
+              <td>{% if item.status == 'APPROVED' %}<a href="{% url 'admin_student_add' %}?request={{ item.pk }}" class="btn-sm btn-sm-teal" style="padding:4px 10px;font-size:11px"><i class="fas fa-user-plus"></i> Convert</a>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -360,41 +581,106 @@
   </div>
 </section>
 
+<!-- EXAMS -->
+<section data-dashboard-pane="exams" class="dashboard-pane">
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-file-pen"></i> Exams</div>
+      <a href="{% url 'admin_exam_add' %}" class="qa-btn qa-deep" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Exam</a>
+    </div>
+    {% if exams %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Exam Name</th><th>Semester</th><th>Start Date</th><th>End Date</th><th>Created By</th><th></th></tr></thead>
+        <tbody>
+          {% for exam in exams %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ exam.name }}</td>
+            <td style="text-align:center">Sem {{ exam.semester }}</td>
+            <td>{{ exam.start_date|date:"d M Y" }}</td>
+            <td>{{ exam.end_date|date:"d M Y" }}</td>
+            <td style="color:var(--muted);font-size:12px">{{ exam.created_by.get_full_name|default:exam.created_by.username }}</td>
+            <td>
+              <form method="POST" action="{% url 'admin_exam_delete' exam.pk %}" style="display:inline" onsubmit="return confirm('Delete this exam?')">
+                {% csrf_token %}
+                <button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px" title="Delete"><i class="fas fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-file-pen"></i>No exams yet. Add one to get started.</div>
+    {% endif %}
+  </div>
+</section>
+
 <!-- FINANCE -->
 <section data-dashboard-pane="finance" class="dashboard-pane">
-  <div class="panel-grid">
-    <div class="focus-card">
-      <h3>Fee Management</h3>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-plus"></i> Add Fee</a>
-        <a href="{% url 'admin_fees' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Manage Fees</a>
-      </div>
-    </div>
-    <div class="focus-card">
-      <h3>Fee Summary</h3>
+  <div class="two-col" style="margin-bottom:20px">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-chart-pie"></i> Fee Summary</div>
       <div class="summary-list">
         <div class="summary-item"><span>Total Collected</span><strong style="color:var(--teal)">Rs {{ fee_summary.total_collected|floatformat:0 }}</strong></div>
         <div class="summary-item"><span>Total Pending</span><strong style="color:var(--red)">Rs {{ fee_summary.total_pending|floatformat:0 }}</strong></div>
         <div class="summary-item"><span>Follow-ups Needed</span><strong>{{ pending_fees }}</strong></div>
       </div>
     </div>
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-plus"></i> Quick Actions</div>
+      <div class="qa-row">
+        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-plus"></i> Add Fee Record</a>
+      </div>
+    </div>
+  </div>
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-indian-rupee-sign"></i> All Fee Records{% if all_fees_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_fees_total }})</span>{% endif %}</div>
+    {% if all_fees %}
+    <div class="table-scroll content-scroll">
+      <table class="dtable">
+        <thead><tr><th>Student</th><th>Dept</th><th>Semester</th><th>Academic Year</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for fee in all_fees %}
+          <tr>
+            <td><div style="font-weight:600;color:var(--deep)">{{ fee.student.user.get_full_name|default:fee.student.user.username }}</div><div style="font-size:11px;color:var(--muted)">{{ fee.student.roll_number }}</div></td>
+            <td>{{ fee.student.department.code }}</td>
+            <td style="text-align:center">{% if fee.semester %}Sem {{ fee.semester }}{% else %}—{% endif %}</td>
+            <td style="color:var(--muted);font-size:12px">{{ fee.academic_year|default:"—" }}</td>
+            <td>Rs {{ fee.total_amount|floatformat:0 }}</td>
+            <td style="color:var(--teal);font-weight:600">Rs {{ fee.paid_amount|floatformat:0 }}</td>
+            <td style="color:{% if fee.balance > 0 %}var(--red){% else %}var(--teal){% endif %};font-weight:600">Rs {{ fee.balance|floatformat:0 }}</td>
+            <td><span class="dbadge {% if fee.status == 'PAID' %}dbadge-active{% elif fee.status == 'PARTIAL' %}dbadge-warning{% else %}dbadge-red{% endif %}">{{ fee.get_status_display }}</span></td>
+            <td><a href="{% url 'admin_fee_edit' fee.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px"><i class="fas fa-pen"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty"><i class="fas fa-receipt"></i>No fee records yet.</div>{% endif %}
   </div>
 </section>
 
 <!-- NOTICES -->
 <section data-dashboard-pane="announcements" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-bell"></i> Announcements</div>
-    <div class="qa-row" style="margin-bottom:18px">
-      <a href="{% url 'admin_announcement_add' %}" class="qa-btn qa-indigo"><i class="fas fa-plus"></i> Post Announcement</a>
-      <a href="{% url 'admin_announcements' %}" class="qa-btn qa-deep"><i class="fas fa-list"></i> Manage All</a>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+      <div class="d-card-title" style="margin:0"><i class="fas fa-bell"></i> Announcements</div>
+      <a href="{% url 'admin_announcement_add' %}" class="qa-btn qa-indigo" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Post Announcement</a>
     </div>
-    {% if recent_announcements %}
+    {% if all_announcements %}
     <div class="content-scroll">
-      {% for ann in recent_announcements %}
-      <div class="ann-item">
-        <div class="ann-title">{{ ann.title }}</div>
-        <div class="ann-meta"><i class="fas fa-user" style="font-size:10px"></i> {{ ann.created_by.username }} &nbsp;·&nbsp; {{ ann.created_at|date:"d M Y" }}</div>
+      {% for ann in all_announcements %}
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:120 }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ ann.created_by.get_full_name|default:ann.created_by.username }} · {{ ann.created_at|date:"d M Y" }}</div>
+        </div>
+        <form method="POST" action="{% url 'admin_announcement_delete' ann.pk %}" style="flex-shrink:0" onsubmit="return confirm('Delete?')">
+          {% csrf_token %}<button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px"><i class="fas fa-trash"></i></button>
+        </form>
       </div>
       {% endfor %}
     </div>
@@ -425,53 +711,140 @@
 
 <!-- HELPDESK -->
 <section data-dashboard-pane="helpdesk" class="dashboard-pane">
-  <div class="panel-grid">
-    <div class="focus-card">
-      <h3>Help Desk Queue</h3>
-      <p>Track login issues, fee problems, and support requests.</p>
-      <div class="qa-row" style="margin-top:8px">
-        <a href="{% url 'admin_helpdesk' %}" class="qa-btn qa-deep"><i class="fas fa-headset"></i> Open Help Desk</a>
-        <a href="{% url 'helpdesk' %}" class="qa-btn qa-teal"><i class="fas fa-eye"></i> Public Form</a>
+  <div class="d-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+      <div>
+        <div class="d-card-title" style="margin-bottom:2px"><i class="fas fa-headset"></i> Help Desk</div>
+        <div class="section-meta" style="margin:0">Track and resolve support tickets from students and staff.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <a href="{% url 'helpdesk' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-external-link-alt"></i> Public Form</a>
+        <!-- Status filter tabs -->
+        <div style="display:flex;gap:4px">
+          <button onclick="filterTickets('')" id="hd-tab-all" class="hd-tab hd-tab-active">All <span class="hd-count">{{ all_helpdesk_tickets|length }}</span></button>
+          <button onclick="filterTickets('OPEN')" id="hd-tab-open" class="hd-tab">Open <span class="hd-count" style="background:#fee2e2;color:#991b1b">{{ open_helpdesk_tickets }}</span></button>
+          <button onclick="filterTickets('IN_PROGRESS')" id="hd-tab-ip" class="hd-tab">In Progress</button>
+          <button onclick="filterTickets('RESOLVED')" id="hd-tab-res" class="hd-tab">Resolved</button>
+        </div>
       </div>
     </div>
-    <div class="focus-card">
-      <h3>Queue Status</h3>
-      <div class="hint-box"><ul>
-        <li>Open tickets: {{ open_helpdesk_tickets }}</li>
-        <li>Use for access issues when invite links expire</li>
-        <li>Gives students a clear support fallback</li>
-      </ul></div>
+
+    {% if all_helpdesk_tickets %}
+    <div class="table-scroll">
+      <table class="dtable" id="hd-table">
+        <thead>
+          <tr><th>Requester</th><th>Issue</th><th>Type</th><th>Status</th><th>Date</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for ticket in all_helpdesk_tickets %}
+          <tr class="hd-row" data-status="{{ ticket.status }}">
+            <td>
+              <div style="font-weight:600;color:var(--deep)">{{ ticket.name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ ticket.email }}</div>
+            </td>
+            <td>
+              <div style="font-weight:600;color:var(--deep)">{{ ticket.subject }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ ticket.description|truncatechars:80 }}</div>
+            </td>
+            <td style="font-size:12px;color:var(--muted)">{{ ticket.get_issue_type_display }}</td>
+            <td>
+              {% if ticket.status == 'OPEN' %}<span class="dbadge dbadge-red">Open</span>
+              {% elif ticket.status == 'IN_PROGRESS' %}<span class="dbadge dbadge-warning">In Progress</span>
+              {% else %}<span class="dbadge dbadge-active">Resolved</span>{% endif %}
+            </td>
+            <td style="font-size:12px;color:var(--muted)">{{ ticket.created_at|date:"d M Y" }}</td>
+            <td>
+              <form method="POST" action="{% url 'admin_helpdesk_update' ticket.pk %}" style="display:flex;gap:6px;align-items:center">
+                {% csrf_token %}
+                <select name="status" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'Inter',sans-serif;outline:none;background:#fafafa">
+                  <option value="OPEN" {% if ticket.status == 'OPEN' %}selected{% endif %}>Open</option>
+                  <option value="IN_PROGRESS" {% if ticket.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                  <option value="RESOLVED" {% if ticket.status == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+                </select>
+                <button type="submit" class="btn-sm btn-sm-teal" style="padding:5px 10px;font-size:11px"><i class="fas fa-save"></i> Save</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-headset"></i>No support tickets yet.</div>
+    {% endif %}
   </div>
 </section>
 
 {% endblock %}
 
 {% block extra_js %}
-function applyPreset(p,a,d){
-  document.getElementById('pc_picker').value=p; document.getElementById('pc_text').value=p;
-  document.getElementById('ac_picker').value=a; document.getElementById('ac_text').value=a;
-  document.getElementById('dc_picker').value=d; document.getElementById('dc_text').value=d;
-}
-(function(){
-  var panes = Array.prototype.slice.call(document.querySelectorAll('[data-dashboard-pane]'));
-  var links = Array.prototype.slice.call(document.querySelectorAll('[data-section-target]'));
-  var def = 'overview';
-  var valid = panes.map(function(p){ return p.getAttribute('data-dashboard-pane'); });
-  function go(id){
-    var next = (id && valid.indexOf(id) !== -1) ? id : def;
-    panes.forEach(function(p){ p.classList.toggle('active', p.getAttribute('data-dashboard-pane') === next); });
-    links.forEach(function(l){ l.classList.toggle('active', l.getAttribute('data-section-target') === next); });
-    history.replaceState(null, '', '#' + next);
-  }
-  links.forEach(function(l){
-    l.addEventListener('click', function(e){
-      var h = l.getAttribute('href') || '';
-      if(h.charAt(0) !== '#') return;
-      e.preventDefault(); go(l.getAttribute('data-section-target'));
-    });
+/* ── Generic table search (departments) ── */
+function filterTable(inputId, tbodyId, countId) {
+  var q = document.getElementById(inputId).value.toLowerCase();
+  var rows = document.getElementById(tbodyId).querySelectorAll('tr');
+  var visible = 0;
+  rows.forEach(function(r) {
+    var match = r.textContent.toLowerCase().includes(q);
+    r.style.display = match ? '' : 'none';
+    if (match) visible++;
   });
-  var hash = (window.location.hash || '').replace('#', '');
-  go(valid.indexOf(hash) !== -1 ? hash : def);
-})();
+  var el = document.getElementById(countId);
+  if (el) el.textContent = q ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
+}
+
+/* ── Subject multi-filter (search + dept + semester) ── */
+function filterSubjects() {
+  var q    = (document.getElementById('subj-search').value || '').toLowerCase();
+  var dept = document.getElementById('subj-dept-filter').value;
+  var sem  = document.getElementById('subj-sem-filter').value;
+  var rows = document.getElementById('subj-tbody').querySelectorAll('tr');
+  var visible = 0;
+  rows.forEach(function(r) {
+    var nameMatch = !q || r.dataset.name.includes(q) || r.dataset.code.includes(q);
+    var deptMatch = !dept || r.dataset.dept === dept;
+    var semMatch  = !sem  || r.dataset.sem  === sem;
+    var show = nameMatch && deptMatch && semMatch;
+    r.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  var countEl = document.getElementById('subj-count');
+  var emptyEl = document.getElementById('subj-empty');
+  var clearBtn = document.getElementById('subj-clear');
+  if (countEl) countEl.textContent = (q || dept || sem) ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
+  if (emptyEl) emptyEl.style.display = visible === 0 ? 'block' : 'none';
+  if (clearBtn) clearBtn.style.display = (q || dept || sem) ? 'inline-block' : 'none';
+}
+
+function clearSubjFilters() {
+  document.getElementById('subj-search').value = '';
+  document.getElementById('subj-dept-filter').value = '';
+  document.getElementById('subj-sem-filter').value = '';
+  filterSubjects();
+}
+function hexLuminance(hex){
+  var h=hex.replace('#','');
+  var r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255;
+  return 0.2126*r+0.7152*g+0.0722*b;
+}
+function checkSidebarDark(hex){
+  var warn=document.getElementById('dc_warn');
+  if(!warn) return;
+  warn.style.display = (hex && hex.length===7 && hexLuminance(hex)>0.25) ? 'inline' : 'none';
+}
+function pickPreset(p,a,d){
+  document.getElementById('pc_pick').value=p; document.getElementById('pc_txt').value=p;
+  document.getElementById('ac_pick').value=a; document.getElementById('ac_txt').value=a;
+  document.getElementById('dc_pick').value=d; document.getElementById('dc_txt').value=d;
+  checkSidebarDark(d);
+}
+
+function filterTickets(status) {
+  document.querySelectorAll('.hd-row').forEach(function(r){
+    r.style.display = (!status || r.dataset.status === status) ? '' : 'none';
+  });
+  document.querySelectorAll('.hd-tab').forEach(function(t){ t.classList.remove('hd-tab-active'); });
+  var map = {'':'hd-tab-all','OPEN':'hd-tab-open','IN_PROGRESS':'hd-tab-ip','RESOLVED':'hd-tab-res'};
+  var el = document.getElementById(map[status]);
+  if(el) el.classList.add('hd-tab-active');
+}
 {% endblock %}

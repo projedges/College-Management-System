@@ -1,0 +1,37 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Marks Overview — {{ exam.name }}{% endblock %}
+{% block breadcrumb %} / {{ exam.name }} / Marks{% endblock %}
+{% block page_title %}Marks Entry Status — {{ exam.name }}{% endblock %}
+{% block page_sub %}Track which subjects have complete marks entry for Sem {{ exam.semester }}{% endblock %}
+{% block content %}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-table-list"></i> Subject-wise Entry Status</div>
+  {% if rows %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Subject</th><th>Dept</th><th>Enrolled</th><th>Entered</th><th>Pending</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><div style="font-weight:600;color:var(--deep)">{{ row.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ row.subject.code }}</div></td>
+          <td>{{ row.subject.department.code }}</td>
+          <td style="text-align:center">{{ row.enrolled }}</td>
+          <td style="text-align:center;font-weight:600;color:var(--teal)">{{ row.entered }}</td>
+          <td style="text-align:center;font-weight:600;color:{% if row.pending > 0 %}#ef4444{% else %}var(--muted){% endif %}">{{ row.pending }}</td>
+          <td>
+            {% if row.complete %}<span class="dbadge dbadge-active"><i class="fas fa-check"></i> Complete</span>
+            {% elif row.entered == 0 %}<span class="dbadge dbadge-red">Not Started</span>
+            {% else %}<span class="dbadge dbadge-warning">Partial</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-book"></i>No subjects found for Sem {{ exam.semester }}.</div>
+  {% endif %}
+</div>
+<div class="hint-box">Faculty enter marks via their dashboard. Once all subjects show <strong>Complete</strong>, proceed to <a href="{% url 'exam_results' exam.pk %}" style="color:#7c3aed">compute results</a>.
+</div>
+{% endblock %}

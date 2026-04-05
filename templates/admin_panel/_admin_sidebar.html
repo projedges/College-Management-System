@@ -1,0 +1,26 @@
+{% comment %}Shared admin sidebar — used by all admin form/standalone pages. Set active_section before including.{% endcomment %}
+<p class="sb-nav-label">Overview</p>
+<a href="{% url 'admin_dashboard' %}#overview" class="sb-link {% if active_section == 'overview' %}active{% endif %}"><i class="fas fa-home"></i> Dashboard</a>
+<a href="{% url 'admin_dashboard' %}#profile" class="sb-link {% if active_section == 'profile' %}active{% endif %}"><i class="fas fa-user-circle"></i> My Profile</a>
+<a href="{% url 'admin_dashboard' %}#workflow" class="sb-link {% if active_section == 'workflow' %}active{% endif %}"><i class="fas fa-compass"></i> Start Here</a>
+
+<p class="sb-nav-label" style="margin-top:12px">Manage</p>
+<a href="{% url 'admin_dashboard' %}#departments" class="sb-link {% if active_section == 'departments' %}active{% endif %}"><i class="fas fa-building"></i> Departments</a>
+<a href="{% url 'admin_dashboard' %}#requests" class="sb-link {% if active_section == 'requests' %}active{% endif %}"><i class="fas fa-inbox"></i> Invite &amp; Requests</a>
+<a href="{% url 'admin_dashboard' %}#students" class="sb-link {% if active_section == 'students' %}active{% endif %}"><i class="fas fa-user-graduate"></i> Students</a>
+<a href="{% url 'admin_dashboard' %}#bulk" class="sb-link {% if active_section == 'bulk' %}active{% endif %}"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
+<a href="{% url 'admin_dashboard' %}#faculty" class="sb-link {% if active_section == 'faculty' %}active{% endif %}"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
+<a href="{% url 'admin_dashboard' %}#academics" class="sb-link {% if active_section == 'academics' %}active{% endif %}"><i class="fas fa-book"></i> Academics</a>
+<a href="{% url 'admin_dashboard' %}#planner" class="sb-link {% if active_section == 'planner' %}active{% endif %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
+<a href="{% url 'admin_dashboard' %}#exams" class="sb-link {% if active_section == 'exams' %}active{% endif %}"><i class="fas fa-file-pen"></i> Exams</a>
+
+<p class="sb-nav-label" style="margin-top:12px">Finance &amp; Comms</p>
+<a href="{% url 'admin_dashboard' %}#finance" class="sb-link {% if active_section == 'finance' %}active{% endif %}"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>
+<a href="{% url 'admin_dashboard' %}#announcements" class="sb-link {% if active_section == 'announcements' %}active{% endif %}"><i class="fas fa-bell"></i> Announcements</a>
+<a href="{% url 'admin_dashboard' %}#helpdesk" class="sb-link {% if active_section == 'helpdesk' %}active{% endif %}"><i class="fas fa-headset"></i> Help Desk</a>
+
+<p class="sb-nav-label" style="margin-top:12px">Reports</p>
+<a href="{% url 'admin_dashboard' %}#reports" class="sb-link {% if active_section == 'reports' %}active{% endif %}"><i class="fas fa-download"></i> Export Reports</a>
+
+<p class="sb-nav-label" style="margin-top:12px">Platform</p>
+<a href="{% url 'admin_contact_support' %}" class="sb-link {% if active_section == 'support' %}active{% endif %}" style="{% if active_section == 'support' %}{% else %}color:rgba(255,255,255,.5){% endif %}"><i class="fas fa-headset"></i> Contact Platform Support</a>

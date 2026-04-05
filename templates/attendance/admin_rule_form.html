@@ -1,0 +1,63 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}{% if rule %}Edit{% else %}Add{% endif %} Attendance Rule{% endblock %}
+{% block breadcrumb %} / <a href="{% url 'admin_attendance_rules' %}" style="color:var(--teal);text-decoration:none">Attendance Rules</a> / {% if rule %}Edit{% else %}Add{% endif %}{% endblock %}
+{% block page_title %}{% if rule %}Edit{% else %}Add{% endif %} Attendance Rule{% endblock %}
+{% block page_sub %}Configure thresholds, grace periods, and exemption policies{% endblock %}
+{% block content %}
+<div class="form-card">
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Department</label>
+        <select name="department" class="form-control">
+          <option value="">All Departments (college-wide default)</option>
+          {% for d in departments %}<option value="{{ d.pk }}" {% if rule and rule.department_id == d.pk %}selected{% endif %}>{{ d.code }} — {{ d.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Semester</label>
+        <select name="semester" class="form-control">
+          <option value="">All Semesters</option>
+          {% for i in "12345678" %}<option value="{{ i }}" {% if rule and rule.semester == i|add:0 %}selected{% endif %}>Semester {{ i }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(13,115,119,.15)">Eligibility Thresholds</div>
+    <div class="form-row">
+      <div class="form-group"><label>Minimum Overall Attendance %</label><input type="number" name="min_overall_pct" class="form-control" value="{{ rule.min_overall_pct|default:'75' }}" min="0" max="100" step="0.5"></div>
+      <div class="form-group"><label>Minimum Per-Subject Attendance %</label><input type="number" name="min_subject_pct" class="form-control" value="{{ rule.min_subject_pct|default:'75' }}" min="0" max="100" step="0.5"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Grace / Condonation %</label><input type="number" name="grace_pct" class="form-control" value="{{ rule.grace_pct|default:'0' }}" min="0" max="20" step="0.5"><div class="form-hint">Subtracted from threshold. e.g. 5% grace on 75% = effective 70%</div></div>
+      <div class="form-group"><label>Min Sessions Before Check Applies</label><input type="number" name="min_sessions_for_check" class="form-control" value="{{ rule.min_sessions_for_check|default:'5' }}" min="0"><div class="form-hint">Subjects with fewer sessions are skipped in eligibility check</div></div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" name="require_both" {% if not rule or rule.require_both %}checked{% endif %} style="width:16px;height:16px">
+        Both overall AND per-subject thresholds must be met (recommended)
+      </label>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(13,115,119,.15)">Alert Thresholds (Notifications Only)</div>
+    <div class="form-row">
+      <div class="form-group"><label>Warning Alert Below %</label><input type="number" name="alert_below_pct" class="form-control" value="{{ rule.alert_below_pct|default:'75' }}" min="0" max="100" step="0.5"></div>
+      <div class="form-group"><label>Critical Alert Below %</label><input type="number" name="critical_below_pct" class="form-control" value="{{ rule.critical_below_pct|default:'65' }}" min="0" max="100" step="0.5"></div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(13,115,119,.15)">Exemption Policy</div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" name="allow_medical_exemption" {% if not rule or rule.allow_medical_exemption %}checked{% endif %} style="width:15px;height:15px"> Allow Medical Exemptions</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" name="allow_sports_exemption" {% if not rule or rule.allow_sports_exemption %}checked{% endif %} style="width:15px;height:15px"> Allow Sports / Cultural</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" name="allow_od_exemption" {% if not rule or rule.allow_od_exemption %}checked{% endif %} style="width:15px;height:15px"> Allow On-Duty</label>
+    </div>
+    <div class="form-group" style="max-width:280px"><label>Max Exemption Days per Semester</label><input type="number" name="max_exemption_days" class="form-control" value="{{ rule.max_exemption_days|default:'15' }}" min="0"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button type="submit" class="btn-submit">{% if rule %}Update Rule{% else %}Create Rule{% endif %}</button>
+      <a href="{% url 'admin_attendance_rules' %}" class="btn-cancel">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

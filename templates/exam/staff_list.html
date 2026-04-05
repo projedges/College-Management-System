@@ -1,0 +1,98 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Exam Staff — {{ ec.college.name }}{% endblock %}
+{% block page_title %}Exam Staff Roster{% endblock %}
+{% block page_sub %}{{ ec.college.name }} · Manage examination department personnel{% endblock %}
+{% block nav_staff %}active{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+  <div>
+    <div style="font-size:13px;color:var(--muted)">{{ staff|length }} staff member{{ staff|length|pluralize }} in the examination department.</div>
+  </div>
+  {% if ec.exam_role == 'COE' or ec.exam_role == 'DEPUTY_COE' %}
+  <a href="{% url 'exam_staff_add' %}" class="btn-purple"><i class="fas fa-user-plus"></i> Add Staff Member</a>
+  {% endif %}
+</div>
+
+<!-- Access guide -->
+<div style="margin-bottom:20px;padding:16px 20px;background:rgba(124,58,237,.05);border:1.5px solid rgba(124,58,237,.2);border-radius:12px">
+  <div style="font-size:13px;font-weight:700;color:#4c1d95;margin-bottom:8px"><i class="fas fa-circle-info" style="color:#7c3aed"></i> How Exam Department Access Works</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;font-size:12px;color:#5b21b6">
+    <div><strong>COE / Deputy COE</strong><br>Full access — publish results, manage staff, hall tickets</div>
+    <div><strong>Section Officer</strong><br>Verify results, manage schedules, scoped to assigned departments</div>
+    <div><strong>Valuation Officer</strong><br>Enter marks only</div>
+    <div><strong>Data Entry</strong><br>Enter marks only</div>
+    <div><strong>Coordinator</strong><br>Manage schedules and hall tickets</div>
+  </div>
+  <div style="margin-top:10px;font-size:12px;color:#7c3aed">
+    <i class="fas fa-key"></i> Staff log in at <strong>/login/</strong> with their username and password. Their role is automatically detected.
+  </div>
+</div>
+
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-users"></i> Staff Members</div>
+  {% if staff %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Employee ID</th>
+          <th>Username</th>
+          <th>Phone</th>
+          <th>Departments</th>
+          <th>Status</th>
+          {% if ec.exam_role == 'COE' or ec.exam_role == 'DEPUTY_COE' %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in staff %}
+        <tr style="{% if not s.is_active %}opacity:.5{% endif %}">
+          <td style="font-weight:600;color:var(--deep)">{{ s.user.get_full_name|default:s.user.username }}</td>
+          <td>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;
+              background:{% if s.exam_role == 'COE' %}rgba(124,58,237,.12);color:#7c3aed
+              {% elif s.exam_role == 'DEPUTY_COE' %}rgba(99,102,241,.12);color:#6366f1
+              {% elif s.exam_role == 'SECTION_OFFICER' %}rgba(13,115,119,.1);color:var(--teal)
+              {% else %}rgba(100,116,139,.1);color:var(--muted){% endif %}">
+              {{ s.get_exam_role_display }}
+            </span>
+          </td>
+          <td style="color:var(--teal);font-weight:600">{{ s.employee_id }}</td>
+          <td style="color:var(--muted);font-size:12px">{{ s.user.username }}</td>
+          <td style="color:var(--muted)">{{ s.phone_number|default:"—" }}</td>
+          <td style="font-size:12px;color:var(--muted)">
+            {% if s.departments.exists %}
+              {% for d in s.departments.all %}{{ d.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% else %}All{% endif %}
+          </td>
+          <td>
+            {% if s.is_active %}
+            <span class="dbadge dbadge-active">Active</span>
+            {% else %}
+            <span class="dbadge dbadge-red">Inactive</span>
+            {% endif %}
+          </td>
+          {% if ec.exam_role == 'COE' or ec.exam_role == 'DEPUTY_COE' %}
+          <td>
+            {% if s.user != request.user %}
+            <form method="POST" action="{% url 'exam_staff_toggle' s.pk %}" style="display:inline">
+              {% csrf_token %}
+              <button type="submit" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:{% if s.is_active %}rgba(239,68,68,.08);color:var(--red){% else %}rgba(16,185,129,.08);color:#059669{% endif %}">
+                {% if s.is_active %}<i class="fas fa-ban"></i> Deactivate{% else %}<i class="fas fa-check"></i> Activate{% endif %}
+              </button>
+            </form>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-users"></i>No exam staff yet. Add the first member above.</div>
+  {% endif %}
+</div>
+{% endblock %}

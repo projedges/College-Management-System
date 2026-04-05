@@ -11,6 +11,12 @@
 {% endblock %}
 
 {% block dashboard_content %}
+
+<div class="hint-box" style="margin-bottom:20px;border-color:rgba(13,115,119,.3)">
+  <i class="fas fa-shield-halved" style="color:var(--teal)"></i>
+  <strong style="color:var(--teal)"> Data Privacy Notice</strong> — As the platform operator you can see structural information (departments, headcount) but not student records, financial data, or user activity. College data belongs to the college.
+</div>
+
 <div class="stat-grid">
   <div class="stat-card">
     <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-sitemap"></i></div>
@@ -18,25 +24,18 @@
   </div>
   <div class="stat-card">
     <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-graduate"></i></div>
-    <div class="s-val">{{ total_students }}</div><div class="s-lbl">Students</div>
+    <div class="s-val">{{ total_students }}</div><div class="s-lbl">Students (count only)</div>
   </div>
   <div class="stat-card">
     <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-chalkboard-teacher"></i></div>
-    <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Faculty</div>
-  </div>
-  <div class="stat-card">
-    <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-indian-rupee-sign"></i></div>
-    <div class="s-val">Rs {{ total_fees_collected|floatformat:0 }}</div><div class="s-lbl">Fees Collected</div>
-  </div>
-  <div class="stat-card">
-    <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-hourglass-half"></i></div>
-    <div class="s-val">Rs {{ total_fees_pending|floatformat:0 }}</div><div class="s-lbl">Fees Pending</div>
+    <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Faculty (count only)</div>
   </div>
 </div>
 
 <div class="two-col">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-sitemap"></i> Departments</div>
+    <div class="section-meta">Department names and headcounts — no student or faculty details.</div>
     {% if departments %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
@@ -60,6 +59,7 @@
 
   <div class="d-card">
     <div class="d-title"><i class="fas fa-user-shield"></i> College Admins</div>
+    <div class="section-meta">Admin accounts you created for this college.</div>
     {% if admins %}
     {% for a in admins %}
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">
@@ -68,7 +68,7 @@
       </div>
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.user.get_full_name|default:a.user.username }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ a.user.email }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ a.user.username }}</div>
       </div>
     </div>
     {% endfor %}
@@ -79,21 +79,5 @@
       <a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep" style="font-size:12px"><i class="fas fa-user-plus"></i> Add Admin</a>
     </div>
   </div>
-</div>
-
-<div class="d-card">
-  <div class="d-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
-  {% if recent_activity %}
-  <div class="content-scroll">
-    {% for log in recent_activity %}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6;gap:12px">
-      <div style="font-size:13px;color:var(--deep)">{{ log.action }}</div>
-      <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.user.username }} · {{ log.timestamp|date:"d M H:i" }}</div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty"><i class="fas fa-clock"></i>No activity for this college yet.</div>
-  {% endif %}
 </div>
 {% endblock %}

@@ -4,6 +4,7 @@ from uuid import uuid4
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 # USER ROLE MODEL
@@ -16,6 +17,7 @@ class UserRole(models.Model):
         (4, 'Student'),
         (5, 'Lab Staff'),
         (6, 'Principal'),
+        (7, 'Exam Controller'),
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -202,9 +204,19 @@ class UserSecurity(models.Model):
 
     login_attempts = models.IntegerField(default=0)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    locked_until = models.DateTimeField(null=True, blank=True,
+                                        help_text='Account locked until this time after too many failed logins')
 
     def __str__(self):
         return self.user.username
+
+    @property
+    def is_locked(self):
+        if self.login_attempts < 5:
+            return False
+        if self.locked_until and timezone.now() < self.locked_until:
+            return True
+        return False
 
 class Course(models.Model):
     name = models.CharField(max_length=100)
@@ -270,8 +282,10 @@ class Notification(models.Model):
 
 class RegistrationRequest(models.Model):
     STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
-        ('REVIEWED', 'Reviewed'),
+        ('SUBMITTED', 'Submitted'),
+        ('UNDER_REVIEW', 'Under Review'),
+        ('NEEDS_CORRECTION', 'Needs Correction'),
+        ('APPROVED', 'Approved'),
         ('CONVERTED', 'Converted'),
         ('REJECTED', 'Rejected'),
     )
@@ -299,7 +313,11 @@ class RegistrationRequest(models.Model):
     school_passed_year = models.IntegerField(null=True, blank=True)
     school_percentage = models.FloatField(null=True, blank=True)
 
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SUBMITTED')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_registration_requests')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True)
+    correction_fields = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -565,12 +583,38 @@ class FacultyAvailability(models.Model):
 
 # SUBJECT MODEL
 class Subject(models.Model):
+    CATEGORY_CHOICES = [
+        ('PC',    'Program Core'),
+        ('PE',    'Program Elective'),
+        ('OE',    'Open Elective'),
+        ('BS',    'Basic Science'),
+        ('PC/BS', 'Program Core / Basic Science'),
+        ('MC',    'Mandatory Course'),
+        ('PW',    'Project Work'),
+        ('AC',    'Audit Course'),
+        ('HS',    'Humanities & Social Science'),
+        ('ES',    'Engineering Science'),
+        ('OTHER', 'Other'),
+    ]
+
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(max_length=20)  # unique per department, not globally
 
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     semester = models.IntegerField()
-    weekly_hours = models.IntegerField(default=3) # Based on Credits
+    weekly_hours = models.IntegerField(default=3)
+
+    # Syllabus structure fields (L-T-P-C format used by Indian universities)
+    lecture_hours   = models.IntegerField(default=3, help_text="Lecture hours per week (L)")
+    tutorial_hours  = models.IntegerField(default=0, help_text="Tutorial hours per week (T)")
+    practical_hours = models.IntegerField(default=0, help_text="Practical/Lab hours per week (P)")
+    credits         = models.IntegerField(default=3, help_text="Credits (C)")
+    category        = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='PC', help_text="Subject category")
+
+    class Meta:
+        # Two departments can have the same subject code (e.g. MATH101 in CSE and ECE)
+        # but within a department each code must be unique per semester
+        unique_together = ('department', 'code')
 
     def __str__(self):
         return self.name
@@ -664,12 +708,15 @@ class CourseSubject(models.Model):
 class Classroom(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='classrooms', null=True)
     room_number = models.CharField(max_length=20)
+    building = models.CharField(max_length=100, blank=True, default='')
     capacity = models.IntegerField()
 
     class Meta:
         unique_together = ('college', 'room_number')
 
     def __str__(self):
+        if self.building:
+            return f"{self.building} - {self.room_number}"
         return f"{self.room_number} ({self.college.code if self.college else 'Global'})"
 
 class Timetable(models.Model):
@@ -691,8 +738,14 @@ class Timetable(models.Model):
     end_time = models.TimeField()
 
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
+
+    # Section support — e.g. "A", "B", "C" for same subject taught by different faculty
+    section = models.CharField(max_length=10, blank=True, default='',
+                               help_text="Section label e.g. A, B, C. Leave blank if no sections.")
+
     def __str__(self):
-        return f"{self.subject.name} - {self.day_of_week}"
+        sec = f" [{self.section}]" if self.section else ""
+        return f"{self.subject.name}{sec} - {self.day_of_week}"
 
 class Substitution(models.Model):
     timetable_slot = models.ForeignKey(Timetable, on_delete=models.CASCADE, related_name='substitutions')
@@ -706,6 +759,24 @@ class Substitution(models.Model):
 
     def __str__(self):
         return f"Sub: {self.substitute_faculty} for {self.original_faculty} on {self.date}"
+
+
+class TimetableBreak(models.Model):
+    """A named break slot (lunch, tea, etc.) shown in timetable views."""
+    DAYS = Timetable.DAYS
+
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='timetable_breaks')
+    label = models.CharField(max_length=50, default='Break')  # e.g. "Lunch Break", "Tea Break"
+    day_of_week = models.CharField(max_length=3, choices=DAYS)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    applies_to_all = models.BooleanField(default=True)  # college-wide vs dept-specific
+
+    class Meta:
+        ordering = ['day_of_week', 'start_time']
+
+    def __str__(self):
+        return f"{self.label} ({self.day_of_week} {self.start_time}–{self.end_time})"
 
 class Semester(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='semesters', null=True)
@@ -829,11 +900,62 @@ class FeeStructure(models.Model):
     def __str__(self):
         return f"{self.department.code} Sem {self.semester}: {self.total_fees}"
 
+
+class FeeBreakdown(models.Model):
+    """Per-category fee amounts linked to a FeeStructure."""
+    FEE_CATEGORY_CHOICES = (
+        ('TUITION',   'Tuition Fee'),
+        ('EXAM',      'Exam Fee'),
+        ('LAB',       'Lab Fee'),
+        ('LIBRARY',   'Library Fee'),
+        ('SPORTS',    'Sports & Cultural Fee'),
+        ('MISC',      'Miscellaneous'),
+        # Per-occurrence fees (set college-wide, not per semester)
+        ('SUPPLY_PER_SUBJECT', 'Supply Exam Fee (per subject)'),
+        ('REVAL_PER_SUBJECT',  'Revaluation Fee (per subject)'),
+        ('PHOTOCOPY',          'Photocopy of Answer Script'),
+    )
+    structure = models.ForeignKey(FeeStructure, on_delete=models.CASCADE, related_name='breakdowns')
+    category  = models.CharField(max_length=30, choices=FEE_CATEGORY_CHOICES)
+    amount    = models.FloatField()
+
+    class Meta:
+        unique_together = ('structure', 'category')
+
+    def __str__(self):
+        return f"{self.structure} | {self.category}: {self.amount}"
+
+
+class SupplyExamRegistration(models.Model):
+    """Student registers for a supply/backlog exam for specific failed subjects."""
+    STATUS_CHOICES = (
+        ('PENDING',  'Payment Pending'),
+        ('PAID',     'Paid & Registered'),
+        ('REJECTED', 'Rejected'),
+    )
+    student    = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='supply_registrations')
+    exam       = models.ForeignKey('Exam', on_delete=models.CASCADE, related_name='supply_registrations')
+    subjects   = models.ManyToManyField('Subject', related_name='supply_registrations')
+    total_fee  = models.FloatField(default=0)
+    payment    = models.OneToOneField('Payment', on_delete=models.SET_NULL, null=True, blank=True, related_name='supply_registration')
+    status     = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'exam')
+
+    def __str__(self):
+        return f"{self.student.roll_number} — Supply {self.exam.name} [{self.status}]"
+
 class Fee(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
 
     total_amount = models.FloatField()
     paid_amount = models.FloatField(default=0)
+
+    # Track which semester and academic year this fee belongs to
+    semester = models.IntegerField(null=True, blank=True)
+    academic_year = models.CharField(max_length=20, blank=True, default='')  # e.g. "2024-25"
 
     STATUS = (
         ('PENDING', 'Pending'),
@@ -844,7 +966,11 @@ class Fee(models.Model):
     status = models.CharField(max_length=10, choices=STATUS, default='PENDING')
 
     def __str__(self):
-        return f"{self.student} - {self.status}"
+        return f"{self.student} - Sem {self.semester or '?'} - {self.status}"
+
+    @property
+    def balance_due(self):
+        return max(self.total_amount - self.paid_amount, 0)
 
 
 # ── QUIZ SYSTEM ──────────────────────────────────────────────────────────────
@@ -927,10 +1053,10 @@ class InternalMark(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='internal_marks')
     entered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
-    ia1 = models.FloatField(null=True, blank=True, help_text='Internal Assessment 1 (out of 30)')
-    ia2 = models.FloatField(null=True, blank=True, help_text='Internal Assessment 2 (out of 30)')
-    assignment_marks = models.FloatField(null=True, blank=True, help_text='Assignment component (out of 20)')
-    attendance_marks = models.FloatField(null=True, blank=True, help_text='Attendance component (out of 5)')
+    ia1 = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(30)], help_text='Internal Assessment 1 (out of 30)')
+    ia2 = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(30)], help_text='Internal Assessment 2 (out of 30)')
+    assignment_marks = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(20)], help_text='Assignment component (out of 20)')
+    attendance_marks = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(5)], help_text='Attendance component (out of 5)')
 
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1028,3 +1154,463 @@ class CollegeBranding(models.Model):
 
     def __str__(self):
         return f"Branding — {self.college.name}"
+
+
+# ── EXAMINATION DEPARTMENT ────────────────────────────────────────────────────
+
+class ExamStaff(models.Model):
+    """
+    Multiple exam department personnel per college, each with a specific sub-role.
+    Replaces the single ExamController model.
+    """
+    EXAM_ROLE_CHOICES = (
+        ('COE',        'Controller of Examinations'),
+        ('DEPUTY_COE', 'Deputy Controller'),
+        ('SECTION_OFFICER', 'Section Officer'),
+        ('VALUATION_OFFICER', 'Valuation Officer'),
+        ('DATA_ENTRY',  'Data Entry Operator'),
+        ('COORDINATOR', 'Exam Coordinator'),
+    )
+
+    user       = models.OneToOneField(User, on_delete=models.CASCADE)
+    college    = models.ForeignKey(College, on_delete=models.CASCADE, related_name='exam_staff')
+    exam_role  = models.CharField(max_length=20, choices=EXAM_ROLE_CHOICES, default='COORDINATOR')
+    employee_id = models.CharField(max_length=50, unique=True)
+    phone_number = models.CharField(max_length=15, blank=True)
+    # Section officers are scoped to specific departments
+    departments = models.ManyToManyField(Department, blank=True, related_name='exam_section_officers',
+                                         help_text='Departments this staff member is responsible for (leave blank for all)')
+    is_active  = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Exam Staff'
+        verbose_name_plural = 'Exam Staff'
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} [{self.get_exam_role_display()}] — {self.college.code}"
+
+    @property
+    def can_publish(self):
+        return self.exam_role in ('COE', 'DEPUTY_COE')
+
+    @property
+    def can_verify(self):
+        return self.exam_role in ('COE', 'DEPUTY_COE', 'SECTION_OFFICER')
+
+    @property
+    def can_manage_schedule(self):
+        return self.exam_role in ('COE', 'DEPUTY_COE', 'COORDINATOR', 'SECTION_OFFICER')
+
+    @property
+    def can_manage_hall_tickets(self):
+        return self.exam_role in ('COE', 'DEPUTY_COE', 'SECTION_OFFICER', 'COORDINATOR')
+
+
+# Keep ExamController as a thin alias so migration 0017 data isn't broken
+# New code should use ExamStaff everywhere
+class ExamController(models.Model):
+    """Legacy single-controller model — superseded by ExamStaff. Kept for migration compatibility."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='exam_controllers')
+    employee_id = models.CharField(max_length=50, unique=True)
+    phone_number = models.CharField(max_length=15, blank=True)
+    designation = models.CharField(max_length=100, default='Exam Controller')
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} — {self.college.code}"
+
+
+class ExamType(models.Model):
+    """CIE (internal) or SEE (semester end) or custom."""
+    CATEGORY_CHOICES = (
+        ('CIE', 'Continuous Internal Evaluation'),
+        ('SEE', 'Semester End Examination'),
+        ('PRACTICAL', 'Practical / Lab'),
+        ('VIVA', 'Viva Voce'),
+        ('OTHER', 'Other'),
+    )
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='exam_types')
+    name = models.CharField(max_length=100)           # e.g. "CIE-1", "SEE Nov 2025"
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='CIE')
+    max_marks = models.FloatField(default=100)
+    passing_marks = models.FloatField(default=40)
+    weightage_percent = models.FloatField(default=100, help_text='% contribution to final result')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('college', 'name')
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+
+class EvaluationScheme(models.Model):
+    """
+    Per-department (optionally per-semester) evaluation pattern.
+    Defines how CIE and SEE components combine into a final result,
+    how many CIEs are conducted, whether best-of rules apply, etc.
+
+    Examples:
+      - VTU: CIE 50 (best 2 of 3 tests × 20 each) + SEE 50
+      - Anna Univ: CIE 20 + SEE 80
+      - Autonomous: CIE 40 + SEE 60, with practical 25 internal + 25 external
+    """
+    GRADING_CHOICES = (
+        ('ABSOLUTE', 'Absolute (fixed cutoffs)'),
+        ('RELATIVE', 'Relative (based on class performance)'),
+        ('CREDIT',   'Credit-based (CGPA)'),
+    )
+    college     = models.ForeignKey(College, on_delete=models.CASCADE, related_name='evaluation_schemes')
+    department  = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='evaluation_schemes',
+                                    help_text='Leave blank to apply to all departments in this college')
+    name        = models.CharField(max_length=150, help_text='e.g. "VTU B.E. Scheme 2021"')
+    description = models.TextField(blank=True)
+
+    # CIE configuration
+    cie_count           = models.IntegerField(default=2, help_text='How many CIE tests are conducted')
+    cie_best_of         = models.IntegerField(default=2, help_text='Best N CIE scores are counted (0 = all)')
+    cie_max_per_test    = models.FloatField(default=30, help_text='Max marks per CIE test')
+    cie_total_max       = models.FloatField(default=50, help_text='Total CIE contribution to final marks')
+
+    # SEE configuration
+    see_max             = models.FloatField(default=100, help_text='SEE question paper max marks')
+    see_scaled_to       = models.FloatField(default=50,  help_text='SEE scaled contribution to final marks')
+    see_passing_min     = models.FloatField(default=35,  help_text='Minimum marks in SEE to pass')
+
+    # Practical / Viva (optional)
+    has_practical       = models.BooleanField(default=False)
+    practical_internal_max = models.FloatField(default=25, null=True, blank=True)
+    practical_external_max = models.FloatField(default=25, null=True, blank=True)
+
+    # Overall passing
+    overall_passing_min = models.FloatField(default=40, help_text='Minimum % to pass overall')
+    grading_type        = models.CharField(max_length=10, choices=GRADING_CHOICES, default='ABSOLUTE')
+    is_active           = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('college', 'department', 'name')
+
+    def __str__(self):
+        dept_str = self.department.code if self.department else 'All Depts'
+        return f"{self.name} [{dept_str}]"
+
+    @property
+    def total_max_marks(self):
+        base = self.cie_total_max + self.see_scaled_to
+        if self.has_practical:
+            base += (self.practical_internal_max or 0) + (self.practical_external_max or 0)
+        return base
+
+
+class ExamSchedule(models.Model):
+    """Per-subject exam slot — date, time, room, invigilator."""
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='schedule')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='exam_schedules')
+    exam_type = models.ForeignKey(ExamType, on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    venue = models.CharField(max_length=100, blank=True)
+    invigilator = models.ForeignKey(
+        Faculty, on_delete=models.SET_NULL, null=True, blank=True, related_name='invigilated_exams'
+    )
+    max_marks = models.FloatField(default=100)
+    passing_marks = models.FloatField(default=40)
+
+    class Meta:
+        unique_together = ('exam', 'subject')
+
+    def __str__(self):
+        return f"{self.exam.name} — {self.subject.code} on {self.date}"
+
+
+class HallTicket(models.Model):
+    """Eligibility record + hall ticket for a student for an exam."""
+    STATUS_CHOICES = (
+        ('ELIGIBLE', 'Eligible'),
+        ('DETAINED', 'Detained — Low Attendance'),
+        ('WITHHELD', 'Withheld — Fee Dues'),
+        ('ISSUED', 'Hall Ticket Issued'),
+    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='hall_tickets')
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='hall_tickets')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ELIGIBLE')
+    attendance_pct = models.FloatField(default=0)
+    has_fee_dues = models.BooleanField(default=False)
+    remarks = models.TextField(blank=True)
+    issued_at = models.DateTimeField(null=True, blank=True)
+    generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('student', 'exam')
+
+    def __str__(self):
+        return f"{self.student.roll_number} — {self.exam.name} [{self.status}]"
+
+
+class ExamResult(models.Model):
+    """
+    Consolidated result per student per exam (across all subjects).
+    Separate from the existing Result model which stores GPA per semester.
+    """
+    STATUS_CHOICES = (
+        ('DRAFT', 'Draft'),
+        ('VERIFIED', 'Verified'),
+        ('PUBLISHED', 'Published'),
+        ('WITHHELD', 'Withheld'),
+    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_results')
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='exam_results')
+    total_marks_obtained = models.FloatField(default=0)
+    total_max_marks = models.FloatField(default=0)
+    percentage = models.FloatField(default=0)
+    grade = models.CharField(max_length=5, blank=True)
+    is_pass = models.BooleanField(default=False)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='DRAFT')
+    published_at = models.DateTimeField(null=True, blank=True)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_results')
+    published_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='published_results')
+
+    class Meta:
+        unique_together = ('student', 'exam')
+
+    def __str__(self):
+        return f"{self.student.roll_number} — {self.exam.name} [{self.status}]"
+
+
+class RevaluationRequest(models.Model):
+    """Student can request revaluation of a specific subject mark."""
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('ACCEPTED', 'Accepted'),
+        ('REJECTED', 'Rejected'),
+        ('COMPLETED', 'Completed'),
+    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='revaluation_requests')
+    marks = models.ForeignKey(Marks, on_delete=models.CASCADE, related_name='revaluation_requests')
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    revised_marks = models.FloatField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'marks')
+
+    def __str__(self):
+        return f"Reval: {self.student.roll_number} — {self.marks.subject.code}"
+
+
+class ValuationAssignment(models.Model):
+    """
+    Assigns a faculty member (internal) or external examiner (name only)
+    to evaluate answer scripts for a specific subject in an exam.
+    Supports double valuation (first + second examiner).
+    """
+    VALUATION_TYPE = (
+        ('FIRST',    'First Valuation'),
+        ('SECOND',   'Second Valuation'),
+        ('THIRD',    'Third / Arbitration'),
+    )
+    exam_schedule   = models.ForeignKey(ExamSchedule, on_delete=models.CASCADE, related_name='valuations')
+    valuation_type  = models.CharField(max_length=6, choices=VALUATION_TYPE, default='FIRST')
+    # Internal faculty valuator
+    faculty         = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='valuation_assignments')
+    # External examiner (name + institution, no system account needed)
+    external_name   = models.CharField(max_length=150, blank=True)
+    external_institution = models.CharField(max_length=200, blank=True)
+    assigned_by     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    assigned_at     = models.DateTimeField(auto_now_add=True)
+    completed       = models.BooleanField(default=False)
+    completed_at    = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('exam_schedule', 'valuation_type')
+
+    def __str__(self):
+        who = self.faculty.user.get_full_name() if self.faculty else self.external_name or 'Unassigned'
+        return f"{self.exam_schedule} — {self.get_valuation_type_display()} by {who}"
+
+
+class ExamStaffLog(models.Model):
+    """Audit trail for all exam department actions."""
+    ACTION_CHOICES = (
+        ('SCHEDULE_CREATED',   'Schedule Created'),
+        ('HALL_TICKET_ISSUED', 'Hall Ticket Issued'),
+        ('MARKS_VERIFIED',     'Marks Verified'),
+        ('RESULT_PUBLISHED',   'Result Published'),
+        ('REVAL_PROCESSED',    'Revaluation Processed'),
+        ('SCHEME_CHANGED',     'Evaluation Scheme Changed'),
+        ('STAFF_ADDED',        'Exam Staff Added'),
+        ('OTHER',              'Other'),
+    )
+    staff       = models.ForeignKey(ExamStaff, on_delete=models.SET_NULL, null=True, blank=True)
+    action      = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    description = models.TextField()
+    exam        = models.ForeignKey(Exam, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_action_display()} by {self.staff} at {self.created_at:%Y-%m-%d %H:%M}"
+
+
+# ── ATTENDANCE RULE ENGINE ────────────────────────────────────────────────────
+
+class AttendanceRule(models.Model):
+    """
+    Admin-configurable attendance eligibility rules per college/department/semester.
+    Replaces all hardcoded 75% thresholds across the system.
+
+    Precedence (most specific wins):
+      department + semester > department only > college-wide (department=None, semester=None)
+    """
+    college    = models.ForeignKey(College, on_delete=models.CASCADE, related_name='attendance_rules')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='attendance_rules',
+                                   help_text='Leave blank to apply to all departments')
+    semester   = models.IntegerField(null=True, blank=True,
+                                     help_text='Leave blank to apply to all semesters')
+
+    # Core thresholds
+    min_overall_pct   = models.FloatField(default=75.0,
+                                          help_text='Minimum overall semester attendance % required')
+    min_subject_pct   = models.FloatField(default=75.0,
+                                          help_text='Minimum per-subject attendance % required')
+    require_both      = models.BooleanField(default=True,
+                                            help_text='Both overall AND subject-wise must be met')
+
+    # Grace / condonation
+    grace_pct         = models.FloatField(default=0.0,
+                                          help_text='Condonation grace % (e.g. 5 means 70% is accepted)')
+    min_sessions_for_check = models.IntegerField(default=5,
+                                                  help_text='Minimum sessions conducted before eligibility check applies')
+
+    # Mandatory subjects — stricter threshold
+    mandatory_subject_pct = models.FloatField(default=75.0,
+                                               help_text='Stricter threshold for mandatory/core subjects')
+
+    # Special case handling
+    allow_medical_exemption  = models.BooleanField(default=True)
+    allow_sports_exemption   = models.BooleanField(default=True)
+    allow_od_exemption       = models.BooleanField(default=True)
+    max_exemption_days       = models.IntegerField(default=15,
+                                                    help_text='Max days that can be exempted per semester')
+
+    # Alert thresholds (for notifications, not eligibility)
+    alert_below_pct   = models.FloatField(default=75.0,
+                                          help_text='Send alert when attendance drops below this %')
+    critical_below_pct = models.FloatField(default=65.0,
+                                            help_text='Send critical alert below this %')
+
+    is_active  = models.BooleanField(default=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('college', 'department', 'semester')
+        ordering = ['college', 'department', 'semester']
+
+    def __str__(self):
+        dept = self.department.code if self.department else 'All'
+        sem  = f'Sem {self.semester}' if self.semester else 'All Sems'
+        return f"Rule [{dept} / {sem}] — {self.min_overall_pct}% overall, {self.min_subject_pct}% per subject"
+
+    @property
+    def effective_min_overall(self):
+        """Threshold after applying grace condonation."""
+        return max(0.0, self.min_overall_pct - self.grace_pct)
+
+    @property
+    def effective_min_subject(self):
+        return max(0.0, self.min_subject_pct - self.grace_pct)
+
+
+class AttendanceExemption(models.Model):
+    """
+    Student-specific attendance exemption (medical, sports, OD, etc.).
+    Approved absences are excluded from the denominator when computing %.
+    """
+    EXEMPTION_TYPE = (
+        ('MEDICAL', 'Medical Leave'),
+        ('SPORTS',  'Sports / Cultural Event'),
+        ('OD',      'On Duty'),
+        ('OTHER',   'Other Authorized Absence'),
+    )
+    STATUS_CHOICES = (
+        ('PENDING',  'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    )
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exemptions')
+    from_date   = models.DateField()
+    to_date     = models.DateField()
+    reason_type = models.CharField(max_length=10, choices=EXEMPTION_TYPE)
+    reason      = models.TextField()
+    document    = models.FileField(upload_to='exemptions/', null=True, blank=True)
+    status      = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='reviewed_exemptions')
+    review_note = models.TextField(blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    @property
+    def days(self):
+        return (self.to_date - self.from_date).days + 1
+
+    def __str__(self):
+        return f"{self.student.roll_number} — {self.get_reason_type_display()} ({self.from_date} to {self.to_date})"
+
+
+class AttendanceCorrection(models.Model):
+    """
+    Audit trail for any attendance record change.
+    Faculty/HOD can correct attendance with a reason; all changes are logged.
+    """
+    attendance   = models.ForeignKey(Attendance, on_delete=models.CASCADE, related_name='corrections')
+    old_status   = models.CharField(max_length=10)
+    new_status   = models.CharField(max_length=10)
+    reason       = models.TextField()
+    corrected_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendance_corrections')
+    corrected_at = models.DateTimeField(auto_now_add=True)
+    approved_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='approved_corrections')
+
+    def __str__(self):
+        return f"{self.attendance} changed {self.old_status}→{self.new_status} by {self.corrected_by}"
+
+
+class EligibilityOverride(models.Model):
+    """
+    Manual override for a student's exam eligibility (HOD/Principal approval).
+    Provides the audit trail required for condonation decisions.
+    """
+    STATUS_CHOICES = (
+        ('PENDING',  'Pending'),
+        ('APPROVED', 'Approved — Eligible'),
+        ('REJECTED', 'Rejected — Remains Ineligible'),
+    )
+    student     = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='eligibility_overrides')
+    exam        = models.ForeignKey('Exam', on_delete=models.CASCADE, related_name='eligibility_overrides')
+    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='override_requests')
+    reason      = models.TextField()
+    attendance_pct_at_request = models.FloatField()
+    status      = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='reviewed_overrides')
+    review_note = models.TextField(blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'exam')
+
+    def __str__(self):
+        return f"Override: {self.student.roll_number} for {self.exam.name} [{self.status}]"

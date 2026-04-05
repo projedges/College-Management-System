@@ -1,0 +1,65 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Attendance Rules{% endblock %}
+{% block nav_exams %}on{% endblock %}
+{% block breadcrumb %} / Attendance Rules{% endblock %}
+{% block page_title %}Attendance Eligibility Rules{% endblock %}
+{% block page_sub %}Configure minimum attendance thresholds, grace periods, and exemption policies per department{% endblock %}
+{% block page_action %}<a href="{% url 'admin_attendance_rule_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Rule</a>{% endblock %}
+{% block content %}
+
+<div class="hint-box" style="margin-bottom:20px">
+  <strong>Rule precedence:</strong> Department + Semester specific &gt; Department only &gt; College-wide default. If no rule is configured, the system uses 75% as the default threshold.
+</div>
+
+{% if rules %}
+{% for rule in rules %}
+<div class="ap-card" style="margin-bottom:16px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+    <div>
+      <div style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)">
+        {{ rule.department.name|default:"All Departments" }}
+        {% if rule.semester %} · Semester {{ rule.semester }}{% else %} · All Semesters{% endif %}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">
+        Effective thresholds: Overall {{ rule.effective_min_overall }}% · Per-subject {{ rule.effective_min_subject }}%
+        {% if rule.grace_pct > 0 %}<span style="color:var(--teal);margin-left:6px">(+{{ rule.grace_pct }}% grace applied)</span>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="{% url 'admin_attendance_rule_edit' rule.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
+      <form method="POST" action="{% url 'admin_attendance_rule_delete' rule.pk %}" style="display:inline" onsubmit="return confirm('Delete this rule?')">
+        {% csrf_token %}<button type="submit" class="btn-del"><i class="fas fa-trash"></i></button>
+      </form>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+    <div style="background:var(--surface2);border-radius:8px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Thresholds</div>
+      <div style="font-size:13px;color:var(--deep)">Overall: <strong>{{ rule.min_overall_pct }}%</strong></div>
+      <div style="font-size:13px;color:var(--deep)">Per-subject: <strong>{{ rule.min_subject_pct }}%</strong></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">{% if rule.require_both %}Both must be met{% else %}Either condition sufficient{% endif %}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Grace & Sessions</div>
+      <div style="font-size:13px;color:var(--deep)">Grace: <strong>{{ rule.grace_pct }}%</strong></div>
+      <div style="font-size:13px;color:var(--deep)">Min sessions: <strong>{{ rule.min_sessions_for_check }}</strong></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exemptions Allowed</div>
+      {% if rule.allow_medical_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> Medical</div>{% endif %}
+      {% if rule.allow_sports_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> Sports / Cultural</div>{% endif %}
+      {% if rule.allow_od_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> On Duty</div>{% endif %}
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Max {{ rule.max_exemption_days }} days/sem</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Alert Thresholds</div>
+      <div style="font-size:13px;color:var(--gold)">Warning: &lt; {{ rule.alert_below_pct }}%</div>
+      <div style="font-size:13px;color:var(--red)">Critical: &lt; {{ rule.critical_below_pct }}%</div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state"><i class="fas fa-sliders"></i><p>No rules configured. The system uses 75% as the default. <a href="{% url 'admin_attendance_rule_add' %}" style="color:var(--teal)">Add a rule</a>.</p></div>
+{% endif %}
+{% endblock %}

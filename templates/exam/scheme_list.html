@@ -1,0 +1,59 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Evaluation Schemes{% endblock %}
+{% block breadcrumb %} / Evaluation Schemes{% endblock %}
+{% block page_title %}Evaluation Schemes{% endblock %}
+{% block page_sub %}Per-department CIE/SEE patterns, grading rules, and practical configurations{% endblock %}
+{% block page_action %}<a href="{% url 'exam_scheme_add' %}" class="btn-purple"><i class="fas fa-plus"></i> Add Scheme</a>{% endblock %}
+{% block content %}
+{% if schemes %}
+{% for s in schemes %}
+<div class="d-card">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>
+      <div style="font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep)">{{ s.name }}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">
+        {{ s.department.name|default:"All Departments" }} · {{ s.get_grading_type_display }}
+        {% if not s.is_active %}<span class="dbadge dbadge-red" style="margin-left:8px">Inactive</span>{% endif %}
+      </div>
+      {% if s.description %}<div style="font-size:12px;color:var(--muted);margin-top:4px">{{ s.description }}</div>{% endif %}
+    </div>
+    <form method="POST" action="{% url 'exam_scheme_delete' s.pk %}" style="display:inline" onsubmit="return confirm('Delete scheme {{ s.name }}?')">
+      {% csrf_token %}<button type="submit" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
+    </form>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:16px">
+    <div style="background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px"><i class="fas fa-clipboard-list"></i> CIE (Internal)</div>
+      <div style="font-size:13px;color:var(--deep)">{{ s.cie_count }} tests conducted</div>
+      <div style="font-size:13px;color:var(--deep)">Best {{ s.cie_best_of }} counted</div>
+      <div style="font-size:13px;color:var(--deep)">{{ s.cie_max_per_test }} marks per test</div>
+      <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-top:6px">Total: {{ s.cie_total_max }} marks</div>
+    </div>
+    <div style="background:rgba(13,115,119,.05);border:1px solid rgba(13,115,119,.15);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px"><i class="fas fa-file-pen"></i> SEE (Semester End)</div>
+      <div style="font-size:13px;color:var(--deep)">Paper: {{ s.see_max }} marks</div>
+      <div style="font-size:13px;color:var(--deep)">Scaled to: {{ s.see_scaled_to }} marks</div>
+      <div style="font-size:13px;color:var(--deep)">Min to pass SEE: {{ s.see_passing_min }}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--teal);margin-top:6px">Total: {{ s.see_scaled_to }} marks</div>
+    </div>
+    {% if s.has_practical %}
+    <div style="background:rgba(230,168,23,.05);border:1px solid rgba(230,168,23,.2);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:#b88510;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px"><i class="fas fa-flask"></i> Practical</div>
+      <div style="font-size:13px;color:var(--deep)">Internal: {{ s.practical_internal_max }} marks</div>
+      <div style="font-size:13px;color:var(--deep)">External: {{ s.practical_external_max }} marks</div>
+    </div>
+    {% endif %}
+    <div style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px"><i class="fas fa-calculator"></i> Overall</div>
+      <div style="font-size:13px;color:var(--deep)">Total max: <strong>{{ s.total_max_marks }}</strong> marks</div>
+      <div style="font-size:13px;color:var(--deep)">Pass at: {{ s.overall_passing_min }}%</div>
+      <div style="font-size:13px;color:var(--deep)">Grading: {{ s.get_grading_type_display }}</div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty"><i class="fas fa-clipboard-list"></i><p>No evaluation schemes defined. <a href="{% url 'exam_scheme_add' %}" style="color:#7c3aed">Add one</a>.</p></div>
+{% endif %}
+{% endblock %}

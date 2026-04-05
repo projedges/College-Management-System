@@ -1,25 +1,21 @@
-{% extends 'admin_panel/base_admin.html' %}
+{% extends 'admin_panel/base_admin_form.html' %}
 {% block title %}Post Announcement — Admin{% endblock %}
-{% block nav_ann %}on{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'admin_announcements' %}" style="color:var(--teal);text-decoration:none">Announcements</a> / Post{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Post Announcement{% endblock %}
 {% block page_sub %}Visible to all students and faculty after posting{% endblock %}
 
-{% block content %}
-<div class="form-card">
+{% block sidebar_links %}{% with active_section='announcements' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+
+{% block form_content %}
+<div class="d-card" style="max-width:560px">
   <form method="POST">
     {% csrf_token %}
-    <div class="form-group">
-      <label>Title <span>*</span></label>
-      <input type="text" name="title" class="form-control" placeholder="e.g. End Semester Exam Schedule" required/>
-    </div>
-    <div class="form-group">
-      <label>Message <span>*</span></label>
-      <textarea name="message" class="form-control" rows="6" placeholder="Write the full announcement here..." required></textarea>
-    </div>
+    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Title *</label><input type="text" name="title" placeholder="e.g. End Semester Exam Schedule" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Message *</label><textarea name="message" rows="6" placeholder="Write the full announcement here..." required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical"></textarea></div>
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i> Post Announcement</button>
-      <a href="{% url 'admin_announcements' %}" class="btn-cancel">Cancel</a>
+      <button type="submit" class="qa-btn qa-indigo"><i class="fas fa-paper-plane"></i> Post Announcement</button>
+      <a href="{% url 'admin_dashboard' %}#announcements" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
 </div>
