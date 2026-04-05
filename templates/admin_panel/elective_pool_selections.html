@@ -1,0 +1,74 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Elective Selections — {{ pool.slot_name }}{% endblock %}
+{% block breadcrumb %} / <a href="{% url 'admin_elective_pools' %}">Elective Pools</a> / {{ pool.slot_name }} / Selections{% endblock %}
+{% block page_title %}{{ pool.department.code }} · Sem {{ pool.semester }} · {{ pool.slot_name }}{% endblock %}
+{% block page_sub %}Review and confirm student elective choices.{% endblock %}
+{% block content %}
+
+<!-- Seat summary -->
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+  {% for subj in pool.subjects.all %}
+  {% with counts=seat_counts|default_if_none:'' %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 16px;min-width:160px">
+    <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ subj.code }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">{{ subj.name }}</div>
+    {% with sc=seat_counts|default_if_none:'' %}
+    <div style="font-size:11px">
+      <span style="color:#059669;font-weight:700">{{ seat_counts|default_if_none:'' }}</span>
+    </div>
+    {% endwith %}
+    <div style="font-size:11px;color:var(--muted)">Quota: {{ pool.quota_per_subject }}</div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+</div>
+
+{% if selections %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Roll No.</th><th>Student</th><th>Chosen Subject</th><th>Status</th><th>Selected At</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for sel in selections %}
+      <tr>
+        <td style="font-weight:700;font-size:12px">{{ sel.student.roll_number }}</td>
+        <td>{{ sel.student.user.get_full_name|default:sel.student.user.username }}</td>
+        <td>
+          <span style="font-weight:600">{{ sel.subject.name }}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:4px">{{ sel.subject.code }}</span>
+        </td>
+        <td>
+          {% if sel.status == 'CONFIRMED' %}<span class="dbadge dbadge-active">Confirmed</span>
+          {% elif sel.status == 'PENDING' %}<span class="dbadge" style="background:rgba(230,168,23,.12);color:#b88510">Pending</span>
+          {% elif sel.status == 'REJECTED' %}<span class="dbadge dbadge-red">Rejected</span>
+          {% else %}<span class="dbadge">Changed</span>{% endif %}
+          {% if sel.note %}<div style="font-size:10px;color:var(--muted);margin-top:2px">{{ sel.note }}</div>{% endif %}
+        </td>
+        <td style="font-size:12px;color:var(--muted)">{{ sel.selected_at|date:"d M Y, H:i" }}</td>
+        <td>
+          {% if sel.status == 'PENDING' %}
+          <form method="POST" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="selection_id" value="{{ sel.pk }}">
+            <input type="hidden" name="action" value="confirm">
+            <button type="submit" class="btn-edit" style="font-size:11px"><i class="fas fa-check"></i> Confirm</button>
+          </form>
+          <form method="POST" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="selection_id" value="{{ sel.pk }}">
+            <input type="hidden" name="action" value="reject">
+            <input type="hidden" name="note" value="Quota full">
+            <button type="submit" class="btn-del" style="font-size:11px"><i class="fas fa-times"></i> Reject</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-inbox"></i><p>No student selections yet. Pool status: <strong>{{ pool.get_status_display }}</strong></p></div>
+{% endif %}
+{% endblock %}

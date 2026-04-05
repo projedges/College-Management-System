@@ -119,7 +119,7 @@
         {% for t in today_timetable %}
         {% with is_marked=t.subject.id|stringformat:"s" %}
         <div class="tt-row" style="{% if t.subject.id in marked_subject_ids %}border-left:3px solid var(--teal);{% else %}border-left:3px solid var(--gold);{% endif %}">
-          <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
+          <div class="tt-time">{{ t.start_time|time:"g:i A" }} - {{ t.end_time|time:"g:i A" }}</div>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
             <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
@@ -284,7 +284,7 @@
           {% for t in today_timetable %}
           <tr style="{% if t.subject.id in marked_subject_ids %}background:rgba(13,115,119,.03){% endif %}">
             <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
-              {{ t.start_time|time:"H:i" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"H:i" }}</span>
+              {{ t.start_time|time:"g:i A" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"g:i A" }}</span>
             </td>
             <td>
               <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
@@ -306,7 +306,7 @@
           {% for brk in today_breaks %}
           <tr style="background:#fef9c3">
             <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
-              {{ brk.start_time|time:"H:i" }}<br><span style="font-weight:400">{{ brk.end_time|time:"H:i" }}</span>
+              {{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span>
             </td>
             <td colspan="2" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
             <td style="text-align:center;font-size:11px;color:#92400e">—</td>
@@ -331,7 +331,7 @@
           </div>
           {% if slots %}{% for t in slots %}
           <div style="background:#fff;border-radius:8px;padding:6px 8px;margin-bottom:5px;border:1px solid var(--border);font-size:11px">
-            <div style="font-weight:700;color:var(--teal)">{{ t.start_time|time:"H:i" }}</div>
+            <div style="font-weight:700;color:var(--teal)">{{ t.start_time|time:"g:i A" }}</div>
             <div style="font-weight:600;color:var(--deep);line-height:1.3">{{ t.subject.name }}</div>
             <div style="color:var(--muted)">{{ t.classroom.room_number }}{% if t.classroom.building %} · {{ t.classroom.building }}{% endif %}</div>
           </div>

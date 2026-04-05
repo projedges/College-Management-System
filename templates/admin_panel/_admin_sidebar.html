@@ -12,6 +12,8 @@
 <a href="{% url 'admin_dashboard' %}#faculty" class="sb-link {% if active_section == 'faculty' %}active{% endif %}"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="{% url 'admin_dashboard' %}#academics" class="sb-link {% if active_section == 'academics' %}active{% endif %}"><i class="fas fa-book"></i> Academics</a>
 <a href="{% url 'admin_dashboard' %}#planner" class="sb-link {% if active_section == 'planner' %}active{% endif %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
+<a href="{% url 'admin_regulations' %}" class="sb-link {% if active_section == 'regulations' %}active{% endif %}"><i class="fas fa-scroll"></i> Regulations</a>
+<a href="{% url 'admin_elective_pools' %}" class="sb-link {% if active_section == 'electives' %}active{% endif %}"><i class="fas fa-layer-group"></i> Elective Pools</a>
 <a href="{% url 'admin_dashboard' %}#exams" class="sb-link {% if active_section == 'exams' %}active{% endif %}"><i class="fas fa-file-pen"></i> Exams</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Finance &amp; Comms</p>

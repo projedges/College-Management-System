@@ -1,0 +1,33 @@
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Add Regulation{% endblock %}
+{% block form_title %}Add Academic Regulation{% endblock %}
+{% block form_subtitle %}Define a university/college scheme (e.g. VTU 2021, Anna Univ R2019).{% endblock %}
+{% block form_content %}
+<form method="POST">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="form-group">
+      <label class="form-label">Regulation Name <span class="req">*</span></label>
+      <input type="text" name="name" class="form-control" placeholder="e.g. VTU 2021 Scheme" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Short Code <span class="req">*</span></label>
+      <input type="text" name="code" class="form-control" placeholder="e.g. VTU21" required>
+      <div class="form-hint">Unique identifier used across the system.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Effective From Year <span class="req">*</span></label>
+      <input type="number" name="effective_from_year" class="form-control" placeholder="e.g. 2021" min="2000" max="2100" required>
+      <div class="form-hint">Admission year from which this regulation applies.</div>
+    </div>
+    <div class="form-group form-group-full">
+      <label class="form-label">Description</label>
+      <textarea name="description" class="form-control" rows="3" placeholder="Brief notes about this regulation..."></textarea>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Save Regulation</button>
+    <a href="{% url 'admin_regulations' %}" class="btn btn-outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}

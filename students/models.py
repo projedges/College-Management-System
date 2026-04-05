@@ -633,6 +633,135 @@ class FacultySubject(models.Model):
         return f"{self.faculty} - {self.subject}"
 
 
+# ── REGULATION & CURRICULUM ───────────────────────────────────────────────────
+
+class Regulation(models.Model):
+    """
+    Academic regulation / scheme defined by the college or university.
+    e.g. "VTU 2021 Scheme", "Anna Univ R2019", "Autonomous 2022"
+    All curriculum entries and evaluation schemes are tied to a regulation.
+    """
+    college     = models.ForeignKey(College, on_delete=models.CASCADE, related_name='regulations')
+    name        = models.CharField(max_length=100, help_text='e.g. "VTU 2021 Scheme"')
+    code        = models.CharField(max_length=30, help_text='Short code e.g. "VTU21", "R2019"')
+    description = models.TextField(blank=True)
+    effective_from_year = models.IntegerField(
+        help_text='Admission year from which this regulation applies (e.g. 2021)'
+    )
+    is_active   = models.BooleanField(default=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('college', 'code')
+
+    def __str__(self):
+        return f"{self.name} ({self.college.code})"
+
+
+class CurriculumEntry(models.Model):
+    """
+    Maps a Subject into a Regulation's curriculum for a specific
+    department and semester. This is the official syllabus record.
+
+    Fixed subjects (PC, BS, MC, HS, ES) are auto-enrolled to all students.
+    Elective subjects (PE, OE) go through ElectivePool → ElectiveSelection.
+    """
+    regulation  = models.ForeignKey(Regulation, on_delete=models.CASCADE, related_name='curriculum_entries')
+    department  = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='curriculum_entries')
+    subject     = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='curriculum_entries')
+    semester    = models.IntegerField()
+
+    ELECTIVE_TYPES = [
+        ('FIXED',    'Fixed / Compulsory'),
+        ('PE',       'Program Elective'),
+        ('OE',       'Open Elective'),
+    ]
+    elective_type = models.CharField(max_length=10, choices=ELECTIVE_TYPES, default='FIXED')
+
+    # Prerequisite subjects (informational + enforced at elective selection)
+    prerequisites = models.ManyToManyField(
+        Subject, blank=True, related_name='required_for',
+        help_text='Subjects that must be passed before taking this subject'
+    )
+
+    class Meta:
+        unique_together = ('regulation', 'department', 'subject', 'semester')
+
+    def __str__(self):
+        return f"{self.regulation.code} | {self.department.code} Sem{self.semester} | {self.subject.code}"
+
+    @property
+    def is_elective(self):
+        return self.elective_type in ('PE', 'OE')
+
+
+# ── ELECTIVE SELECTION ────────────────────────────────────────────────────────
+
+class ElectivePool(models.Model):
+    """
+    Admin opens an elective slot for a batch to choose from.
+    e.g. "Sem 5 PE-1 — choose one from: AI, ML, IoT" with quota per subject.
+    """
+    STATUS_CHOICES = [
+        ('DRAFT',  'Draft'),
+        ('OPEN',   'Open for Selection'),
+        ('CLOSED', 'Closed'),
+    ]
+    regulation   = models.ForeignKey(Regulation, on_delete=models.CASCADE, related_name='elective_pools')
+    department   = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='elective_pools')
+    semester     = models.IntegerField()
+    slot_name    = models.CharField(max_length=60, help_text='e.g. "PE-1", "Open Elective"')
+    elective_type = models.CharField(max_length=10, choices=CurriculumEntry.ELECTIVE_TYPES[1:], default='PE')
+    subjects     = models.ManyToManyField(Subject, related_name='elective_pools',
+                                          help_text='Subjects students can choose from in this slot')
+    quota_per_subject = models.PositiveIntegerField(default=60,
+                                                     help_text='Max students per elective subject (for section/faculty planning)')
+    min_students_per_subject = models.PositiveIntegerField(default=10,
+                                                            help_text='Min students needed to run this elective (below this, subject may be cancelled)')
+    status       = models.CharField(max_length=10, choices=STATUS_CHOICES, default='DRAFT')
+    deadline     = models.DateTimeField(null=True, blank=True,
+                                        help_text='Last date/time for students to submit their choice')
+    created_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('regulation', 'department', 'semester', 'slot_name')
+
+    def __str__(self):
+        return f"{self.department.code} Sem{self.semester} {self.slot_name} [{self.get_status_display()}]"
+
+    def seats_remaining(self, subject):
+        taken = ElectiveSelection.objects.filter(pool=self, subject=subject, status='CONFIRMED').count()
+        return max(0, self.quota_per_subject - taken)
+
+
+class ElectiveSelection(models.Model):
+    """
+    A student's elective choice for a specific pool slot.
+    One record per student per pool.
+    """
+    STATUS_CHOICES = [
+        ('PENDING',   'Pending Admin Confirmation'),
+        ('CONFIRMED', 'Confirmed'),
+        ('REJECTED',  'Rejected — Quota Full'),
+        ('CHANGED',   'Changed by Admin'),
+    ]
+    student  = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='elective_selections')
+    pool     = models.ForeignKey(ElectivePool, on_delete=models.CASCADE, related_name='selections')
+    subject  = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='elective_selections')
+    status   = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    selected_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    note     = models.CharField(max_length=200, blank=True,
+                                help_text='Admin note if changed/rejected')
+
+    class Meta:
+        unique_together = ('student', 'pool')  # one choice per pool per student
+
+    def __str__(self):
+        return f"{self.student.roll_number} → {self.subject.code} [{self.get_status_display()}]"
+
+
 # HOD APPROVAL SYSTEM
 class HODApproval(models.Model):
     APPROVAL_TYPE = (

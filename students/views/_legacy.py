@@ -33,6 +33,7 @@ from ..models import (
     ExamStaff, EvaluationScheme, ValuationAssignment, ExamStaffLog,
     AttendanceRule, AttendanceExemption, AttendanceCorrection, EligibilityOverride,
     FeeBreakdown, SupplyExamRegistration, TimetableBreak,
+    Regulation, CurriculumEntry, ElectivePool, ElectiveSelection,
 )
 
 # --- Helpers for Performance and Validation ---
@@ -3689,17 +3690,36 @@ def razorpay_verify_payment(request):
     try:
         student = Student.objects.select_related('department__college', 'user').filter(user=request.user).first()
         if student:
-            # Get all users with College Admin role (role=1)
+            from django.core.mail import send_mail
+            from django.conf import settings as _s
+            paid_at_str = timezone.localtime(payment.paid_at).strftime('%d %b %Y, %I:%M %p') + ' IST'
+            college_name = student.department.college.name if student.department.college else 'EduTrack'
+
+            # ── Email to student ──────────────────────────────────────────────
+            student_email = student.user.email
+            if student_email:
+                student_subject = f'Payment Confirmation — Rs {payment.amount:.0f} received'
+                student_body = (
+                    f'Dear {student.user.get_full_name()},\n\n'
+                    f'Your payment has been successfully processed.\n\n'
+                    f'  Amount    : Rs {payment.amount:.2f}\n'
+                    f'  Type      : {payment.payment_type}\n'
+                    f'  Method    : {payment.payment_method}\n'
+                    f'  Txn ID    : {payment.transaction_id}\n'
+                    f'  Date/Time : {paid_at_str}\n\n'
+                    f'You can download your receipt from the EduTrack student portal.\n\n'
+                    f'Regards,\n{college_name}'
+                )
+                send_mail(student_subject, student_body, _s.DEFAULT_FROM_EMAIL,
+                          [student_email], fail_silently=True)
+
+            # ── Email to college admin(s) ─────────────────────────────────────
             admin_emails = list(
                 UserRole.objects.filter(role=1, college=student.department.college)
                 .values_list('user__email', flat=True)
             )
             admin_emails = [e for e in set(admin_emails) if e]
             if admin_emails:
-                from django.core.mail import send_mail
-                from django.conf import settings as _s
-                paid_at_str = timezone.localtime(payment.paid_at).strftime('%d %b %Y, %I:%M %p') + ' IST'
-                college_name = student.department.college.name if student.department.college else 'EduTrack'
                 subject = f'[{college_name}] Fee Payment Received — {student.roll_number}'
                 body = (
                     f'A fee payment has been received.\n\n'
@@ -5422,6 +5442,306 @@ def admin_subject_delete(request, pk):
         subject.delete()
         messages.success(request, 'Subject deleted.')
     return redirect('admin_subjects')
+
+
+# ── REGULATIONS ───────────────────────────────────────────────────────────────
+
+@login_required
+def admin_regulations(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    regulations = Regulation.objects.filter(college=college).order_by('-effective_from_year')
+    return render(request, 'admin_panel/regulations.html', {
+        'regulations': regulations, 'college': college,
+        'branding': _get_college_branding(college),
+    })
+
+
+@login_required
+def admin_regulation_add(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    if request.method == 'POST':
+        name  = request.POST.get('name', '').strip()
+        code  = request.POST.get('code', '').strip().upper()
+        desc  = request.POST.get('description', '').strip()
+        year  = _safe_int(request.POST.get('effective_from_year'))
+        if not all([name, code, year]):
+            messages.error(request, 'Name, code, and effective year are required.')
+        elif Regulation.objects.filter(college=college, code=code).exists():
+            messages.error(request, f'Regulation code "{code}" already exists.')
+        else:
+            Regulation.objects.create(college=college, name=name, code=code,
+                                      description=desc, effective_from_year=year)
+            messages.success(request, f'Regulation "{name}" created.')
+            return redirect('admin_regulations')
+    return render(request, 'admin_panel/regulation_form.html', {'college': college})
+
+
+@login_required
+def admin_regulation_delete(request, pk):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    reg = get_object_or_404(Regulation, pk=pk, college=_get_admin_college(request))
+    if request.method == 'POST':
+        reg.delete()
+        messages.success(request, 'Regulation deleted.')
+    return redirect('admin_regulations')
+
+
+# ── CURRICULUM ────────────────────────────────────────────────────────────────
+
+@login_required
+def admin_curriculum(request, regulation_pk):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    regulation = get_object_or_404(Regulation, pk=regulation_pk, college=college)
+    departments = _scope_departments(request).order_by('name')
+    dept_filter = request.GET.get('dept')
+    sem_filter  = _safe_int(request.GET.get('sem'), default=1)
+    department  = departments.filter(pk=dept_filter).first() if dept_filter else departments.first()
+
+    entries = CurriculumEntry.objects.filter(
+        regulation=regulation,
+        department=department,
+        semester=sem_filter,
+    ).select_related('subject').prefetch_related('prerequisites') if department else []
+
+    # Subjects available to add (in this dept+sem, not already in curriculum)
+    existing_ids = [e.subject_id for e in entries]
+    available_subjects = Subject.objects.filter(
+        department=department, semester=sem_filter
+    ).exclude(pk__in=existing_ids) if department else []
+
+    return render(request, 'admin_panel/curriculum.html', {
+        'regulation': regulation, 'departments': departments,
+        'department': department, 'sem_filter': sem_filter,
+        'entries': entries, 'available_subjects': available_subjects,
+        'college': college, 'branding': _get_college_branding(college),
+        'semesters': range(1, 9),
+    })
+
+
+@login_required
+def admin_curriculum_add(request, regulation_pk):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    regulation = get_object_or_404(Regulation, pk=regulation_pk, college=college)
+    if request.method == 'POST':
+        dept_id  = request.POST.get('department')
+        subj_id  = request.POST.get('subject')
+        semester = _safe_int(request.POST.get('semester'))
+        el_type  = request.POST.get('elective_type', 'FIXED')
+        dept     = get_object_or_404(_scope_departments(request), pk=dept_id)
+        subject  = get_object_or_404(Subject, pk=subj_id, department=dept)
+        entry, created = CurriculumEntry.objects.get_or_create(
+            regulation=regulation, department=dept, subject=subject, semester=semester,
+            defaults={'elective_type': el_type}
+        )
+        if not created:
+            entry.elective_type = el_type
+            entry.save(update_fields=['elective_type'])
+        prereq_ids = request.POST.getlist('prerequisites')
+        if prereq_ids:
+            entry.prerequisites.set(Subject.objects.filter(pk__in=prereq_ids))
+        messages.success(request, f'"{subject.name}" added to curriculum.')
+    return redirect(f"{reverse('admin_curriculum', args=[regulation_pk])}?dept={dept_id}&sem={semester}")
+
+
+@login_required
+def admin_curriculum_remove(request, regulation_pk, entry_pk):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    regulation = get_object_or_404(Regulation, pk=regulation_pk, college=college)
+    entry = get_object_or_404(CurriculumEntry, pk=entry_pk, regulation=regulation)
+    dept_id = entry.department_id
+    sem     = entry.semester
+    entry.delete()
+    messages.success(request, 'Subject removed from curriculum.')
+    return redirect(f"{reverse('admin_curriculum', args=[regulation_pk])}?dept={dept_id}&sem={sem}")
+
+
+# ── ELECTIVE POOLS ────────────────────────────────────────────────────────────
+
+@login_required
+def admin_elective_pools(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    pools = ElectivePool.objects.filter(
+        regulation__college=college
+    ).select_related('regulation', 'department').prefetch_related('subjects').order_by('-created_at')
+    return render(request, 'admin_panel/elective_pools.html', {
+        'pools': pools, 'college': college,
+        'branding': _get_college_branding(college),
+    })
+
+
+@login_required
+def admin_elective_pool_add(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    regulations = Regulation.objects.filter(college=college, is_active=True)
+    departments = _scope_departments(request).order_by('name')
+    if request.method == 'POST':
+        reg_id   = request.POST.get('regulation')
+        dept_id  = request.POST.get('department')
+        semester = _safe_int(request.POST.get('semester'))
+        slot     = request.POST.get('slot_name', '').strip()
+        el_type  = request.POST.get('elective_type', 'PE')
+        quota    = _safe_int(request.POST.get('quota_per_subject')) or 60
+        deadline_str = request.POST.get('deadline', '').strip()
+        subj_ids = request.POST.getlist('subjects')
+        regulation = get_object_or_404(Regulation, pk=reg_id, college=college)
+        department = get_object_or_404(departments, pk=dept_id)
+        if not slot:
+            messages.error(request, 'Slot name is required (e.g. PE-1).')
+        elif not subj_ids:
+            messages.error(request, 'Select at least one subject for this elective pool.')
+        else:
+            from django.utils.dateparse import parse_datetime
+            deadline = parse_datetime(deadline_str) if deadline_str else None
+            pool = ElectivePool.objects.create(
+                regulation=regulation, department=department, semester=semester,
+                slot_name=slot, elective_type=el_type, quota_per_subject=quota,
+                deadline=deadline, created_by=request.user,
+            )
+            pool.subjects.set(Subject.objects.filter(pk__in=subj_ids))
+            messages.success(request, f'Elective pool "{slot}" created.')
+            return redirect('admin_elective_pools')
+    return render(request, 'admin_panel/elective_pool_form.html', {
+        'regulations': regulations, 'departments': departments,
+        'college': college, 'semesters': range(1, 9),
+    })
+
+
+@login_required
+def admin_elective_pool_toggle(request, pk):
+    """Open or close an elective pool for student selection."""
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    pool = get_object_or_404(ElectivePool, pk=pk, regulation__college=_get_admin_college(request))
+    if pool.status == 'DRAFT':
+        pool.status = 'OPEN'
+        messages.success(request, f'Pool "{pool.slot_name}" is now open for student selection.')
+    elif pool.status == 'OPEN':
+        pool.status = 'CLOSED'
+        messages.success(request, f'Pool "{pool.slot_name}" closed.')
+    else:
+        pool.status = 'OPEN'
+        messages.success(request, f'Pool "{pool.slot_name}" reopened.')
+    pool.save(update_fields=['status'])
+    return redirect('admin_elective_pools')
+
+
+@login_required
+def admin_elective_pool_selections(request, pk):
+    """View all student selections for a pool; confirm or reassign."""
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    pool = get_object_or_404(ElectivePool, pk=pk, regulation__college=_get_admin_college(request))
+    if request.method == 'POST':
+        sel_id  = request.POST.get('selection_id')
+        action  = request.POST.get('action')
+        new_subj= request.POST.get('new_subject')
+        sel = get_object_or_404(ElectiveSelection, pk=sel_id, pool=pool)
+        if action == 'confirm':
+            sel.status = 'CONFIRMED'
+            sel.confirmed_at = timezone.now()
+            sel.save(update_fields=['status', 'confirmed_at'])
+        elif action == 'reject':
+            sel.status = 'REJECTED'
+            sel.note = request.POST.get('note', 'Quota full')
+            sel.save(update_fields=['status', 'note'])
+        elif action == 'change' and new_subj:
+            subj = get_object_or_404(Subject, pk=new_subj)
+            sel.subject = subj
+            sel.status  = 'CHANGED'
+            sel.note    = request.POST.get('note', 'Changed by admin')
+            sel.confirmed_at = timezone.now()
+            sel.save(update_fields=['subject', 'status', 'note', 'confirmed_at'])
+        messages.success(request, 'Selection updated.')
+        return redirect('admin_elective_pool_selections', pk=pk)
+
+    selections = pool.selections.select_related(
+        'student__user', 'subject'
+    ).order_by('subject__name', 'student__roll_number')
+    # Seat counts per subject
+    seat_counts = {
+        s.pk: {
+            'confirmed': ElectiveSelection.objects.filter(pool=pool, subject=s, status='CONFIRMED').count(),
+            'pending':   ElectiveSelection.objects.filter(pool=pool, subject=s, status='PENDING').count(),
+            'quota':     pool.quota_per_subject,
+        }
+        for s in pool.subjects.all()
+    }
+    return render(request, 'admin_panel/elective_pool_selections.html', {
+        'pool': pool, 'selections': selections, 'seat_counts': seat_counts,
+        'college': _get_admin_college(request),
+        'branding': _get_college_branding(_get_admin_college(request)),
+    })
+
+
+# ── STUDENT ELECTIVE SELECTION ────────────────────────────────────────────────
+
+@login_required
+def student_elective_select(request):
+    """Student views open elective pools and submits their choice."""
+    try:
+        student = Student.objects.select_related('department').get(user=request.user)
+    except Student.DoesNotExist:
+        return redirect('home')
+
+    # Find open pools for this student's department + semester
+    open_pools = ElectivePool.objects.filter(
+        department=student.department,
+        semester=student.current_semester,
+        status='OPEN',
+    ).prefetch_related('subjects')
+
+    # Already selected pools
+    my_selections = {
+        sel.pool_id: sel
+        for sel in ElectiveSelection.objects.filter(
+            student=student, pool__in=open_pools
+        ).select_related('subject', 'pool')
+    }
+
+    if request.method == 'POST':
+        pool_id = request.POST.get('pool_id')
+        subj_id = request.POST.get('subject_id')
+        pool    = get_object_or_404(open_pools, pk=pool_id)
+        subject = get_object_or_404(pool.subjects, pk=subj_id)
+
+        # Check deadline
+        if pool.deadline and timezone.now() > pool.deadline:
+            messages.error(request, 'Selection deadline has passed.')
+            return redirect('student_elective_select')
+
+        # Check quota
+        confirmed = ElectiveSelection.objects.filter(pool=pool, subject=subject, status='CONFIRMED').count()
+        if confirmed >= pool.quota_per_subject:
+            messages.error(request, f'"{subject.name}" is full ({pool.quota_per_subject} seats). Please choose another.')
+            return redirect('student_elective_select')
+
+        sel, created = ElectiveSelection.objects.update_or_create(
+            student=student, pool=pool,
+            defaults={'subject': subject, 'status': 'PENDING', 'confirmed_at': None}
+        )
+        messages.success(request, f'Your choice "{subject.name}" has been submitted and is pending confirmation.')
+        return redirect('student_elective_select')
+
+    return render(request, 'student/elective_select.html', {
+        'open_pools': open_pools,
+        'my_selections': my_selections,
+        'student': student,
+    })
 
 
 @login_required

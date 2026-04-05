@@ -1,0 +1,44 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Regulations{% endblock %}
+{% block breadcrumb %} / Regulations{% endblock %}
+{% block page_title %}Academic Regulations{% endblock %}
+{% block page_sub %}Define the university/college schemes that govern curriculum and evaluation.{% endblock %}
+{% block page_action %}
+  <a href="{% url 'admin_regulation_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Regulation</a>
+{% endblock %}
+{% block content %}
+{% if regulations %}
+<div class="ap-card">
+  <table class="ap-table">
+    <thead>
+      <tr><th>Code</th><th>Name</th><th>Effective From</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for reg in regulations %}
+      <tr>
+        <td><span style="font-weight:700;color:var(--deep)">{{ reg.code }}</span></td>
+        <td>
+          <div style="font-weight:600">{{ reg.name }}</div>
+          {% if reg.description %}<div style="font-size:11px;color:var(--muted)">{{ reg.description|truncatechars:80 }}</div>{% endif %}
+        </td>
+        <td>Admission {{ reg.effective_from_year }} onwards</td>
+        <td>
+          {% if reg.is_active %}<span class="dbadge dbadge-active">Active</span>
+          {% else %}<span class="dbadge">Inactive</span>{% endif %}
+        </td>
+        <td style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="{% url 'admin_curriculum' reg.pk %}" class="btn-edit"><i class="fas fa-book-open"></i> Curriculum</a>
+          <button class="btn-del" onclick="confirmDelete('{% url 'admin_regulation_delete' reg.pk %}','Delete regulation {{ reg.name }}?')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state"><i class="fas fa-scroll"></i><p>No regulations yet. <a href="{% url 'admin_regulation_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
+{% endif %}
+{% include 'admin_panel/_confirm_modal.html' %}
+{% endblock %}

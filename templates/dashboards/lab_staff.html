@@ -44,7 +44,7 @@
               <td style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</td>
               <td>{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
               <td><span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">{{ t.classroom.room_number }}</span></td>
-              <td style="color:var(--muted);font-size:12px">{{ t.start_time|time:"H:i" }} – {{ t.end_time|time:"H:i" }}</td>
+              <td style="color:var(--muted);font-size:12px">{{ t.start_time|time:"g:i A" }} – {{ t.end_time|time:"g:i A" }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -105,7 +105,7 @@
         <tbody>
           {% for t in today_schedule %}
           <tr>
-            <td style="font-weight:600;color:var(--teal);white-space:nowrap">{{ t.start_time|time:"H:i" }} – {{ t.end_time|time:"H:i" }}</td>
+            <td style="font-weight:600;color:var(--teal);white-space:nowrap">{{ t.start_time|time:"g:i A" }} – {{ t.end_time|time:"g:i A" }}</td>
             <td style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</td>
             <td>{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
             <td><span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">{{ t.classroom.room_number }}</span></td>

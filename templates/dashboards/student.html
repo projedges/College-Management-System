@@ -18,6 +18,7 @@
 <a href="#quizzes" data-section-target="quizzes" class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
 <a href="#quiz-history" data-section-target="quiz-history" class="sb-link"><i class="fas fa-clock-rotate-left"></i> Quiz History</a>
 <a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Timetable</a>
+<a href="{% url 'student_elective_select' %}" class="sb-link"><i class="fas fa-layer-group"></i> Choose Electives</a>
 <a href="#assignments" data-section-target="assignments" class="sb-link"><i class="fas fa-file-alt"></i> Assignments</a>
 <a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
@@ -205,7 +206,7 @@
         {% for item in today_timetable %}
         {% with t=item.slot %}
         <div class="tt-row">
-          <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
+          <div class="tt-time">{{ t.start_time|time:"g:i A" }} - {{ t.end_time|time:"g:i A" }}</div>
           <div>
             <div class="tt-subj">{{ t.subject.name }}</div>
             <div class="tt-meta">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
@@ -644,7 +645,7 @@
           {% for item in today_timetable %}{% with t=item.slot %}
           <tr style="cursor:pointer" onclick="openTTModal({{ t.subject.id }},'{{ t.subject.name|escapejs }}','{{ t.subject.code|escapejs }}',{{ t.subject.credits }},{{ t.subject.lecture_hours }},{{ t.subject.tutorial_hours }},{{ t.subject.practical_hours }},'{{ t.subject.get_category_display|escapejs }}','{{ t.faculty.user.get_full_name|default:t.faculty.user.username|escapejs }}','{{ t.faculty.designation|escapejs }}','{{ t.classroom.room_number|escapejs }}','{{ t.classroom.building|escapejs }}')">
             <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
-              {{ t.start_time|time:"H:i" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"H:i" }}</span>
+              {{ t.start_time|time:"g:i A" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"g:i A" }}</span>
             </td>
             <td>
               <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
@@ -671,7 +672,7 @@
           {% for brk in today_breaks %}
           <tr style="background:#fef9c3">
             <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
-              {{ brk.start_time|time:"H:i" }}<br><span style="font-weight:400">{{ brk.end_time|time:"H:i" }}</span>
+              {{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span>
             </td>
             <td colspan="3" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
             <td style="text-align:center;font-size:11px;color:#92400e">—</td>

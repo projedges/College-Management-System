@@ -71,6 +71,25 @@ urlpatterns = [
     path('dashboard/admin/subjects/', views.admin_subjects, name='admin_subjects'),
     path('dashboard/admin/subjects/add/', views.admin_subject_add, name='admin_subject_add'),
     path('dashboard/admin/subjects/<int:pk>/delete/', views.admin_subject_delete, name='admin_subject_delete'),
+
+    # Regulations
+    path('dashboard/admin/regulations/', views.admin_regulations, name='admin_regulations'),
+    path('dashboard/admin/regulations/add/', views.admin_regulation_add, name='admin_regulation_add'),
+    path('dashboard/admin/regulations/<int:pk>/delete/', views.admin_regulation_delete, name='admin_regulation_delete'),
+
+    # Curriculum
+    path('dashboard/admin/regulations/<int:regulation_pk>/curriculum/', views.admin_curriculum, name='admin_curriculum'),
+    path('dashboard/admin/regulations/<int:regulation_pk>/curriculum/add/', views.admin_curriculum_add, name='admin_curriculum_add'),
+    path('dashboard/admin/regulations/<int:regulation_pk>/curriculum/<int:entry_pk>/remove/', views.admin_curriculum_remove, name='admin_curriculum_remove'),
+
+    # Elective Pools
+    path('dashboard/admin/electives/', views.admin_elective_pools, name='admin_elective_pools'),
+    path('dashboard/admin/electives/add/', views.admin_elective_pool_add, name='admin_elective_pool_add'),
+    path('dashboard/admin/electives/<int:pk>/toggle/', views.admin_elective_pool_toggle, name='admin_elective_pool_toggle'),
+    path('dashboard/admin/electives/<int:pk>/selections/', views.admin_elective_pool_selections, name='admin_elective_pool_selections'),
+
+    # Student elective selection
+    path('dashboard/student/electives/', views.student_elective_select, name='student_elective_select'),
     path('dashboard/admin/academic-planner/', views.admin_academic_planner, name='admin_academic_planner'),
     path('dashboard/admin/academic-planner/timetable/template/', views.admin_timetable_template_csv, name='admin_timetable_template_csv'),
     path('dashboard/admin/academic-planner/timetable/upload/', views.admin_timetable_upload_csv, name='admin_timetable_upload_csv'),

@@ -31,7 +31,7 @@
         <select name="slot_id" id="slot-select" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required onchange="filterSubFaculty(this.value)">
           <option value="">Select slot</option>
           {% for slot in slots %}
-          <option value="{{ slot.pk }}" data-faculty-id="{{ slot.faculty_id }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"H:i" }} — {{ slot.subject.name }}{% if slot.section %} [Sec {{ slot.section }}]{% endif %} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
+          <option value="{{ slot.pk }}" data-faculty-id="{{ slot.faculty_id }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"g:i A" }} — {{ slot.subject.name }}{% if slot.section %} [Sec {{ slot.section }}]{% endif %} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
           {% endfor %}
         </select>
       </div>

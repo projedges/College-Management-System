@@ -224,7 +224,7 @@
     <div class="content-scroll">
       {% for t in today_timetable %}
       <div class="tt-row">
-        <div class="tt-time">{{ t.start_time|time:"H:i" }} – {{ t.end_time|time:"H:i" }}</div>
+        <div class="tt-time">{{ t.start_time|time:"g:i A" }} – {{ t.end_time|time:"g:i A" }}</div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
