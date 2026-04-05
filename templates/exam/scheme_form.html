@@ -1,0 +1,74 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Add Evaluation Scheme{% endblock %}
+{% block breadcrumb %} / <a href="{% url 'exam_scheme_list' %}" style="color:#7c3aed;text-decoration:none">Schemes</a> / Add{% endblock %}
+{% block page_title %}Add Evaluation Scheme{% endblock %}
+{% block page_sub %}Define how CIE and SEE combine into a final result for a department{% endblock %}
+{% block content %}
+<div style="background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:680px">
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Scheme Name <span style="color:#ef4444">*</span></label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. VTU B.E. 2021 Scheme" required>
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <select name="department" class="form-control">
+          <option value="">All Departments</option>
+          {% for d in departments %}<option value="{{ d.pk }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea name="description" class="form-control" rows="2" placeholder="Optional notes about this scheme"></textarea>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(124,58,237,.15)"><i class="fas fa-clipboard-list"></i> CIE Configuration</div>
+    <div class="form-row">
+      <div class="form-group"><label>Number of CIE Tests</label><input type="number" name="cie_count" class="form-control" value="2" min="1" max="10"></div>
+      <div class="form-group"><label>Best N Counted (0 = all)</label><input type="number" name="cie_best_of" class="form-control" value="2" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Max Marks per CIE Test</label><input type="number" name="cie_max_per_test" class="form-control" value="30" min="1" step="0.5"></div>
+      <div class="form-group"><label>CIE Total Contribution</label><input type="number" name="cie_total_max" class="form-control" value="50" min="1" step="0.5"></div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(13,115,119,.15)"><i class="fas fa-file-pen"></i> SEE Configuration</div>
+    <div class="form-row">
+      <div class="form-group"><label>SEE Paper Max Marks</label><input type="number" name="see_max" class="form-control" value="100" min="1" step="0.5"></div>
+      <div class="form-group"><label>SEE Scaled Contribution</label><input type="number" name="see_scaled_to" class="form-control" value="50" min="1" step="0.5"></div>
+    </div>
+    <div class="form-group" style="max-width:300px"><label>Minimum SEE Marks to Pass</label><input type="number" name="see_passing_min" class="form-control" value="35" min="0" step="0.5"></div>
+
+    <div style="font-size:12px;font-weight:700;color:#b88510;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(230,168,23,.2)"><i class="fas fa-flask"></i> Practical / Lab (optional)</div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" name="has_practical" id="has_practical" onchange="document.getElementById('practical_fields').style.display=this.checked?'grid':'none'" style="width:16px;height:16px">
+        This scheme includes a practical / lab component
+      </label>
+    </div>
+    <div id="practical_fields" style="display:none;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>Internal Practical Max</label><input type="number" name="practical_internal_max" class="form-control" value="25" min="0" step="0.5"></div>
+      <div class="form-group"><label>External Practical Max</label><input type="number" name="practical_external_max" class="form-control" value="25" min="0" step="0.5"></div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)"><i class="fas fa-calculator"></i> Overall Passing</div>
+    <div class="form-row">
+      <div class="form-group"><label>Overall Passing % Minimum</label><input type="number" name="overall_passing_min" class="form-control" value="40" min="0" max="100" step="0.5"></div>
+      <div class="form-group">
+        <label>Grading Type</label>
+        <select name="grading_type" class="form-control">
+          {% for val, label in grading_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button type="submit" class="btn-purple"><i class="fas fa-save"></i> Save Scheme</button>
+      <a href="{% url 'exam_scheme_list' %}" style="padding:10px 18px;border-radius:9px;background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid var(--border)">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

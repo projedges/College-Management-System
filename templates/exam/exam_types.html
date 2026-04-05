@@ -1,0 +1,37 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Exam Types{% endblock %}
+{% block nav_types %}on{% endblock %}
+{% block breadcrumb %} / Exam Types{% endblock %}
+{% block page_title %}Exam Types{% endblock %}
+{% block page_sub %}Define CIE, SEE, Practical and other exam categories{% endblock %}
+{% block page_action %}<a href="{% url 'exam_type_add' %}" class="btn-purple"><i class="fas fa-plus"></i> Add Type</a>{% endblock %}
+{% block content %}
+{% if types %}
+<div class="d-card">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Name</th><th>Category</th><th>Max Marks</th><th>Pass Marks</th><th>Weightage</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for t in types %}
+        <tr>
+          <td style="font-weight:600;color:var(--deep)">{{ t.name }}</td>
+          <td><span class="dbadge dbadge-purple">{{ t.get_category_display }}</span></td>
+          <td style="text-align:center">{{ t.max_marks }}</td>
+          <td style="text-align:center">{{ t.passing_marks }}</td>
+          <td style="text-align:center;font-weight:600">{{ t.weightage_percent }}%</td>
+          <td>{% if t.is_active %}<span class="dbadge dbadge-active">Active</span>{% else %}<span class="dbadge dbadge-red">Inactive</span>{% endif %}</td>
+          <td>
+            <form method="POST" action="{% url 'exam_type_delete' t.pk %}" style="display:inline" onsubmit="return confirm('Delete exam type {{ t.name }}?')">
+              {% csrf_token %}<button type="submit" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty"><i class="fas fa-layer-group"></i><p>No exam types yet. <a href="{% url 'exam_type_add' %}" style="color:#7c3aed">Add one</a>.</p></div>
+{% endif %}
+{% endblock %}

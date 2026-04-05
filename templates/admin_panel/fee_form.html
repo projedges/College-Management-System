@@ -1,45 +1,107 @@
-{% extends 'admin_panel/base_admin.html' %}
-{% block title %}{{ action }} Fee Record — Admin{% endblock %}
-{% block nav_fees %}on{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'admin_fees' %}" style="color:var(--teal);text-decoration:none">Fees</a> / {{ action }}{% endblock %}
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}{{ action }} Fee Record - Admin{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}{{ action }} Fee Record{% endblock %}
-{% block page_sub %}{% if action == 'Edit' %}Update payment details for {{ fee.student.roll_number }}{% else %}Create a new fee record{% endif %}{% endblock %}
+{% block page_sub %}{% if action == 'Edit' %}Update fee for {{ fee.student.roll_number }}{% else %}Create a new fee record{% endif %}{% endblock %}
 
-{% block content %}
-<div class="form-card">
+{% block sidebar_links %}{% with active_section='finance' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+
+{% block form_content %}
+<div class="d-card" style="max-width:640px">
   <form method="POST">
     {% csrf_token %}
+
     {% if action == 'Add' %}
-    <div class="form-group">
-      <label>Student <span>*</span></label>
-      <select name="student" class="form-control" required>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Student *</label>
+      <select name="student" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif">
         <option value="">Select Student</option>
         {% for s in students %}
-        <option value="{{ s.pk }}">{{ s.roll_number }} — {{ s.user.get_full_name|default:s.user.username }} ({{ s.department.code }})</option>
+        <option value="{{ s.pk }}">{{ s.roll_number }} - {{ s.user.get_full_name|default:s.user.username }} ({{ s.department.code }})</option>
         {% endfor %}
       </select>
     </div>
     {% else %}
     <div style="padding:12px 16px;background:var(--surface2);border-radius:var(--r);margin-bottom:18px;font-size:13px">
       <span style="color:var(--muted)">Student:</span>
-      <strong style="color:var(--deep)"> {{ fee.student.roll_number }} — {{ fee.student.user.get_full_name }}</strong>
+      <strong style="color:var(--deep)">{{ fee.student.roll_number }} - {{ fee.student.user.get_full_name }}</strong>
     </div>
     {% endif %}
+
     <div class="form-row">
-      <div class="form-group">
-        <label>Total Amount (₹) <span>*</span></label>
-        <input type="number" name="total_amount" class="form-control" value="{{ fee.total_amount|default:'' }}" placeholder="e.g. 45000" step="0.01" required/>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Semester *</label>
+        <select name="semester" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif">
+          <option value="">Select Semester</option>
+          {% for i in "12345678" %}
+          <option value="{{ i }}" {% if fee.semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
+          {% endfor %}
+        </select>
       </div>
-      <div class="form-group">
-        <label>Paid Amount (₹)</label>
-        <input type="number" name="paid_amount" class="form-control" value="{{ fee.paid_amount|default:0 }}" step="0.01"/>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Academic Year *</label>
+        <input type="text" name="academic_year" value="{{ fee.academic_year|default:'' }}"
+               placeholder="e.g. 2024-25" required
+               style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif"/>
       </div>
     </div>
-    <div class="form-hint" style="margin-bottom:16px">Status is calculated automatically from the amounts above.</div>
+
+    <!-- Fee Component Breakdown -->
+    <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--deep)">Fee Components (Rs)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
+      Set the amount for each applicable component. Leave 0 for components that do not apply to this branch/semester.
+      The total is calculated automatically.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    {% for key, label, current_val in fee_components %}
+      <div style="padding:12px;border:1px solid var(--border);border-radius:8px;background:#fafafa">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--deep);margin-bottom:6px">{{ label }}</label>
+        <input type="number" name="comp_{{ key }}" min="0" step="1"
+               value="{{ current_val }}"
+               placeholder="0"
+               style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif"
+               data-component="{{ key }}" oninput="recalcTotal()">
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="padding:14px 16px;background:var(--surface2);border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600;color:var(--deep)">Total Fee Amount</span>
+      <span style="font-size:20px;font-weight:800;color:var(--teal)" id="total_display">Rs 0</span>
+      <input type="hidden" name="total_amount" id="total_amount_input" value="{{ fee.total_amount|default:0 }}">
+    </div>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Already Paid (Rs)</label>
+      <input type="number" name="paid_amount" value="{{ fee.paid_amount|default:0 }}" min="0" step="0.01"
+             style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif"/>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Enter amount already collected (cash/DD/offline). Leave 0 for new records.</div>
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px">
+      Fee status (Pending / Partial / Paid) is calculated automatically from the amounts above.
+    </div>
+
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Save</button>
-      <a href="{% url 'admin_fees' %}" class="btn-cancel">Cancel</a>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Fee Record</button>
+      <a href="{% url 'admin_dashboard' %}#finance" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
 </div>
+
+<script>
+var componentInputs = document.querySelectorAll('[data-component]');
+function recalcTotal() {
+  var total = 0;
+  componentInputs.forEach(function(inp) {
+    total += parseFloat(inp.value) || 0;
+  });
+  document.getElementById('total_display').textContent = 'Rs ' + total.toLocaleString('en-IN');
+  document.getElementById('total_amount_input').value = total;
+}
+// Init on load
+recalcTotal();
+</script>
 {% endblock %}

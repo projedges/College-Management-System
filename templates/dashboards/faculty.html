@@ -68,10 +68,26 @@
     </div>
   </div>
 
+  {% if today_timetable %}
+  {% with unmarked_count=today_timetable|length %}
+  {% if unmarked_count > 0 %}
+  <div style="margin-bottom:16px;padding:14px 18px;background:rgba(230,168,23,.07);border:1.5px solid rgba(230,168,23,.3);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <i class="fas fa-triangle-exclamation" style="color:var(--gold);font-size:20px;flex-shrink:0"></i>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700;color:var(--deep)">Attendance Pending Today</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">
+        {% for t in today_timetable %}{% if t.subject.id not in marked_subject_ids %}<span style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</span>{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
+      </div>
+    </div>
+    <a href="#timetable" data-section-target="timetable" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
+  </div>
+  {% endif %}
+  {% endwith %}
+  {% endif %}
+
   <div class="two-col">
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-book"></i> Subject Snapshot</div>
-      <div class="section-meta">Quick action-oriented summary of your teaching load.</div>
+      <div class="d-title"><i class="fas fa-book"></i> Subject Snapshot</div>      <div class="section-meta">Quick action-oriented summary of your teaching load.</div>
       {% if subject_cards %}
       <div class="content-scroll soft">
         {% for item in subject_cards %}
@@ -101,14 +117,21 @@
       {% if today_timetable %}
       <div class="content-scroll soft">
         {% for t in today_timetable %}
-        <div class="tt-row">
-          <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
-          <div>
+        {% with is_marked=t.subject.id|stringformat:"s" %}
+        <div class="tt-row" style="{% if t.subject.id in marked_subject_ids %}border-left:3px solid var(--teal);{% else %}border-left:3px solid var(--gold);{% endif %}">
+          <div class="tt-time">{{ t.start_time|time:"g:i A" }} - {{ t.end_time|time:"g:i A" }}</div>
+          <div style="flex:1">
             <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
             <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
           </div>
           <div class="tt-room">{{ t.classroom.room_number }}</div>
+          {% if t.subject.id in marked_subject_ids %}
+            <span style="font-size:10px;font-weight:700;color:var(--teal);background:rgba(13,115,119,.1);padding:2px 8px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> Marked</span>
+          {% else %}
+            <a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:4px 10px;border-radius:7px;text-decoration:none;white-space:nowrap"><i class="fas fa-calendar-check"></i> Mark Now</a>
+          {% endif %}
         </div>
+        {% endwith %}
         {% endfor %}
       </div>
       {% else %}
@@ -179,18 +202,59 @@
 <!-- ATTENDANCE -->
 <section data-dashboard-pane="attendance" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Recent Attendance Sessions</div>
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions — Per Subject</div>
+    <div class="section-meta">Sessions marked, class average, and defaulter count per subject.</div>
+    {% if subject_cards %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Subject</th><th>Sessions</th><th>Class Avg</th><th>Defaulters (&lt;75%)</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for item in subject_cards %}
+          <tr>
+            <td><div style="font-weight:600;color:var(--deep)">{{ item.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div></td>
+            <td style="text-align:center;font-weight:600">{{ item.total_sessions }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:#f3f4f6;border-radius:99px;height:6px;min-width:60px">
+                  <div style="height:6px;border-radius:99px;width:{{ item.att_pct }}%;background:{% if item.att_pct >= 75 %}var(--teal){% elif item.att_pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+                </div>
+                <span style="font-size:12px;font-weight:700;color:{% if item.att_pct >= 75 %}var(--teal){% elif item.att_pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ item.att_pct }}%</span>
+              </div>
+            </td>
+            <td style="text-align:center">
+              {% if item.defaulter_count > 0 %}
+              <span style="font-weight:700;color:var(--red)">{{ item.defaulter_count }}</span>
+              {% else %}<span style="color:var(--muted)">0</span>{% endif %}
+            </td>
+            <td><a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal"><i class="fas fa-calendar-check"></i> Mark</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No subjects assigned.</div>
+    {% endif %}
+  </div>
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-history"></i> Recent Sessions</div>
+    <div class="section-meta">Last 10 sessions you marked with present/absent breakdown.</div>
     {% if recent_sessions %}
-    <div class="content-scroll">
-      {% for sess in recent_sessions %}
-      <div class="sess-row">
-        <div>
-          <span style="font-weight:600;color:var(--deep)">{{ sess.subject.name }}</span>
-          <span style="color:var(--muted);font-size:12px"> · {{ sess.subject.code }}</span>
-        </div>
-        <span style="color:var(--muted);font-size:12px">{{ sess.date|date:"d M Y" }}</span>
-      </div>
-      {% endfor %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Subject</th><th>Date</th><th>Present</th><th>Absent</th><th>Total</th></tr></thead>
+        <tbody>
+          {% for row in recent_sessions %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ row.session.subject.name }}</td>
+            <td style="color:var(--muted)">{{ row.session.date|date:"d M Y" }}</td>
+            <td style="color:var(--teal);font-weight:700">{{ row.present }}</td>
+            <td style="color:var(--red);font-weight:700">{{ row.absent }}</td>
+            <td style="color:var(--muted)">{{ row.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% else %}
     <div class="empty"><i class="fas fa-calendar-xmark"></i>No sessions marked yet.</div>
@@ -201,23 +265,83 @@
 <!-- TIMETABLE -->
 <section data-dashboard-pane="timetable" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-clock"></i> Today's Timetable</div>
-    {% if today_timetable %}
-    <div class="content-scroll">
-      {% for t in today_timetable %}
-      <div class="tt-row">
-        <div class="tt-time">{{ t.start_time|time:"H:i" }} - {{ t.end_time|time:"H:i" }}</div>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
-        </div>
-        <div class="tt-room">{{ t.classroom.room_number }}</div>
-      </div>
-      {% endfor %}
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Classes</div>
+      <div style="font-size:12px;color:var(--muted)">{{ faculty.department.code }} · {{ today_timetable|length }} class{{ today_timetable|length|pluralize }}</div>
+    </div>
+    {% if today_timetable or today_breaks %}
+    <div class="table-scroll" style="margin-top:12px">
+      <table class="dtable" style="min-width:480px">
+        <thead>
+          <tr>
+            <th style="width:90px">Time</th>
+            <th>Subject</th>
+            <th>Room</th>
+            <th style="text-align:center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in today_timetable %}
+          <tr style="{% if t.subject.id in marked_subject_ids %}background:rgba(13,115,119,.03){% endif %}">
+            <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
+              {{ t.start_time|time:"g:i A" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"g:i A" }}</span>
+            </td>
+            <td>
+              <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
+            </td>
+            <td style="font-size:12px">
+              <span style="font-weight:600">{{ t.classroom.room_number }}</span>
+              {% if t.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ t.classroom.building }}</div>{% endif %}
+            </td>
+            <td style="text-align:center">
+              {% if t.subject.id in marked_subject_ids %}
+                <span style="font-size:11px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> Marked</span>
+              {% else %}
+                <a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:4px 10px;border-radius:7px;text-decoration:none;white-space:nowrap"><i class="fas fa-calendar-check"></i> Mark</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% for brk in today_breaks %}
+          <tr style="background:#fef9c3">
+            <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
+              {{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span>
+            </td>
+            <td colspan="2" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
+            <td style="text-align:center;font-size:11px;color:#92400e">—</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% else %}
     <div class="empty"><i class="fas fa-mug-hot"></i>No classes today.</div>
     {% endif %}
+  </div>
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Schedule</div>
+    <div class="section-meta">Your complete teaching schedule Mon – Sat.</div>
+    <div class="table-scroll">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
+        {% for day_code, day_label, slots in faculty_week_timetable %}
+        <div style="background:var(--surface2);border-radius:12px;padding:10px;min-height:70px;{% if day_code == today_day %}border:1px solid rgba(13,115,119,.3);background:rgba(13,115,119,.05){% endif %}">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">
+            {{ day_label|slice:":3" }}{% if day_code == today_day %} <span style="font-size:9px;background:var(--teal);color:#fff;padding:1px 5px;border-radius:99px">Today</span>{% endif %}
+          </div>
+          {% if slots %}{% for t in slots %}
+          <div style="background:#fff;border-radius:8px;padding:6px 8px;margin-bottom:5px;border:1px solid var(--border);font-size:11px">
+            <div style="font-weight:700;color:var(--teal)">{{ t.start_time|time:"g:i A" }}</div>
+            <div style="font-weight:600;color:var(--deep);line-height:1.3">{{ t.subject.name }}</div>
+            <div style="color:var(--muted)">{{ t.classroom.room_number }}{% if t.classroom.building %} · {{ t.classroom.building }}{% endif %}</div>
+          </div>
+          {% endfor %}{% else %}
+          <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">—</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </section>
 
@@ -303,11 +427,32 @@
 
 <!-- LEAVE APPLICATION -->
 <section data-dashboard-pane="leave" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-calendar-minus"></i> Leave Application</div>
-    <div class="section-meta">Apply for leave, suggest a substitute, and track your applications.</div>
-    <div style="margin-top:8px">
-      <a href="{% url 'faculty_leave_apply' %}" class="qa-btn qa-teal"><i class="fas fa-file-signature"></i> Apply for Leave</a>
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-calendar-minus"></i> Apply for Leave</div>
+      <div class="section-meta">Submit a leave request to your HOD for approval.</div>
+      <div style="margin-top:8px">
+        <a href="{% url 'faculty_leave_apply' %}" class="qa-btn qa-teal"><i class="fas fa-file-signature"></i> Apply for Leave</a>
+      </div>
+    </div>
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-history"></i> Leave History</div>
+      {% if leave_history %}
+      <div class="content-scroll">
+        {% for leave in leave_history %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:10px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ leave.get_leave_type_display }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} – {{ leave.to_date|date:"d M Y" }} · {{ leave.days }} day{{ leave.days|pluralize }}</div>
+            {% if leave.reason %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ leave.reason|truncatechars:60 }}</div>{% endif %}
+          </div>
+          <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ leave.get_status_display }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-check"></i>No leave applications yet.</div>
+      {% endif %}
     </div>
   </div>
 </section>

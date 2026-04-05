@@ -1,0 +1,63 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Results — {{ exam.name }}{% endblock %}
+{% block breadcrumb %} / {{ exam.name }} / Results{% endblock %}
+{% block page_title %}Results — {{ exam.name }}{% endblock %}
+{% block page_sub %}Compute → Verify → Publish workflow for Sem {{ exam.semester }}{% endblock %}
+{% block content %}
+<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:20px">
+  <div class="stat-card"><div class="s-val" style="font-size:20px">{{ summary.total }}</div><div class="s-lbl">Total Students</div></div>
+  <div class="stat-card"><div class="s-val" style="font-size:20px;color:#7c3aed">{{ summary.computed }}</div><div class="s-lbl">Computed</div></div>
+  <div class="stat-card"><div class="s-val" style="font-size:20px;color:#6366f1">{{ summary.verified }}</div><div class="s-lbl">Verified</div></div>
+  <div class="stat-card"><div class="s-val" style="font-size:20px;color:var(--teal)">{{ summary.published }}</div><div class="s-lbl">Published</div></div>
+  <div class="stat-card"><div class="s-val" style="font-size:20px;color:#059669">{{ summary.passed }}</div><div class="s-lbl">Passed</div></div>
+  <div class="stat-card"><div class="s-val" style="font-size:20px;color:#ef4444">{{ summary.failed }}</div><div class="s-lbl">Failed</div></div>
+</div>
+
+<div class="d-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+    <div class="d-title" style="margin:0"><i class="fas fa-chart-bar"></i> Result Actions</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <form method="GET" style="display:inline">
+        <select name="dept" class="form-control" style="width:auto;padding:7px 12px;font-size:12px" onchange="this.form.submit()">
+          <option value="">All Departments</option>
+          {% for d in departments %}<option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>{% endfor %}
+        </select>
+      </form>
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="compute"><button type="submit" class="btn-purple" style="background:#6366f1" onclick="return confirm('Compute results for all students?')"><i class="fas fa-calculator"></i> Compute</button></form>
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="verify"><button type="submit" class="btn-purple" style="background:#7c3aed" onclick="return confirm('Mark all computed results as Verified?')"><i class="fas fa-shield-check"></i> Verify</button></form>
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="publish"><button type="submit" class="btn-purple" style="background:var(--teal)" onclick="return confirm('Publish results? Students will be able to see them.')"><i class="fas fa-bullhorn"></i> Publish</button></form>
+    </div>
+  </div>
+  {% if rows %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Marks</th><th>%</th><th>Grade</th><th>Pass/Fail</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td style="font-weight:600;color:#7c3aed">{{ row.student.roll_number }}</td>
+          <td>{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+          <td>{{ row.student.department.code }}</td>
+          {% if row.result %}
+          <td style="text-align:center">{{ row.result.total_marks_obtained|floatformat:0 }}/{{ row.result.total_max_marks|floatformat:0 }}</td>
+          <td style="text-align:center;font-weight:700;color:{% if row.result.percentage >= 60 %}var(--teal){% elif row.result.percentage >= 40 %}var(--gold){% else %}#ef4444{% endif %}">{{ row.result.percentage|floatformat:1 }}%</td>
+          <td><span class="dbadge dbadge-purple">{{ row.result.grade|default:"—" }}</span></td>
+          <td>{% if row.result.is_pass %}<span class="dbadge dbadge-active">Pass</span>{% else %}<span class="dbadge dbadge-red">Fail</span>{% endif %}</td>
+          <td>
+            {% if row.result.status == 'PUBLISHED' %}<span class="dbadge dbadge-active">Published</span>
+            {% elif row.result.status == 'VERIFIED' %}<span class="dbadge" style="background:rgba(99,102,241,.1);color:#6366f1">Verified</span>
+            {% else %}<span class="dbadge dbadge-warning">Draft</span>{% endif %}
+          </td>
+          {% else %}
+          <td colspan="5" style="color:var(--muted);font-size:12px;text-align:center">No marks entered</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-user-graduate"></i>No students found.</div>
+  {% endif %}
+</div>
+{% endblock %}

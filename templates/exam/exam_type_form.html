@@ -1,0 +1,43 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Add Exam Type{% endblock %}
+{% block nav_types %}on{% endblock %}
+{% block breadcrumb %} / <a href="{% url 'exam_type_list' %}" style="color:#7c3aed;text-decoration:none">Exam Types</a> / Add{% endblock %}
+{% block page_title %}Add Exam Type{% endblock %}
+{% block page_sub %}Define a new exam category for this college{% endblock %}
+{% block content %}
+<div style="background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:560px">
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Name <span style="color:#ef4444">*</span></label>
+      <input type="text" name="name" class="form-control" placeholder="e.g. CIE-1, SEE Nov 2025" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select name="category" class="form-control">
+          {% for val, label in categories %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Weightage (%)</label>
+        <input type="number" name="weightage_percent" class="form-control" value="100" min="1" max="100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Max Marks</label>
+        <input type="number" name="max_marks" class="form-control" value="100" min="1">
+      </div>
+      <div class="form-group">
+        <label>Passing Marks</label>
+        <input type="number" name="passing_marks" class="form-control" value="40" min="0">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button type="submit" class="btn-purple">Save Exam Type</button>
+      <a href="{% url 'exam_type_list' %}" style="padding:10px 18px;border-radius:9px;background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid var(--border)">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

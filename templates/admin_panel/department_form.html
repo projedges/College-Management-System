@@ -1,36 +1,37 @@
-{% extends 'admin_panel/base_admin.html' %}
+{% extends 'admin_panel/base_admin_form.html' %}
 {% block title %}{{ action }} Department — Admin{% endblock %}
-{% block nav_dept %}on{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'admin_departments' %}" style="color:var(--teal);text-decoration:none">Departments</a> / {{ action }}{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}{{ action }} Department{% endblock %}
-{% block page_sub %}{% if action == 'Edit' %}Update department details{% else %}Add a new department to the college{% endif %}{% endblock %}
+{% block page_sub %}{% if action == 'Edit' %}Update department details{% else %}Add a new department{% endif %}{% endblock %}
+{% block sidebar_links %}{% with active_section='departments' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
-{% block content %}
-<div class="form-card">
+{% block form_content %}
+<div class="d-card" style="max-width:560px">
   <form method="POST">
     {% csrf_token %}
     <div class="form-row">
-      <div class="form-group">
-        <label>Department Name <span>*</span></label>
-        <input type="text" name="name" class="form-control" value="{{ dept.name|default:'' }}" placeholder="e.g. Computer Science & Engineering" required/>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Department Name *</label>
+        <input type="text" name="name" value="{{ dept.name|default:'' }}" placeholder="e.g. Computer Science & Engineering" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       </div>
-      <div class="form-group">
-        <label>Department Code <span>*</span></label>
-        <input type="text" name="code" class="form-control" value="{{ dept.code|default:'' }}" placeholder="e.g. CSE" required/>
-        <div class="form-hint">Short unique code (will be uppercased)</div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Department Code *</label>
+        <input type="text" name="code" value="{{ dept.code|default:'' }}" placeholder="e.g. CSE" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Short unique code (will be uppercased)</div>
       </div>
     </div>
-    <div class="form-group">
-      <label>Description</label>
-      <textarea name="description" class="form-control" rows="3" placeholder="Brief description of the department">{{ dept.description|default:'' }}</textarea>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Description</label>
+      <textarea name="description" rows="3" placeholder="Brief description" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">{{ dept.description|default:'' }}</textarea>
     </div>
-    <div class="form-group">
-      <label>Established Year</label>
-      <input type="number" name="established_year" class="form-control" value="{{ dept.established_year|default:'' }}" placeholder="e.g. 2005" min="1900" max="2100"/>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Established Year</label>
+      <input type="number" name="established_year" value="{{ dept.established_year|default:'' }}" placeholder="e.g. 2005" min="1900" max="2100" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Save Department</button>
-      <a href="{% url 'admin_departments' %}" class="btn-cancel">Cancel</a>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Department</button>
+      <a href="{% url 'admin_dashboard' %}#departments" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
 </div>

@@ -1,47 +1,89 @@
-{% extends 'admin_panel/base_admin.html' %}
+{% extends 'admin_panel/base_admin_form.html' %}
 {% block title %}Add Subject — Admin{% endblock %}
-{% block nav_subjects %}on{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'admin_subjects' %}" style="color:var(--teal);text-decoration:none">Subjects</a> / Add{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Add Subject{% endblock %}
 {% block page_sub %}Add a new subject to a department{% endblock %}
+{% block sidebar_links %}{% with active_section='departments' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
-{% block content %}
-<div class="form-card">
+{% block form_content %}
+<div class="d-card" style="max-width:600px">
   <form method="POST">
     {% csrf_token %}
     <div class="form-row">
-      <div class="form-group">
-        <label>Subject Name <span>*</span></label>
-        <input type="text" name="name" class="form-control" placeholder="e.g. Data Structures" required/>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Subject Name *</label>
+        <input type="text" name="name" placeholder="e.g. Data Structures" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       </div>
-      <div class="form-group">
-        <label>Subject Code <span>*</span></label>
-        <input type="text" name="code" class="form-control" placeholder="e.g. CSE401" required/>
-        <div class="form-hint">Must be unique across all subjects</div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Subject Code *</label>
+        <input type="text" name="code" placeholder="e.g. 19ECS701" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Must be unique within the selected department</div>
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Department <span>*</span></label>
-        <select name="department" class="form-control" required>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Department *</label>
+        <select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
           <option value="">Select Department</option>
-          {% for d in departments %}
-          <option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>
-          {% endfor %}
+          {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}
         </select>
       </div>
-      <div class="form-group">
-        <label>Semester <span>*</span></label>
-        <select name="semester" class="form-control" required>
-          {% for i in "12345678" %}
-          <option value="{{ i }}">Semester {{ i }}</option>
-          {% endfor %}
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Semester *</label>
+        <select name="semester" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          {% for i in "12345678" %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
         </select>
       </div>
     </div>
+
+    <!-- Category -->
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Category</label>
+      <select name="category" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+        <option value="PC">PC — Program Core</option>
+        <option value="PE">PE — Program Elective</option>
+        <option value="OE">OE — Open Elective</option>
+        <option value="BS">BS — Basic Science</option>
+        <option value="PC/BS">PC/BS — Program Core / Basic Science</option>
+        <option value="MC">MC — Mandatory Course</option>
+        <option value="PW">PW — Project Work</option>
+        <option value="AC">AC — Audit Course</option>
+        <option value="HS">HS — Humanities &amp; Social Science</option>
+        <option value="ES">ES — Engineering Science</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </div>
+
+    <!-- L-T-P-C -->
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">
+        L – T – P – C
+        <span style="font-size:11px;font-weight:400;color:var(--muted)">Lecture · Tutorial · Practical · Credits per week</span>
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-align:center">L</label>
+          <input type="number" name="lecture_hours" value="3" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-align:center">T</label>
+          <input type="number" name="tutorial_hours" value="0" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-align:center">P</label>
+          <input type="number" name="practical_hours" value="0" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--teal);font-weight:700;display:block;margin-bottom:4px;text-align:center">C (Credits)</label>
+          <input type="number" name="credits" value="3" min="0" max="20" style="width:100%;padding:9px 12px;border:1.5px solid var(--teal);border-radius:var(--r);font-size:16px;font-weight:900;font-family:'Outfit',sans-serif;outline:none;text-align:center;color:var(--teal)" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--teal)'"/>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Add Subject</button>
-      <a href="{% url 'admin_subjects' %}" class="btn-cancel">Cancel</a>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Add Subject</button>
+      <a href="{% url 'admin_subjects' %}" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
 </div>

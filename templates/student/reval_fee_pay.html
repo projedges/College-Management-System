@@ -1,0 +1,104 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Revaluation Fee Payment{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}Revaluation Fee{% endblock %}
+{% block page_sub %}{{ marks.subject.code }} &mdash; {{ marks.exam.name }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}#results" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Results</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div style="max-width:580px">
+  <div class="card">
+
+    {% if existing_reval %}
+    <div style="padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534;font-weight:600;margin-bottom:16px">
+      <i class="fas fa-check-circle"></i> Revaluation request already submitted for this subject.
+      Status: <strong>{{ existing_reval.get_status_display }}</strong>
+    </div>
+    <a href="{% url 'student_dashboard' %}#results" class="btn btn-outline">Back to Dashboard</a>
+
+    {% else %}
+    <!-- Subject & marks summary -->
+    <div style="padding:14px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;margin-bottom:20px;font-size:13px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><span style="color:var(--muted)">Subject</span><br><strong>{{ marks.subject.code }} &mdash; {{ marks.subject.name }}</strong></div>
+        <div><span style="color:var(--muted)">Exam</span><br><strong>{{ marks.exam.name }}</strong></div>
+        <div><span style="color:var(--muted)">Marks Obtained</span><br><strong style="color:#dc2626">{{ marks.marks_obtained|floatformat:0 }} / {{ marks.max_marks|floatformat:0 }}</strong></div>
+        <div><span style="color:var(--muted)">Grade</span><br><strong>{{ marks.grade|default:"N/A" }}</strong></div>
+      </div>
+    </div>
+
+    <!-- Fee info -->
+    <div style="padding:14px 16px;background:var(--surface2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--deep)">Revaluation Fee</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Non-refundable. Answer script will be re-evaluated by a senior examiner.</div>
+      </div>
+      <span style="font-size:22px;font-weight:800;color:var(--teal)">Rs {{ fee|floatformat:0 }}</span>
+    </div>
+
+    {% if order_id %}
+    <!-- Payment step: Razorpay checkout -->
+    <button id="rzp_btn" class="btn btn-teal" style="width:100%;font-size:14px;padding:13px">
+      <i class="fas fa-credit-card"></i> Pay Rs {{ fee|floatformat:0 }} &amp; Submit Request
+    </button>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">
+      <i class="fas fa-lock"></i> Secured by Razorpay
+    </div>
+
+    <form id="rzp_verify_form" method="POST" action="{% url 'razorpay_reval_verify' %}" style="display:none">
+      {% csrf_token %}
+      <input type="hidden" name="razorpay_order_id" id="rzp_order_id">
+      <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id">
+      <input type="hidden" name="razorpay_signature" id="rzp_signature">
+      <input type="hidden" name="marks_id" value="{{ marks.pk }}">
+    </form>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+    document.getElementById('rzp_btn').onclick = function() {
+      var rzp = new Razorpay({
+        key: '{{ razorpay_key_id }}',
+        amount: {{ fee|floatformat:0 }}00,
+        currency: 'INR',
+        name: '{{ marks.subject.department.college.name|default:"EduTrack" }}',
+        description: 'Revaluation Fee - {{ marks.subject.code }}',
+        order_id: '{{ order_id }}',
+        prefill: { name: '{{ student.user.get_full_name }}', email: '{{ student.user.email }}' },
+        theme: { color: '#0d7377' },
+        handler: function(response) {
+          document.getElementById('rzp_order_id').value   = response.razorpay_order_id;
+          document.getElementById('rzp_payment_id').value = response.razorpay_payment_id;
+          document.getElementById('rzp_signature').value  = response.razorpay_signature;
+          document.getElementById('rzp_verify_form').submit();
+        }
+      });
+      rzp.open();
+    };
+    </script>
+
+    {% elif razorpay_enabled %}
+    <!-- Confirm step before creating order -->
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="confirm_pay" value="1">
+      <button type="submit" class="btn btn-teal" style="width:100%;font-size:14px;padding:13px">
+        <i class="fas fa-arrow-right"></i> Confirm &amp; Proceed to Payment
+      </button>
+    </form>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">
+      By proceeding you agree to pay the non-refundable revaluation fee.
+    </div>
+
+    {% else %}
+    <div style="padding:12px 14px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;font-size:12px;color:#713f12">
+      <i class="fas fa-info-circle"></i> Online payment not configured. Visit the accounts office to pay the revaluation fee.
+    </div>
+    {% endif %}
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

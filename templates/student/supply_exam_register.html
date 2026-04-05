@@ -1,0 +1,131 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Supply Exam Registration{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}Supply Exam Registration{% endblock %}
+{% block page_sub %}Register for backlog / arrear subjects{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div style="max-width:720px">
+
+  {% if not latest_exam %}
+  <div class="d-card" style="text-align:center;padding:40px">
+    <i class="fas fa-calendar-times" style="font-size:40px;color:var(--muted);display:block;margin-bottom:12px"></i>
+    <div style="font-size:14px;color:var(--muted)">No upcoming supply exam found. Check back later or contact the exam department.</div>
+  </div>
+
+  {% elif existing_reg and existing_reg.status == 'PAID' %}
+  <div class="d-card">
+    <div style="padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534;font-weight:600;margin-bottom:16px">
+      <i class="fas fa-check-circle"></i> Already registered for <strong>{{ latest_exam.name }}</strong>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Registered Subjects</div>
+    <div style="display:grid;gap:6px">
+      {% for subj in existing_reg.subjects.all %}
+      <div style="padding:10px 14px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600">
+        <span style="color:var(--teal)">{{ subj.code }}</span> &mdash; {{ subj.name }}
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">Sem {{ subj.semester }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top:14px;font-size:13px;color:var(--muted)">Total paid: <strong>Rs {{ existing_reg.total_fee|floatformat:0 }}</strong></div>
+  </div>
+
+  {% else %}
+  <div class="d-card">
+    <div style="padding:12px 16px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;font-size:13px;color:#713f12;margin-bottom:20px">
+      <i class="fas fa-info-circle"></i>
+      <strong>{{ latest_exam.name }}</strong> &mdash; Fee: <strong>Rs {{ fee_per_subject|floatformat:0 }} per subject</strong>
+    </div>
+
+    {% if not all_failed_marks %}
+    <div style="text-align:center;padding:32px;color:var(--muted)">
+      <i class="fas fa-check-circle" style="color:#16a34a;font-size:36px;display:block;margin-bottom:10px"></i>
+      <div style="font-size:14px">No failed subjects found across any semester.</div>
+      <div style="font-size:12px;margin-top:6px">You are not eligible for supply registration.</div>
+    </div>
+    {% else %}
+    <form method="POST">
+      {% csrf_token %}
+      <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:14px">
+        Select subjects to register — grouped by semester:
+      </div>
+
+      {% for sem, marks in failed_grouped %}
+      <!-- Semester group -->
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);background:rgba(13,115,119,.08);padding:3px 10px;border-radius:99px">Semester {{ sem }}</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <button type="button" onclick="selectSem({{ sem }})" style="font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;font-weight:600">Select all</button>
+        </div>
+        <div style="display:grid;gap:6px">
+          {% for m in marks %}
+          <label style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:all .15s" id="subj_label_{{ m.subject.pk }}" data-sem="{{ sem }}">
+            <div style="display:flex;align-items:center;gap:12px">
+              <input type="checkbox" name="subjects" value="{{ m.subject.pk }}" data-sem="{{ sem }}"
+                     onchange="recalcFee(); highlightLabel(this)"
+                     style="accent-color:var(--teal);width:16px;height:16px;flex-shrink:0">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ m.subject.code }} &mdash; {{ m.subject.name }}</div>
+                <div style="font-size:11px;color:#dc2626;margin-top:2px">
+                  Scored {{ m.marks_obtained|floatformat:0 }} / {{ m.max_marks|floatformat:0 }}
+                  &nbsp;&middot;&nbsp; Passing: {% widthratio m.max_marks 100 40 %} marks
+                </div>
+              </div>
+            </div>
+            <span style="font-size:13px;font-weight:700;color:var(--teal);flex-shrink:0">Rs {{ fee_per_subject|floatformat:0 }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Total + submit -->
+      <div style="padding:14px 16px;background:var(--surface2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;border:1px solid var(--border)">
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Selected: <span id="selected_count">0</span> subject(s)</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Rs {{ fee_per_subject|floatformat:0 }} &times; <span id="selected_count2">0</span></div>
+        </div>
+        <span style="font-size:22px;font-weight:900;color:var(--teal)" id="total_fee_display">Rs 0</span>
+      </div>
+
+      <button type="submit" class="btn btn-teal" id="submit_btn" disabled style="width:100%;font-size:14px;padding:13px">
+        <i class="fas fa-arrow-right"></i> Proceed to Payment
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+var feePerSubject = {{ fee_per_subject }};
+function recalcFee() {
+  var checked = document.querySelectorAll('input[name="subjects"]:checked').length;
+  var total = checked * feePerSubject;
+  document.getElementById('total_fee_display').textContent = 'Rs ' + total.toLocaleString('en-IN');
+  document.getElementById('selected_count').textContent = checked;
+  document.getElementById('selected_count2').textContent = checked;
+  document.getElementById('submit_btn').disabled = (checked === 0);
+}
+function highlightLabel(cb) {
+  var lbl = document.getElementById('subj_label_' + cb.value);
+  if (lbl) {
+    lbl.style.border = cb.checked ? '1.5px solid var(--teal)' : '1.5px solid var(--border)';
+    lbl.style.background = cb.checked ? '#f0fdfa' : '#fff';
+  }
+}
+function selectSem(sem) {
+  document.querySelectorAll('input[name="subjects"][data-sem="' + sem + '"]').forEach(function(cb) {
+    cb.checked = true;
+    highlightLabel(cb);
+  });
+  recalcFee();
+}
+{% endblock %}

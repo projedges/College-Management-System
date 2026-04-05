@@ -1,40 +1,37 @@
-{% extends 'admin_panel/base_admin.html' %}
-{% block title %}Create Exam - Admin{% endblock %}
-{% block nav_exams %}on{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'admin_exams' %}" style="color:var(--teal);text-decoration:none">Exams</a> / Create{% endblock %}
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Create Exam — Admin{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Create Exam{% endblock %}
-{% block page_sub %}Add an exam window for a semester so faculty can enter marks against it{% endblock %}
+{% block page_sub %}Add an exam window so faculty can enter marks against it{% endblock %}
+{% block sidebar_links %}{% with active_section='exams' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
-{% block content %}
-<div class="form-card">
+{% block form_content %}
+<div class="d-card" style="max-width:560px">
   <form method="POST">
     {% csrf_token %}
-
-    <div class="form-group">
-      <label>Exam Name <span>*</span></label>
-      <input type="text" name="name" class="form-control" placeholder="e.g. Mid Semester Exam" required />
-      <div class="form-hint">Use a clear name that faculty and students will recognize.</div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Exam Name *</label>
+      <input type="text" name="name" placeholder="e.g. Mid Semester Exam" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Use a clear name that faculty and students will recognize.</div>
     </div>
-
     <div class="form-row">
-      <div class="form-group">
-        <label>Semester <span>*</span></label>
-        <input type="number" name="semester" class="form-control" placeholder="e.g. 4" min="1" max="12" required />
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Semester *</label>
+        <input type="number" name="semester" placeholder="e.g. 4" min="1" max="12" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       </div>
-      <div class="form-group">
-        <label>Start Date <span>*</span></label>
-        <input type="date" name="start_date" class="form-control" required />
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Start Date *</label>
+        <input type="date" name="start_date" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       </div>
     </div>
-
-    <div class="form-group">
-      <label>End Date <span>*</span></label>
-      <input type="date" name="end_date" class="form-control" required />
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">End Date *</label>
+      <input type="date" name="end_date" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
     </div>
-
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Create Exam</button>
-      <a href="{% url 'admin_exams' %}" class="btn-cancel">Cancel</a>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Create Exam</button>
+      <a href="{% url 'admin_dashboard' %}#exams" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
 </div>

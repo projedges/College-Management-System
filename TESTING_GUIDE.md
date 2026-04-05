@@ -206,13 +206,45 @@ Login: `lab_suresh_vitm / Lab@1234`
 
 ## PDF Reports
 
-| Report | How to access |
-|--------|--------------|
-| Attendance report | Admin → Reports → Export Attendance PDF |
-| Payment report | Admin → Reports → Export Payment PDF |
-| Result report | Admin → Reports → Export Result PDF |
-| Student result | Student dashboard → Profile → Result PDF |
-| Payment receipt | Student dashboard → Fees → Receipt |
+| Report | How to access | What's in it |
+|--------|--------------|--------------|
+| Attendance report | Admin → Reports → Export Attendance PDF | Dept-wise present/total/% with color-coded rows |
+| Payment report | Admin → Reports → Export Payment PDF | Per-student paid/balance/status table |
+| Result report | Admin → Reports → Export Result PDF | Per-student GPA/percentage/PASS-FAIL table |
+| Student result | Student dashboard → Profile → Result PDF | Semester-wise marks table with grades |
+| Payment receipt (screen) | Student → Fees → any payment → Receipt | Full receipt with college logo, student details |
+| Payment receipt (PDF) | Receipt page → Download PDF button | Same as screen version, printable |
+
+---
+
+## Razorpay Payment Flow
+
+> Requires `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` env vars set.  
+> Without them the page falls back to a manual Cash Counter form.
+
+**To test with Razorpay test keys:**
+
+1. Get test keys from https://dashboard.razorpay.com → Settings → API Keys → Test Mode
+2. Set env vars before starting the server:
+   ```bash
+   set RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
+   set RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+   python manage.py runserver
+   ```
+3. Login as **Student** (`stu_1_vitm / Student@1234`)
+4. Dashboard → Fees → **Pay Now**
+5. Select fee type (Tuition / Semester / Exam / Lab / Library)
+6. Enter an amount ≤ balance due → **Pay with Razorpay**
+7. Razorpay checkout opens → use test card:
+   - Card: `4111 1111 1111 1111`  Expiry: any future date  CVV: any 3 digits
+   - Or UPI: `success@razorpay`
+8. On success → redirected to **Receipt page** with full details
+9. Click **Download PDF** → styled receipt with college header, student info, transaction details
+
+**Fallback (no Razorpay keys):**
+
+- Payment form shows Cash Counter / UPI Manual / NEFT options
+- Submit records payment directly as SUCCESS (for admin-assisted payments)
 
 ---
 

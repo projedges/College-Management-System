@@ -1,0 +1,80 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Schedule — {{ exam.name }}{% endblock %}
+{% block breadcrumb %} / {{ exam.name }} / Schedule{% endblock %}
+{% block page_title %}{{ exam.name }} — Schedule{% endblock %}
+{% block page_sub %}Sem {{ exam.semester }} · {{ exam.start_date|date:"d M" }} – {{ exam.end_date|date:"d M Y" }}{% endblock %}
+{% block content %}
+<div class="two-col" style="align-items:start">
+  <div>
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-calendar-plus"></i> Add / Update Slot</div>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+          <label>Subject <span style="color:#ef4444">*</span></label>
+          <select name="subject" class="form-control" required>
+            <option value="">— Select Subject —</option>
+            {% for s in subjects %}<option value="{{ s.pk }}">{{ s.department.code }} · {{ s.name }} ({{ s.code }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Exam Type</label>
+          <select name="exam_type" class="form-control">
+            <option value="">— None —</option>
+            {% for et in exam_types %}<option value="{{ et.pk }}">{{ et.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date <span style="color:#ef4444">*</span></label><input type="date" name="date" class="form-control" required></div>
+          <div class="form-group"><label>Start Time</label><input type="time" name="start_time" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>End Time</label><input type="time" name="end_time" class="form-control"></div>
+          <div class="form-group"><label>Venue / Room</label><input type="text" name="venue" class="form-control" placeholder="e.g. Hall A"></div>
+        </div>
+        <div class="form-group">
+          <label>Invigilator</label>
+          <select name="invigilator" class="form-control">
+            <option value="">— None —</option>
+            {% for f in faculty_list %}<option value="{{ f.pk }}">{{ f.user.get_full_name }} ({{ f.department.code }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Max Marks</label><input type="number" name="max_marks" class="form-control" value="100" min="1"></div>
+          <div class="form-group"><label>Pass Marks</label><input type="number" name="passing_marks" class="form-control" value="40" min="0"></div>
+        </div>
+        <button type="submit" class="btn-purple"><i class="fas fa-save"></i> Save Slot</button>
+      </form>
+    </div>
+  </div>
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-calendar-days"></i> Scheduled Subjects ({{ schedules|length }})</div>
+    {% if schedules %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Subject</th><th>Date</th><th>Time</th><th>Venue</th><th>Invigilator</th><th>Max</th><th></th></tr></thead>
+        <tbody>
+          {% for slot in schedules %}
+          <tr>
+            <td><div style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ slot.subject.code }} · {{ slot.subject.department.code }}</div></td>
+            <td style="font-size:12px">{{ slot.date|date:"d M Y" }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ slot.start_time|time:"g:i A" }}–{{ slot.end_time|time:"g:i A" }}</td>
+            <td style="font-size:12px">{{ slot.venue|default:"—" }}</td>
+            <td style="font-size:12px">{{ slot.invigilator.user.get_full_name|default:"—" }}</td>
+            <td style="text-align:center">{{ slot.max_marks }}</td>
+            <td>
+              <form method="POST" action="{% url 'exam_schedule_delete' exam.pk slot.pk %}" style="display:inline" onsubmit="return confirm('Remove this slot?')">
+                {% csrf_token %}<button type="submit" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No slots scheduled yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

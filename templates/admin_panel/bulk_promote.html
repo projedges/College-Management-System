@@ -1,0 +1,37 @@
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Bulk Promote — Admin{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
+{% block page_title %}Bulk Promote Students{% endblock %}
+{% block page_sub %}Move all active students in a department up one semester{% endblock %}
+
+{% block sidebar_links %}{% with active_section='bulk' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+
+{% block form_content %}
+<div class="d-card" style="max-width:480px">
+  <div class="hint-box" style="margin-bottom:18px">
+    This will move all <strong>Active</strong> students in the selected department from the chosen semester to the next one. Selecting <strong>Semester 8</strong> will mark students as <strong>Graduated</strong> instead of promoting further. This action cannot be undone.
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Department *</label>
+      <select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+        <option value="">Select Department</option>
+        {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Current Semester (to promote from) *</label>
+      <select name="from_semester" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+        {% for i in "1234567" %}<option value="{{ i }}">Semester {{ i }} → Semester {{ i|add:"1" }}</option>{% endfor %}
+        <option value="8">Semester 8 → Mark as Graduated ✓</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button type="submit" class="qa-btn qa-teal" onclick="return confirm('Promote all matching students? This cannot be undone.')"><i class="fas fa-arrow-up"></i> Promote</button>
+      <a href="{% url 'admin_dashboard' %}#bulk" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

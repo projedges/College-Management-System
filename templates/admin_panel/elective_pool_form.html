@@ -1,0 +1,82 @@
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Create Elective Pool{% endblock %}
+{% block form_title %}Create Elective Pool{% endblock %}
+{% block form_subtitle %}Define a slot where students choose one elective from a set of subjects.{% endblock %}
+{% block form_content %}
+<form method="POST">
+  {% csrf_token %}
+  <div class="form-grid">
+    <div class="form-group">
+      <label class="form-label">Regulation <span class="req">*</span></label>
+      <select name="regulation" class="form-control" required>
+        <option value="">— Select —</option>
+        {% for r in regulations %}<option value="{{ r.pk }}">{{ r.code }} — {{ r.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Department <span class="req">*</span></label>
+      <select name="department" id="dept-sel" class="form-control" required onchange="loadSubjects()">
+        <option value="">— Select —</option>
+        {% for d in departments %}<option value="{{ d.pk }}" data-code="{{ d.code }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Semester <span class="req">*</span></label>
+      <select name="semester" class="form-control" required>
+        {% for s in semesters %}<option value="{{ s }}">Semester {{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Slot Name <span class="req">*</span></label>
+      <input type="text" name="slot_name" class="form-control" placeholder="e.g. PE-1, Open Elective" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Elective Type</label>
+      <select name="elective_type" class="form-control">
+        <option value="PE">Program Elective (PE)</option>
+        <option value="OE">Open Elective (OE)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Quota per Subject</label>
+      <input type="number" name="quota_per_subject" class="form-control" value="60" min="1">
+      <div class="form-hint">Max students allowed per elective subject.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Selection Deadline</label>
+      <input type="datetime-local" name="deadline" class="form-control">
+      <div class="form-hint">Leave blank for no deadline.</div>
+    </div>
+    <div class="form-group form-group-full">
+      <label class="form-label">Subjects in this Pool <span class="req">*</span></label>
+      <select name="subjects" id="subjects-sel" class="form-control" multiple style="height:140px" required>
+        <option disabled>Select department first…</option>
+      </select>
+      <div class="form-hint">Hold Ctrl/Cmd to select multiple. Students will choose one from these.</div>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Create Pool</button>
+    <a href="{% url 'admin_elective_pools' %}" class="btn btn-outline">Cancel</a>
+  </div>
+</form>
+<script>
+var subjectsByDept = {};
+{% for d in departments %}
+subjectsByDept[{{ d.pk }}] = [];
+{% endfor %}
+// Fetch subjects via simple page reload approach — dept change reloads with subjects
+document.getElementById('dept-sel').addEventListener('change', function() {
+  var deptId = this.value;
+  var sel = document.getElementById('subjects-sel');
+  sel.innerHTML = '<option disabled>Loading…</option>';
+  if (!deptId) return;
+  fetch('/dashboard/admin/subjects/?dept=' + deptId, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { return r.text(); })
+    .catch(function() {});
+  // Simpler: just submit form to reload with dept context
+  // For now show a note
+  sel.innerHTML = '<option disabled>Save form, then subjects will load based on dept+sem selection.</option>';
+});
+</script>
+{% endblock %}

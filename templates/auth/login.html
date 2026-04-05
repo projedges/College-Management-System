@@ -4,114 +4,219 @@
 
 {% block extra_css %}
 <style>
-  body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-  .auth-wrap{width:100%;max-width:420px}
-  .auth-logo{text-align:center;margin-bottom:28px}
-  .auth-logo img{height:90px;width:auto;max-width:280px;object-fit:contain;display:block;margin:0 auto}
-  .auth-logo .logo-txt{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)}
-  .auth-logo .logo-txt span{color:var(--teal)}
-  .auth-logo .logo-sub{font-size:12px;color:var(--muted);margin-top:2px;letter-spacing:.5px}
-  .auth-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:36px;box-shadow:0 8px 40px rgba(7,30,38,.12)}
-  .auth-card h2{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:4px}
-  .auth-card .sub{font-size:13px;color:var(--muted);margin-bottom:28px}
-  .form-group{margin-bottom:18px}
-  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
-  .form-group .input-wrap{position:relative}
-  .form-group .input-wrap i.lead-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
-  .form-group input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none}
-  .form-group input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
-  .form-group input::placeholder{color:var(--muted)}
-  .form-group input.has-toggle{padding-right:44px}
-  .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
-  .pw-toggle:hover{background:rgba(13,115,119,.08);color:var(--teal)}
-  .btn-submit{width:100%;padding:12px;border-radius:var(--r);background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(13,115,119,.3);font-family:'Inter',sans-serif}
-  .btn-submit:hover{background:var(--teal-dk);transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,115,119,.4)}
-  .auth-footer{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
-  .auth-footer a{color:var(--teal);font-weight:600}
-  .auth-footer a:hover{text-decoration:underline}
-  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:12px}
-  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;padding:0;min-height:100vh;display:flex;background:#f0f4f5;font-family:'Inter',sans-serif}
+
+  /* ── Split layout ── */
+  .login-shell{display:flex;width:100%;min-height:100vh}
+
+  /* Left panel — brand */
+  .login-brand{flex:1;background:linear-gradient(145deg,#071e26 0%,#0d5c61 55%,#0d7377 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 40px;position:relative;overflow:hidden}
+  .login-brand::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+  .login-brand::after{content:'';position:absolute;bottom:-80px;right:-80px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.04)}
+
+  .brand-logo-wrap{position:relative;z-index:1;text-align:center;margin-bottom:40px}
+  .brand-logo-wrap img{height:72px;width:auto;filter:brightness(0) invert(1);opacity:.95}
+  .brand-logo-txt{font-family:'Outfit',sans-serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:-.5px}
+  .brand-logo-txt span{color:#e6a817}
+  .brand-tagline{font-size:13px;color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.8px;text-transform:uppercase}
+
+  .brand-features{position:relative;z-index:1;display:flex;flex-direction:column;gap:16px;width:100%;max-width:320px}
+  .brand-feat{display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,.07);border-radius:12px;border:1px solid rgba(255,255,255,.08)}
+  .brand-feat-icon{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:15px;color:#e6a817;flex-shrink:0}
+  .brand-feat-text{font-size:13px;color:rgba(255,255,255,.8);line-height:1.4}
+  .brand-feat-text strong{color:#fff;display:block;font-size:13px;margin-bottom:1px}
+
+  .brand-footer{position:relative;z-index:1;margin-top:40px;font-size:11px;color:rgba(255,255,255,.3);text-align:center;letter-spacing:.3px}
+
+  /* Right panel — form */
+  .login-form-panel{width:460px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:40px 48px;background:#fff}
+  .login-form-inner{width:100%;max-width:360px}
+
+  .form-head{margin-bottom:32px}
+  .form-head h1{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:#071e26;margin:0 0 6px}
+  .form-head p{font-size:13px;color:#6b7280;margin:0;line-height:1.5}
+
+  .fgroup{margin-bottom:18px}
+  .fgroup label{display:block;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+  .finput-wrap{position:relative}
+  .finput-wrap .ficon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;pointer-events:none}
+  .finput{width:100%;padding:11px 14px 11px 40px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:#111827;background:#fafafa;transition:border-color .2s,box-shadow .2s,background .2s;outline:none}
+  .finput:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.1);background:#fff}
+  .finput::placeholder{color:#9ca3af}
+  .finput.has-toggle{padding-right:44px}
+  .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:none;background:transparent;color:#9ca3af;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .pw-toggle:hover{background:rgba(13,115,119,.08);color:#0d7377}
+
+  .row-inline{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .remember-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#6b7280;user-select:none}
+  .remember-label input[type=checkbox]{width:15px;height:15px;accent-color:#0d7377;cursor:pointer;border-radius:4px}
+  .forgot-link{font-size:12px;color:#0d7377;font-weight:600;text-decoration:none}
+  .forgot-link:hover{text-decoration:underline}
+
+  .captcha-label{font-size:13px;font-weight:600;color:#374151;margin-bottom:7px;display:block}
+  .captcha-label .captcha-q{display:inline-flex;align-items:center;gap:6px;background:rgba(13,115,119,.08);color:#0d7377;font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;padding:2px 10px;border-radius:6px;margin-left:4px}
+
+  .btn-signin{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,#0d7377,#0a5c60);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(13,115,119,.35);font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
+  .btn-signin:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(13,115,119,.45)}
+  .btn-signin:active{transform:translateY(0)}
+
+  .divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#d1d5db;font-size:12px}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:#f3f4f6}
+
+  .form-footer{text-align:center;font-size:13px;color:#6b7280}
+  .form-footer a{color:#0d7377;font-weight:700;text-decoration:none}
+  .form-footer a:hover{text-decoration:underline}
+
+  .alert{padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:18px;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+  .alert-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+  .alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+  .alert-warning{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+
+  /* Responsive */
+  @media(max-width:860px){
+    .login-brand{display:none}
+    .login-form-panel{width:100%;padding:32px 24px}
+  }
+  @media(max-width:480px){
+    .login-form-panel{padding:24px 20px}
+    .login-form-inner{max-width:100%}
+  }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="auth-wrap">
-  <div class="auth-logo">
-    <img src="{% static 'students/images/logo.png' %}" alt="Logo"
-         onerror="this.style.display='none';document.getElementById('logo-fb').style.display='block'"/>
-    <div id="logo-fb" style="display:none">
-      <div class="logo-txt">Edu<span>Track</span></div>
+<div class="login-shell">
+
+  <!-- Left brand panel -->
+  <div class="login-brand">
+    <div class="brand-logo-wrap">
+      <img src="{% static 'students/images/logo.png' %}" alt="EduTrack"
+           onerror="this.style.display='none';document.getElementById('brand-txt').style.display='block'"/>
+      <div id="brand-txt" style="display:none">
+        <div class="brand-logo-txt">Edu<span>Track</span></div>
+      </div>
+      <div class="brand-tagline">Academic Management Portal</div>
     </div>
-    <div class="logo-sub">Academic Management Portal</div>
+
+    <div class="brand-features">
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="fas fa-user-graduate"></i></div>
+        <div class="brand-feat-text">
+          <strong>Students</strong>
+          Attendance, results, assignments & fees in one place
+        </div>
+      </div>
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="brand-feat-text">
+          <strong>Faculty</strong>
+          Mark attendance, enter marks, manage quizzes
+        </div>
+      </div>
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="fas fa-building-columns"></i></div>
+        <div class="brand-feat-text">
+          <strong>Administration</strong>
+          Full college oversight — departments, fees, reports
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-footer">Powered by ProEdge EduTrack &nbsp;·&nbsp; Secure &amp; Multi-tenant</div>
   </div>
 
-  <div class="auth-card">
-    <h2>Welcome back</h2>
-    <p class="sub">Sign in with your assigned credentials to access your portal.</p>
+  <!-- Right form panel -->
+  <div class="login-form-panel">
+    <div class="login-form-inner">
 
-    {% for message in messages %}
+      <!-- Mobile logo (hidden on desktop) -->
+      <div style="text-align:center;margin-bottom:28px;display:none" class="mob-logo">
+        <img src="{% static 'students/images/logo.png' %}" alt="EduTrack" style="height:52px;width:auto"
+             onerror="this.style.display='none'"/>
+        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:#071e26;margin-top:6px">Edu<span style="color:#0d7377">Track</span></div>
+      </div>
+
+      <div class="form-head">
+        <h1>Welcome back</h1>
+        <p>Sign in with your assigned credentials to access your portal.</p>
+      </div>
+
+      {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">
-        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}"></i>
+        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}" style="margin-top:1px;flex-shrink:0"></i>
         {{ message }}
       </div>
-    {% endfor %}
+      {% endfor %}
 
-    <form method="POST" action="{% url 'login' %}">
-      {% csrf_token %}
-      <div class="form-group">
-        <label>Username</label>
-        <div class="input-wrap">
-          <i class="fas fa-user lead-icon"></i>
-          <input type="text" name="username" placeholder="Enter your username" required autofocus/>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <div class="input-wrap">
-          <i class="fas fa-lock lead-icon"></i>
-          <input id="loginPassword" class="has-toggle" type="password" name="password" placeholder="Enter your password" required/>
-          <button type="button" class="pw-toggle" aria-label="Show password" onclick="togglePassword('loginPassword', this)">
-            <i class="fas fa-eye"></i>
-          </button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);font-weight:500;user-select:none">
-          <input type="checkbox" name="remember_me" style="width:15px;height:15px;accent-color:var(--teal);cursor:pointer"/>
-          Remember me for 8 hours
-        </label>
-        <a href="{% url 'password_reset' %}" style="font-size:12px;color:var(--teal);font-weight:600">Forgot password?</a>
-      </div>
-      <div class="form-group">
-        <label>Security Check — What is <strong style="color:var(--teal)">{{ captcha_q }}</strong>?</label>
-        <div class="input-wrap">
-          <i class="fas fa-shield-halved lead-icon"></i>
-          <input type="number" name="captcha" placeholder="Enter the answer" required autocomplete="off" style="padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;width:100%;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--teal)';this.style.boxShadow='0 0 0 3px rgba(13,115,119,.1)'" onblur="this.style.borderColor='';this.style.boxShadow=''"/>
-        </div>
-      </div>
-      <button type="submit" class="btn-submit">
-        <i class="fas fa-sign-in-alt"></i> Sign In
-      </button>
-    </form>
+      <form method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
 
-    <div class="divider">or</div>
-    <div class="auth-footer">
-      Don't have an account? <a href="{% url 'register' %}">Register here</a>
+        <div class="fgroup">
+          <label>Username</label>
+          <div class="finput-wrap">
+            <i class="fas fa-user ficon"></i>
+            <input class="finput" type="text" name="username" placeholder="Enter your username" required autofocus autocomplete="username"/>
+          </div>
+        </div>
+
+        <div class="fgroup">
+          <label>Password</label>
+          <div class="finput-wrap">
+            <i class="fas fa-lock ficon"></i>
+            <input id="loginPassword" class="finput has-toggle" type="password" name="password" placeholder="Enter your password" required autocomplete="current-password"/>
+            <button type="button" class="pw-toggle" aria-label="Show password" onclick="togglePw('loginPassword',this)">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="row-inline">
+          <label class="remember-label">
+            <input type="checkbox" name="remember_me"/>
+            Remember me for 8 hours
+          </label>
+          <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <div class="fgroup">
+          <span class="captcha-label">
+            Security Check
+            <span class="captcha-q"><i class="fas fa-shield-halved" style="font-size:12px"></i> {{ captcha_q }} = ?</span>
+          </span>
+          <div class="finput-wrap">
+            <i class="fas fa-hashtag ficon"></i>
+            <input class="finput" type="number" name="captcha" placeholder="Your answer" required autocomplete="off"/>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-signin">
+          <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+        </button>
+      </form>
+
+      <div class="divider">or</div>
+      <div class="form-footer">
+        Don't have an account? <a href="{% url 'register' %}">Register here</a>
+      </div>
+
     </div>
   </div>
 </div>
+
+<style>
+  @media(max-width:860px){.mob-logo{display:block !important}}
+</style>
+
 <script>
-  function togglePassword(fieldId, trigger) {
-    var input = document.getElementById(fieldId);
-    if (!input || !trigger) return;
-    var icon = trigger.querySelector('i');
-    var showing = input.type === 'text';
-    input.type = showing ? 'password' : 'text';
-    trigger.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
-    if (icon) {
-      icon.classList.toggle('fa-eye', showing);
-      icon.classList.toggle('fa-eye-slash', !showing);
-    }
-  }
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  var icon = btn.querySelector('i');
+  var show = inp.type === 'text';
+  inp.type = show ? 'password' : 'text';
+  btn.setAttribute('aria-label', show ? 'Show password' : 'Hide password');
+  icon.classList.toggle('fa-eye', show);
+  icon.classList.toggle('fa-eye-slash', !show);
+}
 </script>
 {% endblock %}

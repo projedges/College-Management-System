@@ -124,7 +124,7 @@
     {% if departments %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Code</th><th>Students</th><th>Faculty</th><th>Est. Year</th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Students</th><th>Faculty</th><th>Subjects</th><th>Est. Year</th></tr></thead>
         <tbody>
           {% for d in departments %}
           <tr>
@@ -132,6 +132,7 @@
             <td style="color:var(--teal);font-weight:600">{{ d.code }}</td>
             <td style="text-align:center">{{ d.student_count }}</td>
             <td style="text-align:center">{{ d.faculty_count }}</td>
+            <td style="text-align:center">{{ d.subject_count }}</td>
             <td style="color:var(--muted)">{{ d.established_year|default:"-" }}</td>
           </tr>
           {% endfor %}
@@ -146,14 +147,14 @@
 
 <section data-dashboard-pane="faculty" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty</div>
+    <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty{% if total_faculty > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ total_faculty }})</span>{% endif %}</div>
     {% if faculty_list %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
         <thead><tr><th>Name</th><th>Department</th><th>Designation</th><th>Experience</th></tr></thead>
         <tbody>
           {% for f in faculty_list %}
-          <tr>
+          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_faculty_edit' f.pk %}'">
             <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
             <td>{{ f.department.code }}</td>
             <td style="color:var(--muted)">{{ f.designation }}</td>
@@ -171,14 +172,14 @@
 
 <section data-dashboard-pane="students" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-user-graduate"></i> Students</div>
+    <div class="d-title"><i class="fas fa-user-graduate"></i> Students{% if total_students > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ total_students }})</span>{% endif %}</div>
     {% if students_list %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
         <thead><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Semester</th><th>Status</th></tr></thead>
         <tbody>
           {% for s in students_list %}
-          <tr>
+          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_student_edit' s.pk %}'">
             <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
             <td>{{ s.user.get_full_name|default:s.user.username }}</td>
             <td>{{ s.department.code }}</td>
@@ -204,7 +205,7 @@
         <thead><tr><th>Name</th><th>Department</th><th>Employee ID</th><th>Qualification</th></tr></thead>
         <tbody>
           {% for h in hod_list %}
-          <tr>
+          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_hod_add' %}'">
             <td style="font-weight:600;color:var(--deep)">{{ h.user.get_full_name|default:h.user.username }}</td>
             <td>{{ h.department.code }}</td>
             <td style="color:var(--teal);font-weight:600">{{ h.employee_id }}</td>
@@ -234,38 +235,109 @@
       <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-users"></i></div>
       <div class="s-val">{{ pending_fee_count }}</div><div class="s-lbl">Students with Dues</div>
     </div>
+    <div class="stat-card">
+      <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-circle-check"></i></div>
+      <div class="s-val">{{ paid_fee_count }}</div><div class="s-lbl">Fully Paid</div>
+    </div>
   </div>
-  <div class="hint-box">Fee details are managed by the College Admin. This view shows a read-only summary for institutional oversight.</div>
+  {% if total_fee_count > 0 %}
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-chart-pie"></i> Collection Progress</div>
+    {% widthratio paid_fee_count total_fee_count 100 as paid_pct %}
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+        <span>{{ paid_pct }}% students fully paid</span>
+        <span>{{ paid_fee_count }} / {{ total_fee_count }}</span>
+      </div>
+      <div style="background:#f3f4f6;border-radius:8px;height:12px;overflow:hidden">
+        <div style="height:100%;width:{{ paid_pct }}%;background:var(--teal);border-radius:8px;transition:width .5s"></div>
+      </div>
+    </div>
+    {% if total_collected > 0 or total_pending > 0 %}
+    {% with grand_total=total_collected|add:total_pending %}
+    {% widthratio total_collected grand_total 100 as coll_pct %}
+    <div style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+        <span>Amount collected vs pending</span>
+        <span>Rs {{ total_collected|floatformat:0 }} / Rs {{ grand_total|floatformat:0 }}</span>
+      </div>
+      <div style="background:#fee2e2;border-radius:8px;height:12px;overflow:hidden">
+        <div style="height:100%;width:{{ coll_pct }}%;background:var(--teal);border-radius:8px"></div>
+      </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+  </div>
+  {% endif %}
 </section>
 
 <section data-dashboard-pane="attendance" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Health by Department</div>
-    <div class="section-meta">Average attendance across all subjects per department.</div>
-    {% if dept_attendance %}
-    <div class="table-scroll content-scroll">
-      <table class="dtable">
-        <thead><tr><th>Department</th><th>Records</th><th>Avg Attendance</th></tr></thead>
-        <tbody>
-          {% for da in dept_attendance %}
-          <tr>
-            <td><div style="font-weight:600;color:var(--deep)">{{ da.dept.name }}</div><div style="font-size:11px;color:var(--muted)">{{ da.dept.code }}</div></td>
-            <td style="text-align:center;color:var(--muted)">{{ da.total }}</td>
-            <td>
-              <div style="display:flex;align-items:center;gap:8px">
-                <div class="att-bar-bg" style="flex:1"><div class="att-bar-fill" style="width:{{ da.pct }}%;background:{% if da.pct >= 75 %}var(--teal){% elif da.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div></div>
-                <span style="font-size:12px;font-weight:700;color:{% if da.pct >= 75 %}var(--teal){% elif da.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ da.pct }}%</span>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Health by Department</div>
+      <div class="section-meta">Average attendance % and defaulter count per department.</div>
+      {% if dept_attendance %}
+      <div class="table-scroll content-scroll">
+        <table class="dtable">
+          <thead><tr><th>Department</th><th>Avg Attendance</th><th>Defaulters</th></tr></thead>
+          <tbody>
+            {% for da in dept_attendance %}
+            <tr>
+              <td><div style="font-weight:600;color:var(--deep)">{{ da.dept.name }}</div><div style="font-size:11px;color:var(--muted)">{{ da.dept.code }}</div></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="att-bar-bg" style="flex:1"><div class="att-bar-fill" style="width:{{ da.pct }}%;background:{% if da.pct >= 75 %}var(--teal){% elif da.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div></div>
+                  <span style="font-size:12px;font-weight:700;color:{% if da.pct >= 75 %}var(--teal){% elif da.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ da.pct }}%</span>
+                </div>
+              </td>
+              <td style="text-align:center">
+                {% if da.defaulters > 0 %}<span style="font-weight:700;color:var(--red)">{{ da.defaulters }} <i class="fas fa-triangle-exclamation" style="font-size:10px"></i></span>
+                {% else %}<span style="color:var(--muted)">0</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
+      {% endif %}
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
-    {% endif %}
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-trophy"></i> Academic Performance by Department</div>
+      <div class="section-meta">Average GPA ranking across departments.</div>
+      {% if dept_gpa %}
+      {% for row in dept_gpa %}
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+        <div style="width:22px;height:22px;border-radius:50%;background:{% if forloop.counter == 1 %}var(--gold){% elif forloop.counter == 2 %}#9ca3af{% elif forloop.counter == 3 %}#b45309{% else %}var(--surface2){% endif %};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:{% if forloop.counter <= 3 %}#fff{% else %}var(--muted){% endif %};flex-shrink:0">{{ forloop.counter }}</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--deep)">{{ row.dept.name }}</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--teal)">{{ row.avg_gpa }}</div>
+        <div style="font-size:10px;color:var(--muted)">avg GPA</div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-trophy"></i>No result data yet.</div>
+      {% endif %}
+    </div>
   </div>
+
+  <!-- Semester distribution -->
+  {% if sem_distribution %}
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-layer-group"></i> Student Distribution by Semester</div>
+    <div style="display:flex;align-items:flex-end;gap:12px;height:100px;padding:8px 0">
+      {% for row in sem_distribution %}
+      {% widthratio row.count total_students 100 as bh %}
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:11px;font-weight:700;color:var(--teal)">{{ row.count }}</div>
+        <div style="width:100%;background:var(--teal);border-radius:4px 4px 0 0;height:{{ bh }}px;min-height:6px;opacity:.75"></div>
+        <div style="font-size:10px;color:var(--muted)">Sem {{ row.current_semester }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </section>
 
 <section data-dashboard-pane="notices" class="dashboard-pane">

@@ -1,19 +1,45 @@
-{% extends 'admin_panel/base_admin.html' %}
-{% block title %}Semester Planner - Admin{% endblock %}
-{% block nav_planner %}on{% endblock %}
-{% block breadcrumb %} / Semester Planner{% endblock %}
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Semester Planner — Admin{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Semester Planner{% endblock %}
 {% block page_sub %}Manage semester subjects, faculty allocation, availability, and automatic timetable generation{% endblock %}
+{% block sidebar_links %}{% with active_section='planner' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
-{% block content %}
-<div class="filter-bar">
+{% block extra_css %}
+<style>
+  .planner-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px}
+  .planner-label{font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px}
+  .fc{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;background:#fff}
+  .fc:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .fg{margin-bottom:14px}
+  .fg label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+  .planner-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .tt-matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+  .tt-matrix{width:100%;border-collapse:separate;border-spacing:0;background:#fff;min-width:780px}
+  .tt-matrix th{background:#17375e;color:#fff;font-size:12px;font-weight:800;padding:12px 10px;text-align:center}
+  .tt-matrix td{background:#f8fafc;border:2px solid #fff;vertical-align:top;padding:10px;min-width:120px}
+  .tt-matrix .time-col{background:#eef2f7;color:var(--deep);font-size:12px;font-weight:700;white-space:nowrap}
+  .tt-matrix .break-row td{background:#eceff3;color:var(--muted);font-size:12px;font-weight:700;text-align:center}
+  .tt-chip{display:block;border-radius:10px;padding:10px 8px;margin-bottom:6px;background:rgba(13,115,119,.08);border:1px solid rgba(13,115,119,.16)}
+  .tt-chip:last-child{margin-bottom:0}
+  .tt-chip-subj{font-size:12px;font-weight:800;color:var(--deep);line-height:1.35}
+  .tt-chip-meta{font-size:11px;color:var(--muted);margin-top:4px}
+  .sec-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:rgba(13,115,119,.1);color:var(--teal)}
+  @media(max-width:700px){.planner-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block form_content %}
+<!-- Filter bar -->
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:24px">
   <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap">
-    <select name="dept" class="filter-select" onchange="this.form.submit()">
+    <select name="dept" class="fc" style="width:auto;min-width:200px" onchange="this.form.submit()">
       {% for d in departments %}
       <option value="{{ d.pk }}" {% if department and department.pk == d.pk %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>
       {% endfor %}
     </select>
-    <select name="sem" class="filter-select" onchange="this.form.submit()">
+    <select name="sem" class="fc" style="width:auto" onchange="this.form.submit()">
       {% for i in "12345678" %}
       <option value="{{ i }}" {% if selected_semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
       {% endfor %}
@@ -25,211 +51,369 @@
     <input type="hidden" name="planner_action" value="generate_timetable"/>
     <input type="hidden" name="department" value="{{ department.pk }}"/>
     <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-    <button type="submit" class="btn-add"><i class="fas fa-wand-magic-sparkles"></i> Auto Update Timetable</button>
+    <button type="submit" class="qa-btn qa-teal"><i class="fas fa-wand-magic-sparkles"></i> Auto Update Timetable</button>
   </form>
   {% endif %}
 </div>
 
 {% if department %}
-<div class="stat-row">
-  <div class="stat-mini"><div class="n">{{ subjects|length }}</div><div class="l">Semester Subjects</div></div>
-  <div class="stat-mini"><div class="n">{{ subject_assignments|length }}</div><div class="l">Faculty Assignments</div></div>
-  <div class="stat-mini"><div class="n">{{ availability|length }}</div><div class="l">Availability Slots</div></div>
-  <div class="stat-mini"><div class="n">{{ timetable_entries|length }}</div><div class="l">Timetable Entries</div></div>
+<!-- Stats -->
+<div class="stat-grid" style="margin-bottom:24px">
+  <div class="stat-card"><div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-book"></i></div><div class="s-val">{{ subjects|length }}</div><div class="s-lbl">Semester Subjects</div></div>
+  <div class="stat-card"><div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-user-check"></i></div><div class="s-val">{{ subject_assignments|length }}</div><div class="s-lbl">Faculty Assignments</div></div>
+  <div class="stat-card"><div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-clock"></i></div><div class="s-val">{{ availability|length }}</div><div class="s-lbl">Availability Slots</div></div>
+  <div class="stat-card"><div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-calendar-days"></i></div><div class="s-val">{{ timetable_entries|length }}</div><div class="s-lbl">Timetable Entries</div></div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px">
-  <div class="form-card" style="max-width:none">
-    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Add Subject To Semester</div>
+<div class="planner-card" style="margin-bottom:20px">
+  <div class="planner-label">Section Strength</div>
+  <div class="section-meta" style="margin-bottom:12px">Students are grouped automatically by section capacity. Current capacity for {{ department.code }} is {{ department.section_capacity }} students per section.</div>
+  {% if section_strength_summary %}
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    {% for item in section_strength_summary %}
+    <span class="sec-pill"><i class="fas fa-users"></i> Section {{ item.section }}: {{ item.total }}</span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-users"></i>No student sections formed yet for Semester {{ selected_semester }}.</div>
+  {% endif %}
+</div>
+
+<!-- Add subject + Assign faculty -->
+<div class="planner-grid" style="margin-bottom:20px">
+  <div class="planner-card">
+    <div class="planner-label">Add Subject to Semester</div>
     <form method="POST">
       {% csrf_token %}
       <input type="hidden" name="planner_action" value="add_subject"/>
       <input type="hidden" name="department" value="{{ department.pk }}"/>
       <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Subject Name <span>*</span></label>
-          <input type="text" name="name" class="form-control" required/>
-        </div>
-        <div class="form-group">
-          <label>Subject Code <span>*</span></label>
-          <input type="text" name="code" class="form-control" required/>
-        </div>
+      <div class="planner-grid">
+        <div class="fg"><label>Subject Name *</label><input type="text" name="name" class="fc" required/></div>
+        <div class="fg"><label>Subject Code *</label><input type="text" name="code" class="fc" required/></div>
       </div>
-      <button type="submit" class="btn-submit"><i class="fas fa-plus"></i> Add Subject</button>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add Subject</button>
     </form>
   </div>
 
-  <div class="form-card" style="max-width:none">
-    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Assign Faculty</div>
+  <div class="planner-card">
+    <div class="planner-label">Assign Faculty to Subject</div>
+    <div class="section-meta" style="margin-bottom:12px">Assign one faculty per section. Same subject with 2 faculty = Section A &amp; B. Faculty from any department can be assigned.</div>
     <form method="POST">
       {% csrf_token %}
       <input type="hidden" name="planner_action" value="assign_faculty"/>
       <input type="hidden" name="department" value="{{ department.pk }}"/>
       <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Subject <span>*</span></label>
-          <select name="subject_id" class="form-control" required>
-            <option value="">Select Subject</option>
-            {% for subject in subjects %}
-            <option value="{{ subject.pk }}">{{ subject.name }} ({{ subject.code }})</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Faculty <span>*</span></label>
-          <select name="faculty_id" class="form-control" required>
+      <div class="planner-grid">
+        <div class="fg"><label>Subject *</label><select name="subject_id" class="fc" required><option value="">Select Subject</option>{% for subject in subjects %}<option value="{{ subject.pk }}">{{ subject.code }} — {{ subject.name }}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Faculty * <span style="font-size:10px;color:var(--muted);font-weight:400">(any dept)</span></label>
+          <select name="faculty_id" class="fc" required>
             <option value="">Select Faculty</option>
             {% for member in faculty %}
-            <option value="{{ member.pk }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+            <option value="{{ member.pk }}">{{ member.user.get_full_name|default:member.user.username }} ({{ member.department.code }})</option>
             {% endfor %}
           </select>
         </div>
       </div>
-      <button type="submit" class="btn-submit"><i class="fas fa-user-check"></i> Assign Faculty</button>
+      <button type="submit" class="qa-btn" style="background:#6366f1;color:#fff"><i class="fas fa-user-check"></i> Assign (adds a section)</button>
     </form>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:20px">
-  <div class="form-card" style="max-width:none">
-    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Faculty Availability</div>
+<!-- Faculty availability + Current subjects -->
+<div class="planner-grid" style="margin-bottom:20px">
+  <div class="planner-card">
+    <div class="planner-label">Faculty Availability</div>
     <form method="POST">
       {% csrf_token %}
       <input type="hidden" name="planner_action" value="add_availability"/>
       <input type="hidden" name="department" value="{{ department.pk }}"/>
       <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Faculty <span>*</span></label>
-          <select name="faculty_id" class="form-control" required>
-            <option value="">Select Faculty</option>
-            {% for member in faculty %}
-            <option value="{{ member.pk }}">{{ member.user.get_full_name|default:member.user.username }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Day <span>*</span></label>
-          <select name="day_of_week" class="form-control" required>
-            <option value="MON">Monday</option>
-            <option value="TUE">Tuesday</option>
-            <option value="WED">Wednesday</option>
-            <option value="THU">Thursday</option>
-            <option value="FRI">Friday</option>
-            <option value="SAT">Saturday</option>
-          </select>
-        </div>
+      <div class="planner-grid">
+        <div class="fg"><label>Faculty *</label><select name="faculty_id" class="fc" required><option value="">Select Faculty</option>{% for member in faculty %}<option value="{{ member.pk }}">{{ member.user.get_full_name|default:member.user.username }}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Day *</label><select name="day_of_week" class="fc" required><option value="MON">Monday</option><option value="TUE">Tuesday</option><option value="WED">Wednesday</option><option value="THU">Thursday</option><option value="FRI">Friday</option><option value="SAT">Saturday</option></select></div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Start Time <span>*</span></label>
-          <input type="time" name="start_time" class="form-control" required/>
-        </div>
-        <div class="form-group">
-          <label>End Time <span>*</span></label>
-          <input type="time" name="end_time" class="form-control" required/>
-        </div>
+      <div class="planner-grid">
+        <div class="fg"><label>Start Time *</label><input type="time" name="start_time" class="fc" required/></div>
+        <div class="fg"><label>End Time *</label><input type="time" name="end_time" class="fc" required/></div>
       </div>
-      <button type="submit" class="btn-submit"><i class="fas fa-clock"></i> Save Availability</button>
+      <button type="submit" class="qa-btn qa-gold"><i class="fas fa-clock"></i> Save Availability</button>
     </form>
   </div>
 
-  <div class="ap-card">
-    <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:14px">Current Semester Subjects</div>
+  <div class="planner-card">
+    <div class="planner-label">Current Semester Subjects</div>
     {% if subjects %}
-    <table class="ap-table">
-      <thead><tr><th>Code</th><th>Name</th><th>Semester</th></tr></thead>
-      <tbody>
-        {% for subject in subjects %}
-        <tr>
-          <td>{{ subject.code }}</td>
-          <td>{{ subject.name }}</td>
-          <td>{{ subject.semester }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Code</th><th>Name</th><th>Sem</th></tr></thead>
+        <tbody>{% for subject in subjects %}<tr><td style="font-weight:600;color:var(--teal)">{{ subject.code }}</td><td>{{ subject.name }}</td><td style="text-align:center">{{ subject.semester }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
     {% else %}
-    <div class="empty-state"><i class="fas fa-book"></i><p>No subjects yet for this semester.</p></div>
+    <div class="empty"><i class="fas fa-book"></i>No subjects yet for this semester.</div>
     {% endif %}
   </div>
 </div>
 
-<div class="ap-card" style="margin-top:20px">
-  <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:14px">Faculty Assignment Map</div>
+<!-- Faculty assignment map -->
+<div class="planner-card" style="margin-bottom:20px">
+  <div class="planner-label">Faculty Assignment Map — Sections</div>
+  <div class="section-meta" style="margin-bottom:12px">Each row = one section. Multiple rows for same subject = multiple sections (A, B, C…). Same faculty can appear across different subjects or departments.</div>
   {% if subject_assignments %}
-  <table class="ap-table">
-    <thead><tr><th>Subject</th><th>Faculty</th><th>Action</th></tr></thead>
-    <tbody>
-      {% for item in subject_assignments %}
-      <tr>
-        <td>{{ item.subject.code }} - {{ item.subject.name }}</td>
-        <td>{{ item.faculty.user.get_full_name|default:item.faculty.user.username }}</td>
-        <td>
-          <form method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="planner_action" value="remove_assignment"/>
-            <input type="hidden" name="department" value="{{ department.pk }}"/>
-            <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-            <input type="hidden" name="assignment_id" value="{{ item.pk }}"/>
-            <button type="submit" class="btn-del"><i class="fas fa-unlink"></i> Remove</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Subject</th><th>Section</th><th>Faculty</th><th>Dept</th><th></th></tr></thead>
+      <tbody>
+        {% regroup subject_assignments by subject as grouped_assignments %}
+        {% for group in grouped_assignments %}
+          {% for item in group.list %}
+          <tr>
+            {% if forloop.first %}
+            <td rowspan="{{ group.list|length }}" style="font-weight:600;color:var(--deep);vertical-align:top;padding-top:12px">
+              {{ item.subject.code }}<div style="font-size:11px;color:var(--muted);font-weight:400">{{ item.subject.name }}</div>
+            </td>
+            {% endif %}
+            <td><span style="font-size:11px;font-weight:800;background:rgba(13,115,119,.1);color:var(--teal);padding:2px 8px;border-radius:6px">Sec {{ forloop.counter }}</span></td>
+            <td>{{ item.faculty.user.get_full_name|default:item.faculty.user.username }}</td>
+            <td style="font-size:11px;color:var(--muted)">{{ item.faculty.department.code }}</td>
+            <td>
+              <form method="POST" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="planner_action" value="remove_assignment"/>
+                <input type="hidden" name="department" value="{{ department.pk }}"/>
+                <input type="hidden" name="semester" value="{{ selected_semester }}"/>
+                <input type="hidden" name="assignment_id" value="{{ item.pk }}"/>
+                <button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600"><i class="fas fa-unlink"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
-  <div class="empty-state"><i class="fas fa-user-check"></i><p>No faculty assignments yet.</p></div>
+  <div class="empty"><i class="fas fa-user-check"></i>No faculty assignments yet. Assign faculty above to define sections.</div>
   {% endif %}
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:20px">
-  <div class="ap-card">
-    <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:14px">Availability Slots</div>
+<!-- Timetable CSV Upload -->
+<div class="planner-card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+    <div class="planner-label" style="margin:0">Upload Timetable from CSV</div>
+    <a href="{% url 'admin_timetable_template_csv' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text);border:1.5px solid var(--border);font-size:12px;padding:7px 14px">
+      <i class="fas fa-download"></i> Download Template
+    </a>
+  </div>
+  <div class="hint-box" style="margin-bottom:14px">
+    Columns: <code>department_code</code>, <code>subject_code</code>, <code>faculty_employee_id</code>, <code>day_of_week</code> (MON/TUE/WED/THU/FRI/SAT), <code>start_time</code> (HH:MM), <code>end_time</code>, <code>room_number</code>, <code>section</code> (A/B/C — optional, for multiple sections of the same subject). Duplicate slots are skipped automatically.
+  </div>
+  {% if department %}
+  <form method="POST" action="{% url 'admin_timetable_upload_csv' %}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+    {% csrf_token %}
+    <input type="hidden" name="department" value="{{ department.pk }}"/>
+    <input type="hidden" name="semester" value="{{ selected_semester }}"/>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">CSV File</label>
+      <input type="file" name="csv_file" accept=".csv" required style="font-size:13px;padding:6px 0"/>
+    </div>
+    <button type="submit" class="qa-btn qa-teal"><i class="fas fa-upload"></i> Upload Timetable</button>
+  </form>
+  {% else %}
+  <div style="font-size:13px;color:var(--muted)">Select a department above to upload.</div>
+  {% endif %}
+</div>
+
+<!-- Availability + Timetable -->
+<div class="planner-grid">
+  <div class="planner-card">
+    <div class="planner-label">Availability Slots</div>
     {% if availability %}
-    <table class="ap-table">
-      <thead><tr><th>Faculty</th><th>Day</th><th>Time</th></tr></thead>
-      <tbody>
-        {% for slot in availability %}
-        <tr>
-          <td>{{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }}</td>
-          <td>{{ slot.get_day_of_week_display }}</td>
-          <td>{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Faculty</th><th>Day</th><th>Time</th></tr></thead>
+        <tbody>{% for slot in availability %}<tr><td>{{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }}</td><td>{{ slot.get_day_of_week_display }}</td><td>{{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
     {% else %}
-    <div class="empty-state"><i class="fas fa-clock"></i><p>No availability slots saved yet.</p></div>
+    <div class="empty"><i class="fas fa-clock"></i>No availability slots saved yet.</div>
     {% endif %}
   </div>
 
-  <div class="ap-card">
-    <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:14px">Generated Timetable</div>
+  <div class="planner-card">
+    <div class="planner-label">Generated Timetable</div>
+    {% if timetable_matrix %}
+    <div class="section-meta" style="margin-bottom:12px">Weekly timetable matrix built from the current subject, section, faculty, room, and break data.</div>
+    <div class="tt-matrix-wrap" style="margin-bottom:16px">
+      <table class="tt-matrix">
+        <thead>
+          <tr>
+            <th style="text-align:left">Period</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+            <th>Saturday</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in timetable_matrix %}
+          <tr class="{% if row.is_break_row %}break-row{% endif %}">
+            <td class="time-col">{{ row.label }}</td>
+            {% for cell in row.cells %}
+            <td>
+              {% if cell.entries %}
+                {% for entry in cell.entries %}
+                <div class="tt-chip">
+                  <div class="tt-chip-subj">{{ entry.subject.name }}</div>
+                  <div class="tt-chip-meta">{{ entry.subject.code }}{% if entry.section %} · Section {{ entry.section }}{% endif %}</div>
+                  <div class="tt-chip-meta">{{ entry.classroom.room_number }} · {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
+                </div>
+                {% endfor %}
+              {% elif cell.break_label %}
+                <div style="font-size:12px;font-weight:700;color:var(--muted);text-align:center">{{ cell.break_label }}</div>
+              {% else %}
+                <div style="font-size:12px;color:#94a3b8;text-align:center">—</div>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
     {% if timetable_entries %}
-    <table class="ap-table">
-      <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th></tr></thead>
-      <tbody>
-        {% for entry in timetable_entries %}
-        <tr>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Sec</th><th>Faculty</th><th>Dept</th><th>Room</th></tr></thead>
+        <tbody>{% for entry in timetable_entries %}<tr>
           <td>{{ entry.get_day_of_week_display }}</td>
-          <td>{{ entry.start_time|time:"H:i" }} - {{ entry.end_time|time:"H:i" }}</td>
-          <td>{{ entry.subject.code }}</td>
+          <td style="white-space:nowrap">{{ entry.start_time|time:"g:i A" }} – {{ entry.end_time|time:"g:i A" }}</td>
+          <td style="font-weight:600;color:var(--teal)">{{ entry.subject.code }}<div style="font-size:10px;color:var(--muted);font-weight:400">{{ entry.subject.name }}</div></td>
+          <td>{% if entry.section %}<span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.1);color:var(--teal);padding:1px 7px;border-radius:5px">{{ entry.section }}</span>{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
           <td>{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</td>
-          <td>{{ entry.classroom.room_number }}</td>
+          <td style="font-size:11px;color:var(--muted)">{{ entry.faculty.department.code }}</td>
+          <td>{{ entry.classroom.room_number }}{% if entry.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ entry.classroom.building }}</div>{% endif %}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-days"></i>No timetable yet. Add assignments and availability, then click Auto Update.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Break Management -->
+<div class="planner-grid" style="margin-top:20px">
+  <div class="planner-card">
+    <div class="planner-label"><i class="fas fa-coffee"></i> Add Break Slot</div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="planner_action" value="add_break"/>
+      <input type="hidden" name="department" value="{{ department.pk }}"/>
+      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
+      <div class="fg"><label>Break Label *</label>
+        <select name="break_label" class="fc">
+          <option value="Lunch Break">Lunch Break</option>
+          <option value="Tea Break">Tea Break</option>
+          <option value="Short Break">Short Break</option>
+          <option value="Prayer Break">Prayer Break</option>
+        </select>
+      </div>
+      <div class="planner-grid">
+        <div class="fg"><label>Day *</label>
+          <select name="break_day" class="fc" required>
+            <option value="MON">Monday</option><option value="TUE">Tuesday</option>
+            <option value="WED">Wednesday</option><option value="THU">Thursday</option>
+            <option value="FRI">Friday</option><option value="SAT">Saturday</option>
+          </select>
+        </div>
+        <div class="fg"><label>Applies To</label>
+          <select name="break_scope" class="fc">
+            <option value="all">All Departments (College-wide)</option>
+            <option value="dept">This Department Only</option>
+          </select>
+        </div>
+      </div>
+      <div class="planner-grid">
+        <div class="fg"><label>Start Time *</label><input type="time" name="break_start" class="fc" required/></div>
+        <div class="fg"><label>End Time *</label><input type="time" name="break_end" class="fc" required/></div>
+      </div>
+      <button type="submit" class="qa-btn" style="background:#92400e;color:#fff"><i class="fas fa-coffee"></i> Add Break</button>
+    </form>
+  </div>
+
+  <div class="planner-card">
+    <div class="planner-label">Scheduled Breaks</div>
+    {% if college_breaks %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Label</th><th>Day</th><th>Time</th><th>Scope</th><th></th></tr></thead>
+        <tbody>
+          {% for brk in college_breaks %}
+          <tr>
+            <td style="font-weight:600"><i class="fas fa-coffee" style="color:#92400e;margin-right:5px"></i>{{ brk.label }}</td>
+            <td>{{ brk.get_day_of_week_display }}</td>
+            <td style="white-space:nowrap">{{ brk.start_time|time:"g:i A" }} – {{ brk.end_time|time:"g:i A" }}</td>
+            <td><span class="dbadge {% if brk.applies_to_all %}dbadge-active{% else %}dbadge-warning{% endif %}">{% if brk.applies_to_all %}College-wide{% else %}Dept{% endif %}</span></td>
+            <td>
+              <form method="POST" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="planner_action" value="delete_break"/>
+                <input type="hidden" name="break_id" value="{{ brk.pk }}"/>
+                <input type="hidden" name="department" value="{{ department.pk }}"/>
+                <input type="hidden" name="semester" value="{{ selected_semester }}"/>
+                <button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-coffee"></i>No breaks scheduled yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Classroom Management -->
+<div class="planner-card" style="margin-top:20px">
+  <div class="planner-label"><i class="fas fa-door-open"></i> Classrooms / Rooms</div>
+  <div class="planner-grid">
+    <form method="POST" style="display:contents">
+      {% csrf_token %}
+      <input type="hidden" name="planner_action" value="add_classroom"/>
+      <input type="hidden" name="department" value="{{ department.pk }}"/>
+      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
+      <div class="fg"><label>Room Number *</label><input type="text" name="room_number" class="fc" placeholder="e.g. 101, LAB-A" required/></div>
+      <div class="fg"><label>Building</label><input type="text" name="building" class="fc" placeholder="e.g. Block A, Main Block"/></div>
+      <div class="fg"><label>Capacity</label><input type="number" name="capacity" class="fc" value="60" min="1"/></div>
+      <div class="fg" style="display:flex;align-items:flex-end"><button type="submit" class="qa-btn qa-deep"><i class="fas fa-plus"></i> Add Room</button></div>
+    </form>
+  </div>
+  {% if classrooms %}
+  <div class="table-scroll" style="margin-top:14px">
+    <table class="dtable">
+      <thead><tr><th>Room</th><th>Building</th><th>Capacity</th></tr></thead>
+      <tbody>
+        {% for room in classrooms %}
+        <tr>
+          <td style="font-weight:600;color:var(--teal)">{{ room.room_number }}</td>
+          <td style="color:var(--muted)">{{ room.building|default:"—" }}</td>
+          <td style="text-align:center">{{ room.capacity }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <div class="empty-state"><i class="fas fa-calendar-days"></i><p>No timetable entries yet. Use auto update after adding assignments and availability.</p></div>
-    {% endif %}
   </div>
+  {% endif %}
 </div>
+
 {% else %}
-<div class="empty-state"><i class="fas fa-building"></i><p>Add a department first to use the semester planner.</p></div>
+<div class="empty" style="padding:48px 0"><i class="fas fa-building"></i>Add a department first to use the semester planner.</div>
 {% endif %}
 {% endblock %}

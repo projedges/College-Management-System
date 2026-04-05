@@ -85,7 +85,7 @@
       {% for slot in timetable_slots %}
       <div class="slot-row">
         <div class="slot-day">{{ slot.day_of_week }}</div>
-        <div class="slot-time">{{ slot.start_time|time:"H:i" }} – {{ slot.end_time|time:"H:i" }}</div>
+        <div class="slot-time">{{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}</div>
         <div style="flex:1">
           <span style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</span>
           <span style="color:var(--muted);font-size:11px"> · {{ slot.subject.code }}</span>

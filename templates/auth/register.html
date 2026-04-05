@@ -4,130 +4,214 @@
 
 {% block extra_css %}
 <style>
-  body{background:linear-gradient(150deg,#eaf4f5 0%,#f2f6f8 50%,#fdf9ee 100%);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-  .auth-wrap{width:100%;max-width:560px}
-  .auth-logo{text-align:center;margin-bottom:28px}
-  .auth-logo img{height:64px;width:auto;max-width:220px;object-fit:contain;display:block;margin:0 auto}
-  .auth-logo .logo-txt{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)}
-  .auth-logo .logo-txt span{color:var(--teal)}
-  .auth-logo .logo-sub{font-size:12px;color:var(--muted);margin-top:2px;letter-spacing:.5px}
-  .auth-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--border);padding:36px;box-shadow:0 8px 40px rgba(7,30,38,.12)}
-  .auth-card h2{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:4px}
-  .auth-card .sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.7}
-  .info-box{background:var(--surface2);border:1px dashed #bcd2db;border-radius:14px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.7}
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;padding:0;min-height:100vh;display:flex;background:#f0f4f5;font-family:'Inter',sans-serif}
+
+  .reg-shell{display:flex;width:100%;min-height:100vh}
+
+  /* ── Left brand panel (same as login) ── */
+  .reg-brand{flex:1;background:linear-gradient(145deg,#071e26 0%,#0d5c61 55%,#0d7377 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 40px;position:relative;overflow:hidden}
+  .reg-brand::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+  .reg-brand::after{content:'';position:absolute;bottom:-80px;right:-80px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.04)}
+  .brand-logo-wrap{position:relative;z-index:1;text-align:center;margin-bottom:40px}
+  .brand-logo-wrap img{height:72px;width:auto;filter:brightness(0) invert(1);opacity:.95}
+  .brand-logo-txt{font-family:'Outfit',sans-serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:-.5px}
+  .brand-logo-txt span{color:#e6a817}
+  .brand-tagline{font-size:13px;color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.8px;text-transform:uppercase}
+  .brand-steps{position:relative;z-index:1;display:flex;flex-direction:column;gap:0;width:100%;max-width:300px}
+  .brand-step{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .brand-step:last-child{border-bottom:none}
+  .step-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#e6a817;flex-shrink:0;margin-top:1px}
+  .step-text{font-size:13px;color:rgba(255,255,255,.75);line-height:1.5}
+  .step-text strong{color:#fff;display:block;margin-bottom:1px}
+  .brand-footer{position:relative;z-index:1;margin-top:40px;font-size:11px;color:rgba(255,255,255,.3);text-align:center;letter-spacing:.3px}
+
+  /* ── Right form panel ── */
+  .reg-form-panel{width:520px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:40px 48px;background:#fff;overflow-y:auto}
+  .reg-form-inner{width:100%;max-width:420px}
+
+  .form-head{margin-bottom:28px}
+  .form-head h1{font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:#071e26;margin:0 0 6px}
+  .form-head p{font-size:13px;color:#6b7280;margin:0;line-height:1.6}
+
+  /* Invite-required state */
+  .invite-icon{width:64px;height:64px;border-radius:16px;background:rgba(13,115,119,.08);display:flex;align-items:center;justify-content:center;font-size:26px;color:#0d7377;margin-bottom:20px}
+  .invite-info{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin:18px 0 24px;font-size:13px;color:#6b7280;line-height:1.7;display:flex;align-items:flex-start;gap:10px}
+  .invite-info i{color:#0d7377;margin-top:2px;flex-shrink:0}
+  .invite-actions{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+  .btn-primary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,#0d7377,#0a5c60);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;text-decoration:none;transition:all .2s;box-shadow:0 4px 16px rgba(13,115,119,.3);font-family:'Inter',sans-serif}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(13,115,119,.4)}
+  .btn-secondary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:10px;background:#071e26;color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;text-decoration:none;transition:all .2s;font-family:'Inter',sans-serif}
+  .btn-secondary:hover{background:#0d2d38;transform:translateY(-1px)}
+
+  /* Registration form */
+  .info-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#166534;line-height:1.6;display:flex;gap:9px;align-items:flex-start}
+  .info-box i{margin-top:1px;flex-shrink:0}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .form-group{margin-bottom:16px}
-  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
-  .form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none}
-  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
-  .form-group textarea{resize:vertical;min-height:100px}
-  .btn-submit{width:100%;padding:12px;border-radius:var(--r);background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(13,115,119,.3);font-family:'Inter',sans-serif}
-  .btn-submit:hover{background:var(--teal-dk);transform:translateY(-1px)}
-  .auth-footer{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
-  .auth-footer a{color:var(--teal);font-weight:600}
-  .auth-footer a:hover{text-decoration:underline}
-  @media(max-width:560px){.form-row{grid-template-columns:1fr}}
+  .fgroup{margin-bottom:16px}
+  .fgroup label{display:block;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+  .fgroup input,.fgroup select,.fgroup textarea{width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:#111827;background:#fafafa;transition:border-color .2s,box-shadow .2s;outline:none}
+  .fgroup input:focus,.fgroup select:focus,.fgroup textarea:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.1);background:#fff}
+  .fgroup input::placeholder,.fgroup textarea::placeholder{color:#9ca3af}
+  .fgroup textarea{resize:vertical;min-height:90px}
+  .btn-submit{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,#0d7377,#0a5c60);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(13,115,119,.3);font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(13,115,119,.4)}
+
+  .divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#d1d5db;font-size:12px}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:#f3f4f6}
+  .form-footer{text-align:center;font-size:13px;color:#6b7280}
+  .form-footer a{color:#0d7377;font-weight:700;text-decoration:none}
+  .form-footer a:hover{text-decoration:underline}
+
+  .alert{padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+  .alert-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+  .alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+
+  @media(max-width:900px){
+    .reg-brand{display:none}
+    .reg-form-panel{width:100%;padding:32px 24px}
+  }
+  @media(max-width:480px){
+    .form-row{grid-template-columns:1fr}
+    .reg-form-panel{padding:24px 20px}
+  }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="auth-wrap">
-  <div class="auth-logo">
-    <img src="{% static 'students/images/logo.png' %}" alt="Logo"
-         onerror="this.style.display='none';document.getElementById('logo-fb').style.display='block'"/>
-    <div id="logo-fb" style="display:none">
-      <div class="logo-txt">Edu<span>Track</span></div>
+<div class="reg-shell">
+
+  <!-- Left brand panel -->
+  <div class="reg-brand">
+    <div class="brand-logo-wrap">
+      <img src="{% static 'students/images/logo.png' %}" alt="EduTrack"
+           onerror="this.style.display='none';document.getElementById('brand-txt').style.display='block'"/>
+      <div id="brand-txt" style="display:none">
+        <div class="brand-logo-txt">Edu<span>Track</span></div>
+      </div>
+      <div class="brand-tagline">Student Onboarding</div>
     </div>
-    <div class="logo-sub">Academic Management Portal</div>
+
+    <div class="brand-steps">
+      <div class="brand-step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Get an invite link</strong>Your college admin shares a one-time link tied to your email</div>
+      </div>
+      <div class="brand-step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Submit your details</strong>Fill in your personal and academic information</div>
+      </div>
+      <div class="brand-step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Admin reviews & approves</strong>Your college admin verifies and creates your account</div>
+      </div>
+      <div class="brand-step">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong>Sign in and get started</strong>Your roll number is auto-generated on approval</div>
+      </div>
+    </div>
+
+    <div class="brand-footer">Powered by ProEdge EduTrack &nbsp;·&nbsp; Invite-only access</div>
   </div>
 
-  <div class="auth-card">
-    {% if invite_required %}
-    <h2>Invite link required</h2>
-    <p class="sub">Student access is no longer open from the public site. A college admin must share a one-time onboarding link for each student.</p>
-    <div class="info-box">
-      If you do not have an invite link, contact your college admin or raise a request through the help desk.
-    </div>
-    {% else %}
-    <h2>Student access request</h2>
-    <p class="sub">This link was shared by the college admin and can be used only once. Submit your details here so the admin can verify them and create your student account.</p>
+  <!-- Right panel -->
+  <div class="reg-form-panel">
+    <div class="reg-form-inner">
 
-    <div class="info-box">
-      This is a controlled onboarding form, not a direct registration form.
-      Faculty, HOD, Principal, College Admin, and Super Admin accounts are always created internally.
-    </div>
-    {% endif %}
-
-    {% for message in messages %}
+      {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">
-        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}"></i>
+        <i class="fas fa-{% if message.tags == 'error' %}circle-exclamation{% else %}circle-check{% endif %}" style="margin-top:1px;flex-shrink:0"></i>
         {{ message }}
       </div>
-    {% endfor %}
+      {% endfor %}
 
-    {% if invite_required %}
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a href="{% url 'helpdesk' %}" class="btn-submit" style="text-align:center;text-decoration:none">Open Help Desk</a>
-      <a href="{% url 'login' %}" class="btn-submit" style="text-align:center;text-decoration:none;background:var(--deep)">Back to Sign In</a>
-    </div>
-    {% else %}
-    <form method="POST" action="{% url 'register' %}">
-      {% csrf_token %}
-      <input type="hidden" name="token" value="{{ invite.token }}"/>
-      <div class="form-row">
-        <div class="form-group">
-          <label>First Name</label>
-          <input type="text" name="first_name" placeholder="First name" required/>
-        </div>
-        <div class="form-group">
-          <label>Last Name</label>
-          <input type="text" name="last_name" placeholder="Last name" required/>
-        </div>
+      {% if invite_required %}
+      <!-- ── Invite required state ── -->
+      <div class="invite-icon"><i class="fas fa-link-slash"></i></div>
+      <div class="form-head">
+        <h1>Invite link required</h1>
+        <p>Student access is controlled. A college admin must share a one-time onboarding link for each student — public registration is not available.</p>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" name="email" value="{{ invite.invited_email }}" placeholder="Your email address" required/>
-        </div>
-        <div class="form-group">
-          <label>Phone Number</label>
-          <input type="text" name="phone_number" placeholder="Mobile number"/>
-        </div>
+      <div class="invite-info">
+        <i class="fas fa-circle-info"></i>
+        <span>If you don't have an invite link, contact your college admin directly or raise a support request through the help desk below.</span>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Preferred Department</label>
-          <select name="desired_department">
-            <option value="">Select Department</option>
-            {% for department in departments %}
-            <option value="{{ department.pk }}" {% if invite.department_id == department.pk %}selected{% endif %}>{{ department.name }} ({{ department.code }})</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Current Semester</label>
-          <select name="current_semester">
-            <option value="">Select Semester</option>
-            {% for i in "12345678" %}
-            <option value="{{ i }}" {% if invite.current_semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
-            {% endfor %}
-          </select>
-        </div>
+      <div class="invite-actions">
+        <a href="{% url 'helpdesk' %}" class="btn-primary"><i class="fas fa-headset"></i> Open Help Desk</a>
+        <a href="{% url 'login' %}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Sign In</a>
       </div>
-      <div class="form-group">
-        <label>Admission Year</label>
-        <input type="number" name="admission_year" min="2000" max="2100" placeholder="e.g. 2024" value="{{ invite.admission_year|default:'' }}"/>
-      </div>
-      <div class="form-group">
-        <label>Message</label>
-        <textarea name="message" placeholder="Add any note that can help the college admin verify your request"></textarea>
-      </div>
-      <button type="submit" class="btn-submit">Submit Request</button>
-    </form>
-    {% endif %}
 
-    <div class="auth-footer">
-      Already have an account? <a href="{% url 'login' %}">Sign in</a>
+      {% else %}
+      <!-- ── Registration form ── -->
+      <div class="form-head">
+        <h1>Student access request</h1>
+        <p>This link was shared by your college admin and can be used only once. Submit your details for review.</p>
+      </div>
+      <div class="info-box">
+        <i class="fas fa-circle-check"></i>
+        <span>This is a controlled onboarding form. Faculty, HOD, Principal, and Admin accounts are created internally by the college admin.</span>
+      </div>
+
+      <form method="POST" action="{% url 'register' %}">
+        {% csrf_token %}
+        <input type="hidden" name="token" value="{{ invite.token }}"/>
+        <div class="form-row">
+          <div class="fgroup">
+            <label>First Name</label>
+            <input type="text" name="first_name" placeholder="First name" required/>
+          </div>
+          <div class="fgroup">
+            <label>Last Name</label>
+            <input type="text" name="last_name" placeholder="Last name" required/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fgroup">
+            <label>Email</label>
+            <input type="email" name="email" value="{{ invite.invited_email }}" placeholder="Your email" required/>
+          </div>
+          <div class="fgroup">
+            <label>Phone</label>
+            <input type="text" name="phone_number" placeholder="Mobile number"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fgroup">
+            <label>Department</label>
+            <select name="desired_department">
+              <option value="">Select Department</option>
+              {% for department in departments %}
+              <option value="{{ department.pk }}" {% if invite.department_id == department.pk %}selected{% endif %}>{{ department.name }} ({{ department.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="fgroup">
+            <label>Semester</label>
+            <select name="current_semester">
+              <option value="">Select Semester</option>
+              {% for i in "12345678" %}
+              <option value="{{ i }}" {% if invite.current_semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="fgroup">
+          <label>Admission Year</label>
+          <input type="number" name="admission_year" min="2000" max="2100" placeholder="e.g. 2024" value="{{ invite.admission_year|default:'' }}"/>
+        </div>
+        <div class="fgroup">
+          <label>Message <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#9ca3af">(optional)</span></label>
+          <textarea name="message" placeholder="Any note to help the admin verify your request…"></textarea>
+        </div>
+        <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i> Submit Request</button>
+      </form>
+      {% endif %}
+
+      <div class="divider">or</div>
+      <div class="form-footer">
+        Already have an account? <a href="{% url 'login' %}">Sign in</a>
+      </div>
+
     </div>
   </div>
 </div>

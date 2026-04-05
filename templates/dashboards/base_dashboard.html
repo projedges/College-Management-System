@@ -45,23 +45,19 @@
 
   <!-- Sidebar -->
   <aside class="db-sidebar" id="db-sidebar">
+    <!-- College identity header -->
     <div class="sb-head">
       {% if college and college.logo %}
-        <div class="sb-logo-wrap">
-          <img src="{{ college.logo.url }}" alt="{{ college.name }}" class="sb-logo-img"/>
-        </div>
+        <img src="{{ college.logo.url }}" alt="{{ college.name }}" class="sb-college-logo"/>
+        <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
+      {% elif college %}
+        <div class="sb-college-initials">{{ college.code|slice:":2"|upper }}</div>
+        <div class="sb-college-head-name">{{ college.name|truncatechars:22 }}</div>
+        <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
       {% else %}
-        <div class="sb-logo-wrap">
-          <img src="{% static 'students/images/logo.png' %}" alt="Logo" class="sb-logo-img"
-               onerror="this.parentElement.style.display='none';document.getElementById('sb-logo-fb').style.display='block'"/>
-        </div>
-        <div id="sb-logo-fb" style="display:none;font-family:'Outfit',sans-serif;font-size:18px;font-weight:900;color:#fff;padding:0 16px">
-          {% if college %}{{ college.name|truncatechars:18 }}{% else %}Edu<span style="color:var(--teal-lt)">Track</span>{% endif %}
-        </div>
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:#fff">Edu<span style="color:var(--teal-lt)">Track</span></div>
+        <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
       {% endif %}
-      <button class="sb-close" id="sb-close" aria-label="Close menu">
-        <i class="fas fa-times"></i>
-      </button>
     </div>
 
     {% if college %}
@@ -72,7 +68,6 @@
     {% endif %}
 
     <nav class="sb-nav">
-      <p class="sb-nav-label">Menu</p>
       {% block sidebar_links %}{% endblock %}
     </nav>
 
@@ -89,13 +84,24 @@
         <i class="fas fa-sign-out-alt"></i> Sign Out
       </a>
     </div>
+    <!-- Powered by footer -->
+    <div class="sb-powered">Powered by <span>ProEdge EduTrack</span></div>
   </aside>
 
   <!-- Main content -->
   <main class="db-main">
     <div class="db-page-head">
-      <h1 class="db-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
-      <p class="db-page-sub">{% block page_sub %}Welcome back, {{ request.user.first_name|default:request.user.username }}{% endblock %}</p>
+      <div class="db-page-head-row">
+        <div>
+          <h1 class="db-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+          <p class="db-page-sub">{% block page_sub %}Welcome back, {{ request.user.first_name|default:request.user.username }}{% endblock %}</p>
+        </div>
+        <div class="topbar-session-timer{% if request.is_college_admin %} admin-timer-hidden{% endif %}" id="sb-session-timer" title="Session time remaining">
+          <i class="fas fa-clock"></i>
+          <span class="timer-label">Session</span>
+          <span id="sb-timer-display" style="font-variant-numeric:tabular-nums;letter-spacing:.5px">--:--</span>
+        </div>
+      </div>
     </div>
 
     {% block quick_nav %}{% endblock %}
@@ -110,6 +116,18 @@
   </main>
 </div>
 
+<!-- Session expiry modal (college admin only) -->
+{% if request.is_college_admin %}
+<div id="session-expiry-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="width:56px;height:56px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:22px;color:#ef4444"><i class="fas fa-clock"></i></div>
+    <h3 style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:#071e26;margin-bottom:8px">Session Expired</h3>
+    <p style="font-size:14px;color:#5a7080;margin-bottom:24px;line-height:1.6">You've been inactive for 30 minutes. Please sign in again to continue.</p>
+    <a href="{% url 'login' %}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;background:#0d7377;color:#fff;font-size:14px;font-weight:700;text-decoration:none"><i class="fas fa-arrow-right-to-bracket"></i> Sign In Again</a>
+  </div>
+</div>
+{% endif %}
+
 <style>
 /* ── Layout ── */
 .db-layout{display:flex;min-height:100vh}
@@ -121,10 +139,10 @@
 .mob-logo-img{height:36px;width:auto;max-width:140px;object-fit:contain}
 .mob-role-badge{font-size:11px;font-weight:700;color:var(--teal);background:rgba(13,115,119,.08);padding:3px 10px;border-radius:99px;white-space:nowrap}
 
-/* ── Mobile top bar ── */
-.sb-head{padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;min-height:72px}
-.sb-logo-wrap{display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:10px;padding:6px 10px}
-.sb-logo-img{height:44px;width:auto;max-width:160px;object-fit:contain;display:block}
+.sb-head{padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;min-height:72px}
+.sb-college-logo{height:52px;width:auto;max-width:160px;object-fit:contain;display:block;flex-shrink:0}
+.sb-college-initials{width:44px;height:44px;border-radius:10px;background:var(--teal);display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
+.sb-college-head-name{font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;color:#fff;line-height:1.3;flex:1;min-width:0;word-break:break-word}
 .sb-close{display:none;background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .2s}
 .sb-close:hover{color:#fff}
 .sb-nav{padding:14px 12px;flex:1}
@@ -140,6 +158,19 @@
 .sb-college-banner{padding:9px 16px 10px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)}
 .sb-college-name{font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;color:#fff;line-height:1.3;word-break:break-word}
 .sb-college-tagline{font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;font-style:italic}
+.sb-powered{padding:8px 16px;font-size:10px;color:rgba(255,255,255,.25);text-align:center;letter-spacing:.3px}
+.sb-powered span{color:rgba(255,255,255,.45);font-weight:600}
+.sb-session-timer{display:none}
+.topbar-session-timer{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);padding:7px 14px;border-radius:99px;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);transition:all .3s;white-space:nowrap;flex-shrink:0}
+.topbar-session-timer i{font-size:13px;color:var(--teal)}
+.topbar-session-timer .timer-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
+.topbar-session-timer.warn{color:#92400e;background:#fef3c7;border-color:#fcd34d}
+.topbar-session-timer.warn i{color:#d97706}
+.topbar-session-timer.urgent{color:#991b1b;background:#fee2e2;border-color:#fca5a5;animation:pulse-timer .8s infinite}
+.topbar-session-timer.urgent i{color:#ef4444}
+.admin-timer-hidden{display:none !important}
+.db-page-head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+@keyframes pulse-timer{0%,100%{opacity:1}50%{opacity:.6}}
 
 /* Sidebar overlay */
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:299;backdrop-filter:blur(2px)}
@@ -154,7 +185,7 @@
 /* ── Sidebar links ── */
 .sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:500;text-decoration:none;transition:all .2s;margin-bottom:2px}
 .sb-link:hover,.sb-link.active{background:rgba(255,255,255,.08);color:#fff}
-.sb-link.active{background:var(--teal);color:#fff}
+.sb-link.active{background:rgba(255,255,255,.15);color:#fff;border-left:3px solid var(--teal);padding-left:9px}
 .sb-link i{width:16px;text-align:center;font-size:14px;flex-shrink:0}
 
 /* ── Shared dashboard components ── */
@@ -257,10 +288,22 @@
   /* ── Section switching ── */
   var panes = Array.prototype.slice.call(document.querySelectorAll('[data-dashboard-pane]'));
   var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-section-target]'));
-  var defaultSection = 'dashboard';
+  var defaultSection = '{% block dashboard_default_section %}dashboard{% endblock %}';
+  var aliasesRaw = '{% block dashboard_section_aliases %}{}{% endblock %}';
+  var aliases = {};
+  try { aliases = JSON.parse(aliasesRaw); } catch(e){}
+
+  function closeSidebar() {
+    var sb = document.getElementById('db-sidebar');
+    var ov = document.getElementById('sb-overlay');
+    if (sb) sb.classList.remove('open');
+    if (ov) ov.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 
   function activateSection(section) {
-    var next = section || defaultSection;
+    var resolved = aliases[section] || section;
+    var next = resolved || defaultSection;
     var matched = false;
     panes.forEach(function (pane) {
       var isActive = pane.getAttribute('data-dashboard-pane') === next;
@@ -269,10 +312,10 @@
     });
     if (!matched && next !== defaultSection) { activateSection(defaultSection); return; }
     navLinks.forEach(function (link) {
-      link.classList.toggle('active', link.getAttribute('data-section-target') === next);
+      var t = link.getAttribute('data-section-target');
+      link.classList.toggle('active', t === next || t === section);
     });
     if (window.location.hash !== '#' + next) history.replaceState(null, '', '#' + next);
-    /* close sidebar on mobile after navigation */
     closeSidebar();
   }
 
@@ -294,12 +337,52 @@
   var hamBtn   = document.getElementById('mob-ham');
   var closeBtn = document.getElementById('sb-close');
 
-  function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
 
   if (hamBtn)   hamBtn.addEventListener('click', openSidebar);
   if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
   if (overlay)  overlay.addEventListener('click', closeSidebar);
 })();
+
+/* ── Session countdown ── */
+(function() {
+  var secs = {{ request.session_seconds_left|default:1800 }};
+  var warn = {{ request.session_warning_before|default:120 }};
+  var isAdmin = {{ request.is_college_admin|yesno:"true,false" }};
+  var timerEl = document.getElementById('sb-timer-display');
+  var timerWrap = document.getElementById('sb-session-timer');
+  var expiryModal = document.getElementById('session-expiry-modal');
+
+  function fmt(s) {
+    var m = Math.floor(s / 60), r = s % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
+  }
+
+  if (!isAdmin && timerEl) timerEl.textContent = fmt(secs);
+
+  setInterval(function() {
+    if (secs <= 0) return;
+    secs--;
+    if (isAdmin) {
+      // College admin: no visible timer, just show modal on expiry
+      if (secs <= 0 && expiryModal) {
+        expiryModal.style.display = 'flex';
+      }
+    } else {
+      // Other roles: show countdown timer
+      if (timerEl) timerEl.textContent = fmt(secs);
+      if (timerWrap) {
+        if (secs <= 60) timerWrap.className = 'topbar-session-timer urgent';
+        else if (secs <= warn) timerWrap.className = 'topbar-session-timer warn';
+      }
+    }
+  }, 1000);
+})();
+
+{% block extra_js %}{% endblock %}
 </script>
 {% endblock %}

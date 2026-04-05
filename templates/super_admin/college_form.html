@@ -10,18 +10,43 @@
 
 {% block dashboard_content %}
 <div class="card" style="max-width:720px">
-  <form method="POST">
+  <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College Name</label><input type="text" name="name" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
-      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College Code</label><input type="text" name="code" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
-      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">City</label><input type="text" name="city" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
-      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">State</label><input type="text" name="state" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College Name <span style="color:var(--red)">*</span></label><input type="text" name="name" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College Code <span style="color:var(--red)">*</span></label><input type="text" name="code" required placeholder="e.g. VITM" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none;text-transform:uppercase"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">City</label><input type="text" name="city" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">State</label><input type="text" name="state" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;outline:none"></div>
     </div>
+
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">College Logo</div>
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div id="logo-preview-wrap" style="display:none;width:80px;height:80px;border-radius:12px;border:2px solid var(--border);overflow:hidden;background:#f8fafc;flex-shrink:0">
+          <img id="logo-preview" style="width:100%;height:100%;object-fit:contain"/>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <input type="file" name="logo" id="logo-input" accept="image/*" style="width:100%;padding:10px 12px;border:1.5px dashed var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;background:#fafbfc">
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">PNG or SVG recommended. This logo appears in the sidebar of all dashboards for this college.</div>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-top:20px;display:flex;gap:10px">
       <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Create College</button>
       <a href="{% url 'super_admin_dashboard' %}#colleges" class="btn btn-outline">Cancel</a>
     </div>
   </form>
 </div>
+<script>
+document.getElementById('logo-input').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  var wrap = document.getElementById('logo-preview-wrap');
+  var img = document.getElementById('logo-preview');
+  var reader = new FileReader();
+  reader.onload = function(e) { img.src = e.target.result; wrap.style.display = 'block'; };
+  reader.readAsDataURL(file);
+});
+</script>
 {% endblock %}

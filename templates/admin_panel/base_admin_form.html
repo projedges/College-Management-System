@@ -1,0 +1,10 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% comment %}
+  Admin form pages base — extends base_dashboard.html so the sidebar is
+  pixel-identical to the main admin dashboard. No duplication.
+  Form pages use {% block form_content %} which maps to dashboard_content.
+{% endcomment %}
+
+{% block dashboard_content %}
+{% block form_content %}{% endblock %}
+{% endblock %}

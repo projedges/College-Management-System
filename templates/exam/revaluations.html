@@ -1,0 +1,46 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Revaluations{% endblock %}
+{% block nav_reval %}on{% endblock %}
+{% block breadcrumb %} / Revaluations{% endblock %}
+{% block page_title %}Revaluation Requests{% endblock %}
+{% block page_sub %}Review and process student revaluation requests{% endblock %}
+{% block content %}
+{% if revals %}
+<div class="d-card">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Student</th><th>Exam</th><th>Subject</th><th>Marks</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for r in revals %}
+        <tr>
+          <td><div style="font-weight:600;color:var(--deep)">{{ r.student.user.get_full_name|default:r.student.roll_number }}</div><div style="font-size:11px;color:var(--muted)">{{ r.student.roll_number }}</div></td>
+          <td style="font-size:12px">{{ r.marks.exam.name }}</td>
+          <td><div style="font-weight:600">{{ r.marks.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ r.marks.subject.code }}</div></td>
+          <td style="text-align:center;font-weight:700;color:#7c3aed">{{ r.marks.marks_obtained|floatformat:0 }}/{{ r.marks.max_marks|floatformat:0 }}</td>
+          <td style="font-size:12px;color:var(--muted);max-width:180px">{{ r.reason|truncatechars:80|default:"—" }}</td>
+          <td>
+            {% if r.status == 'PENDING' %}<span class="dbadge dbadge-warning">Pending</span>
+            {% elif r.status == 'COMPLETED' %}<span class="dbadge dbadge-active">Completed{% if r.revised_marks %} → {{ r.revised_marks }}{% endif %}</span>
+            {% elif r.status == 'REJECTED' %}<span class="dbadge dbadge-red">Rejected</span>
+            {% else %}<span class="dbadge dbadge-purple">{{ r.status }}</span>{% endif %}
+          </td>
+          <td>
+            {% if r.status == 'PENDING' %}
+            <form method="POST" action="{% url 'exam_reval_update' r.pk %}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              {% csrf_token %}
+              <input type="number" name="revised_marks" placeholder="New marks" step="0.5" min="0" max="{{ r.marks.max_marks }}" style="width:90px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px">
+              <button type="submit" name="action" value="accept" class="btn-purple" style="padding:5px 10px;font-size:11px"><i class="fas fa-check"></i> Accept</button>
+              <button type="submit" name="action" value="reject" style="padding:5px 10px;font-size:11px;border-radius:7px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-weight:600"><i class="fas fa-times"></i> Reject</button>
+            </form>
+            {% else %}<span style="font-size:12px;color:var(--muted)">Processed</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty"><i class="fas fa-rotate-left"></i><p>No revaluation requests yet.</p></div>
+{% endif %}
+{% endblock %}

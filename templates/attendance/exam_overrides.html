@@ -1,0 +1,48 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Eligibility Overrides — {{ exam.name }}{% endblock %}
+{% block breadcrumb %} / {{ exam.name }} / Overrides{% endblock %}
+{% block page_title %}Eligibility Override Requests — {{ exam.name }}{% endblock %}
+{% block page_sub %}Review and approve manual eligibility overrides for detained students{% endblock %}
+{% block content %}
+{% if overrides %}
+<div class="d-card">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Student</th><th>Dept</th><th>Attendance at Request</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for ov in overrides %}
+        <tr>
+          <td><div style="font-weight:600;color:var(--deep)">{{ ov.student.user.get_full_name }}</div><div style="font-size:11px;color:var(--muted)">{{ ov.student.roll_number }}</div></td>
+          <td>{{ ov.student.department.code }}</td>
+          <td style="font-weight:700;color:var(--red)">{{ ov.attendance_pct_at_request }}%</td>
+          <td style="font-size:12px;color:var(--muted);max-width:200px">{{ ov.reason|truncatechars:100 }}</td>
+          <td>
+            {% if ov.status == 'PENDING' %}<span class="dbadge dbadge-warning">Pending</span>
+            {% elif ov.status == 'APPROVED' %}<span class="dbadge dbadge-active">Approved</span>
+            {% else %}<span class="dbadge dbadge-red">Rejected</span>{% endif %}
+          </td>
+          <td>
+            {% if ov.status == 'PENDING' %}
+            <form method="POST" style="display:flex;flex-direction:column;gap:5px;min-width:180px">
+              {% csrf_token %}
+              <input type="hidden" name="override_id" value="{{ ov.pk }}">
+              <textarea name="review_note" rows="2" placeholder="Justification note" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;font-family:'Inter',sans-serif;resize:none"></textarea>
+              <div style="display:flex;gap:5px">
+                <button type="submit" name="action" value="APPROVED" style="flex:1;padding:5px;border-radius:6px;background:#d1fae5;color:#065f46;border:none;cursor:pointer;font-size:11px;font-weight:600"><i class="fas fa-check"></i> Approve</button>
+                <button type="submit" name="action" value="REJECTED" style="flex:1;padding:5px;border-radius:6px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-size:11px;font-weight:600"><i class="fas fa-times"></i> Reject</button>
+              </div>
+            </form>
+            {% else %}
+            <div style="font-size:11px;color:var(--muted)">{{ ov.review_note|default:"—"|truncatechars:60 }}</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty"><i class="fas fa-check-double"></i>No override requests for this exam.</div>
+{% endif %}
+{% endblock %}
