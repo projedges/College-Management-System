@@ -4,5 +4,4 @@ venv/
 .kiro/
 test.txt
 
-# Environment variables — never commit real keys
-.env
+
