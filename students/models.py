@@ -61,6 +61,7 @@ class Department(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='departments')
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20)
+    section_capacity = models.PositiveIntegerField(default=60)
 
     description = models.TextField(null=True, blank=True)
     established_year = models.IntegerField(null=True, blank=True)
@@ -87,6 +88,7 @@ class Student(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)    
     admission_year = models.IntegerField()
     current_semester = models.IntegerField()
+    section = models.CharField(max_length=10, blank=True, default='')
 
     STATUS_CHOICES = (
         ('ACTIVE', 'Active'),

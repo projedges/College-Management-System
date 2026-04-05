@@ -15,6 +15,17 @@
   .fg{margin-bottom:14px}
   .fg label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
   .planner-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .tt-matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+  .tt-matrix{width:100%;border-collapse:separate;border-spacing:0;background:#fff;min-width:780px}
+  .tt-matrix th{background:#17375e;color:#fff;font-size:12px;font-weight:800;padding:12px 10px;text-align:center}
+  .tt-matrix td{background:#f8fafc;border:2px solid #fff;vertical-align:top;padding:10px;min-width:120px}
+  .tt-matrix .time-col{background:#eef2f7;color:var(--deep);font-size:12px;font-weight:700;white-space:nowrap}
+  .tt-matrix .break-row td{background:#eceff3;color:var(--muted);font-size:12px;font-weight:700;text-align:center}
+  .tt-chip{display:block;border-radius:10px;padding:10px 8px;margin-bottom:6px;background:rgba(13,115,119,.08);border:1px solid rgba(13,115,119,.16)}
+  .tt-chip:last-child{margin-bottom:0}
+  .tt-chip-subj{font-size:12px;font-weight:800;color:var(--deep);line-height:1.35}
+  .tt-chip-meta{font-size:11px;color:var(--muted);margin-top:4px}
+  .sec-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:rgba(13,115,119,.1);color:var(--teal)}
   @media(max-width:700px){.planner-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
@@ -52,6 +63,20 @@
   <div class="stat-card"><div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-user-check"></i></div><div class="s-val">{{ subject_assignments|length }}</div><div class="s-lbl">Faculty Assignments</div></div>
   <div class="stat-card"><div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-clock"></i></div><div class="s-val">{{ availability|length }}</div><div class="s-lbl">Availability Slots</div></div>
   <div class="stat-card"><div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-calendar-days"></i></div><div class="s-val">{{ timetable_entries|length }}</div><div class="s-lbl">Timetable Entries</div></div>
+</div>
+
+<div class="planner-card" style="margin-bottom:20px">
+  <div class="planner-label">Section Strength</div>
+  <div class="section-meta" style="margin-bottom:12px">Students are grouped automatically by section capacity. Current capacity for {{ department.code }} is {{ department.section_capacity }} students per section.</div>
+  {% if section_strength_summary %}
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    {% for item in section_strength_summary %}
+    <span class="sec-pill"><i class="fas fa-users"></i> Section {{ item.section }}: {{ item.total }}</span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-users"></i>No student sections formed yet for Semester {{ selected_semester }}.</div>
+  {% endif %}
 </div>
 
 <!-- Add subject + Assign faculty -->
@@ -218,6 +243,48 @@
 
   <div class="planner-card">
     <div class="planner-label">Generated Timetable</div>
+    {% if timetable_matrix %}
+    <div class="section-meta" style="margin-bottom:12px">Weekly timetable matrix built from the current subject, section, faculty, room, and break data.</div>
+    <div class="tt-matrix-wrap" style="margin-bottom:16px">
+      <table class="tt-matrix">
+        <thead>
+          <tr>
+            <th style="text-align:left">Period</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+            <th>Saturday</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in timetable_matrix %}
+          <tr class="{% if row.is_break_row %}break-row{% endif %}">
+            <td class="time-col">{{ row.label }}</td>
+            {% for cell in row.cells %}
+            <td>
+              {% if cell.entries %}
+                {% for entry in cell.entries %}
+                <div class="tt-chip">
+                  <div class="tt-chip-subj">{{ entry.subject.name }}</div>
+                  <div class="tt-chip-meta">{{ entry.subject.code }}{% if entry.section %} · Section {{ entry.section }}{% endif %}</div>
+                  <div class="tt-chip-meta">{{ entry.classroom.room_number }} · {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
+                </div>
+                {% endfor %}
+              {% elif cell.break_label %}
+                <div style="font-size:12px;font-weight:700;color:var(--muted);text-align:center">{{ cell.break_label }}</div>
+              {% else %}
+                <div style="font-size:12px;color:#94a3b8;text-align:center">—</div>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
     {% if timetable_entries %}
     <div class="table-scroll">
       <table class="dtable">

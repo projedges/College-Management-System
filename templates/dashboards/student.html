@@ -27,14 +27,35 @@
 
 {% block extra_css %}
 <style>
-  .att-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6}
-  .att-row:last-child{border-bottom:none}
-  .att-subj{flex:1;font-size:13px;font-weight:600;color:var(--deep)}
-  .att-sub{font-size:11px;color:var(--muted)}
-  .att-bar-bg{flex:2;background:#f3f4f6;border-radius:99px;height:8px;overflow:hidden}
-  .att-bar-fill{height:100%;border-radius:99px;transition:width .5s}
-  .att-pct{font-size:13px;font-weight:700;width:42px;text-align:right}
-  .att-count{font-size:11px;color:var(--muted);width:60px;text-align:right}
+  /* Attendance redesign */
+  .att-summary-bar{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:18px}
+  .att-donut-wrap{position:relative;width:100px;height:100px;flex-shrink:0}
+  .att-donut-svg{width:100px;height:100px}
+  .att-donut-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .att-donut-val{font-size:18px;font-weight:900;color:var(--deep)}
+  .att-donut-sub{font-size:10px;color:var(--muted);font-weight:600}
+  .att-summary-stats{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+  .att-stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:70px}
+  .att-stat-val{font-size:18px;font-weight:900;color:var(--deep)}
+  .att-stat-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .att-elig-warn{display:flex;align-items:flex-start;gap:10px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 14px;flex:1;min-width:220px}
+  .att-elig-btn{font-size:11px;font-weight:700;padding:6px 12px;border-radius:8px;background:var(--teal);color:#fff;text-decoration:none;white-space:nowrap;flex-shrink:0}
+  .att-table-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+  .att-legend{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .att-legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .att-course-table{width:100%;border-collapse:collapse;min-width:560px}
+  .att-course-table thead tr{background:#f1f5f9}
+  .att-course-table th{padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:2px solid var(--border)}
+  .att-course-table td{padding:11px 16px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+  .att-course-table tbody tr:hover{background:#f8fafc}
+  .att-prog-bg{background:#e2e8f0;border-radius:99px;height:7px;overflow:hidden}
+  .att-prog-fill{height:7px;border-radius:99px;transition:width .4s}
+  .att-absence-row td{padding-top:0!important}
+  .att-hidden{display:none!important}
+  /* Attendance view tabs */
+  .att-view-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+  .att-view-tab{padding:7px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--muted);transition:all .15s}
+  .att-view-tab.active{background:var(--teal);color:#fff}
   .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
   .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
   .tt-subj{font-size:13px;font-weight:600;color:var(--deep)}
@@ -62,6 +83,31 @@
   .week-tt-slot-time{font-weight:700;color:var(--teal);margin-bottom:2px}
   .week-tt-slot-subj{font-weight:600;color:var(--deep);line-height:1.3}
   .week-tt-slot-meta{color:var(--muted);margin-top:2px}
+  .week-matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+  .week-matrix{width:100%;border-collapse:separate;border-spacing:0;min-width:760px}
+  .week-matrix th{background:var(--deep);color:#fff;font-size:12px;font-weight:800;padding:12px 10px;text-align:center}
+  .week-matrix td{background:#f8fafc;border:2px solid #fff;vertical-align:top;padding:10px;min-width:118px}
+  .week-matrix .time-col{background:#eef2f7;color:var(--deep);font-size:12px;font-weight:700;white-space:nowrap}
+  .week-matrix .today-head{background:var(--teal)}
+  .week-matrix .today-cell{background:rgba(13,115,119,.06)}
+  .week-matrix .break-row td{background:#eceff3;color:var(--muted);font-size:12px;font-weight:700;text-align:center}
+  .week-chip{display:block;border-radius:10px;padding:9px 8px;background:#fff;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+  .week-chip:last-child{margin-bottom:0}
+  .week-chip:hover{border-color:var(--teal);box-shadow:0 2px 10px rgba(13,115,119,.15)}
+  .week-chip-subj{font-size:12px;font-weight:800;color:var(--deep);line-height:1.35}
+  .week-chip-meta{font-size:11px;color:var(--muted);margin-top:4px}
+  /* Subject detail modal */
+  #tt-modal-overlay{display:none}
+  #tt-modal-overlay.open{display:flex!important}
+  .tt-modal-title{font-size:17px;font-weight:800;color:var(--deep);margin-bottom:4px;padding-right:24px}
+  .tt-modal-code{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .tt-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .tt-modal-stat{background:var(--surface2);border-radius:10px;padding:10px 12px;text-align:center}
+  .tt-modal-stat-val{font-size:20px;font-weight:900;color:var(--teal)}
+  .tt-modal-stat-lbl{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .tt-modal-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+  .tt-modal-row:last-child{border-bottom:none}
+  .tt-modal-row-lbl{color:var(--muted);font-weight:600;min-width:80px;font-size:12px}
   /* Predictor pill */
   .pred-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-top:4px}
   .pred-safe{background:#d1fae5;color:#065f46}
@@ -127,18 +173,22 @@
       {% if attendance_data %}
       <div class="content-scroll soft">
         {% for a in attendance_data %}
-        <div class="att-row">
-          <div style="width:130px">
-            <div class="att-subj">{{ a.subject.name }}</div>
-            <div class="att-sub">{{ a.subject.code }}</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <!-- Subject name + code -->
+          <div style="min-width:0;flex:2">
+            <div style="font-size:13px;font-weight:600;color:var(--deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.subject.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ a.subject.code }}</div>
           </div>
-          <div class="att-bar-bg">
-            <div class="att-bar-fill" style="width:{% if a.pct is not None %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct is None %}#d1d5db{% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}"></div>
+          <!-- Progress bar -->
+          <div style="flex:3;background:#f3f4f6;border-radius:99px;height:7px;overflow:hidden;min-width:60px">
+            <div style="height:7px;border-radius:99px;width:{% if a.pct is not None %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct is None %}#d1d5db{% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %};transition:width .4s"></div>
           </div>
-          <div class="att-pct" style="color:{% if a.pct is None %}var(--muted){% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}">
+          <!-- Percentage -->
+          <div style="font-size:13px;font-weight:700;width:46px;text-align:right;flex-shrink:0;color:{% if a.pct is None %}var(--muted){% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}">
             {% if a.pct is not None %}{{ a.pct }}%{% else %}N/A{% endif %}
           </div>
-          <div class="att-count">{{ a.present }}/{{ a.total }}</div>
+          <!-- Classes count -->
+          <div style="font-size:11px;color:var(--muted);width:36px;text-align:right;flex-shrink:0">{{ a.present }}/{{ a.total }}</div>
         </div>
         {% endfor %}
       </div>
@@ -230,82 +280,186 @@
 </section>
 
 <section data-dashboard-pane="attendance" class="dashboard-pane">
-  <!-- Eligibility Status Banner -->
-  {% if eligibility %}
-  <div style="margin-bottom:18px;padding:16px 20px;border-radius:var(--r-lg);border:1.5px solid {% if eligibility.eligible %}rgba(16,185,129,.3){% else %}rgba(239,68,68,.3){% endif %};background:{% if eligibility.eligible %}rgba(16,185,129,.05){% else %}rgba(239,68,68,.04){% endif %}">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div style="width:40px;height:40px;border-radius:50%;background:{% if eligibility.eligible %}rgba(16,185,129,.12){% else %}rgba(239,68,68,.1){% endif %};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
-        {% if eligibility.eligible %}<i class="fas fa-check-circle" style="color:#059669"></i>{% else %}<i class="fas fa-ban" style="color:#ef4444"></i>{% endif %}
-      </div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:{% if eligibility.eligible %}#065f46{% else %}#991b1b{% endif %}">
-          {% if eligibility.eligible %}Eligible for Exams{% else %}Currently Ineligible for Exams{% endif %}
-          {% if eligibility.has_override %}<span style="font-size:11px;background:rgba(16,185,129,.15);color:#065f46;padding:2px 8px;border-radius:99px;margin-left:8px">Override Approved</span>{% endif %}
+
+  <!-- View toggle tabs -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:800;color:var(--deep)">Attendance</div>
+    <div class="att-view-tabs">
+      <button class="att-view-tab active" onclick="switchAttView('semester',this)">Semester</button>
+      <button class="att-view-tab" onclick="switchAttView('calendar',this)"><i class="fas fa-calendar"></i> Calendar</button>
+    </div>
+  </div>
+
+  <!-- ── SEMESTER VIEW ── -->
+  <div id="att-view-semester">
+
+    <!-- Summary bar -->
+    <div class="att-summary-bar">
+      <div class="att-donut-wrap">
+        <svg viewBox="0 0 120 120" class="att-donut-svg">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#fecaca" stroke-width="12"/>
+          {% if overall_attendance %}
+            {% widthratio overall_attendance 100 314 as arc %}
+            <circle cx="60" cy="60" r="50" fill="none"
+              stroke="{% if overall_attendance >= att_rule.effective_min_overall %}#0d7377{% else %}#ef4444{% endif %}"
+              stroke-width="12" stroke-dasharray="{{ arc }} 314" stroke-dashoffset="78.5"
+              stroke-linecap="round"/>
+          {% endif %}
+        </svg>
+        <div class="att-donut-label">
+          <div class="att-donut-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}—{% endif %}</div>
+          <div class="att-donut-sub">Overall</div>
         </div>
-        {% if eligibility.overall_pct is not None %}
-        <div style="font-size:12px;color:var(--muted);margin-top:3px">
-          Overall: <strong>{{ eligibility.overall_pct }}%</strong>
-          (required: {{ eligibility.rule.effective_min_overall }}%)
-          {% if eligibility.rule.grace_pct > 0 %}<span style="color:var(--teal)"> · {{ eligibility.rule.grace_pct }}% grace applied</span>{% endif %}
+      </div>
+      <div class="att-summary-stats">
+        <div class="att-stat-box">
+          <div class="att-stat-val">{{ attendance_data|length }}</div>
+          <div class="att-stat-lbl">Subjects</div>
+        </div>
+        <div class="att-stat-box">
+          <div class="att-stat-val">{{ attendance_data|length }}</div>
+          <div class="att-stat-lbl">Tracked</div>
+        </div>
+        {% if att_rule %}
+        <div class="att-stat-box">
+          <div class="att-stat-val" style="color:var(--teal)">{{ att_rule.effective_min_subject }}%</div>
+          <div class="att-stat-lbl">Required</div>
         </div>
         {% endif %}
-        {% if not eligibility.eligible and eligibility.reasons %}
-        <div style="margin-top:6px">
-          {% for reason in eligibility.reasons %}<div style="font-size:11px;color:#991b1b">• {{ reason }}</div>{% endfor %}
+        {% if eligibility %}
+        <div class="att-stat-box" style="background:{% if eligibility.eligible %}rgba(16,185,129,.07){% else %}rgba(239,68,68,.06){% endif %};border-color:{% if eligibility.eligible %}rgba(16,185,129,.25){% else %}rgba(239,68,68,.25){% endif %}">
+          <div class="att-stat-val" style="color:{% if eligibility.eligible %}#059669{% else %}#dc2626{% endif %}">
+            {% if eligibility.eligible %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-xmark"></i>{% endif %}
+          </div>
+          <div class="att-stat-lbl">Exam Elig.</div>
         </div>
         {% endif %}
       </div>
-      {% if not eligibility.eligible and not eligibility.has_override %}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="{% url 'student_exemption_apply' %}" style="font-size:12px;padding:7px 14px;border-radius:8px;background:var(--teal);color:#fff;text-decoration:none;font-weight:600"><i class="fas fa-file-medical"></i> Apply Exemption</a>
+      {% if eligibility and not eligibility.eligible %}
+      <div class="att-elig-warn">
+        <i class="fas fa-triangle-exclamation" style="color:#dc2626;font-size:15px;flex-shrink:0"></i>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#991b1b">Ineligible for Exams</div>
+          {% for reason in eligibility.reasons %}<div style="font-size:11px;color:#b91c1c;margin-top:2px">{{ reason }}</div>{% endfor %}
+        </div>
+        {% if not eligibility.has_override %}
+        <a href="{% url 'student_exemption_apply' %}" class="att-elig-btn">Apply Exemption</a>
+        {% else %}
+        <span style="font-size:11px;font-weight:700;color:#059669;background:rgba(16,185,129,.1);padding:4px 10px;border-radius:99px">Override Approved</span>
+        {% endif %}
       </div>
       {% endif %}
     </div>
-  </div>
-  {% endif %}
 
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Subject-wise Attendance</div>
-    <div class="section-meta">Attendance, predictor, and absence dates per subject. Required: {{ att_rule.effective_min_subject }}%{% if att_rule.grace_pct > 0 %} (after {{ att_rule.grace_pct }}% grace){% endif %}</div>
-    {% if attendance_data %}
-    <div class="content-scroll">
-      {% for a in attendance_data %}
-      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
-        <div class="att-row" style="border:none;padding:0;margin-bottom:6px">
-          <div style="width:140px">
-            <div class="att-subj">{{ a.subject.name }}</div>
-            <div class="att-sub">{{ a.subject.code }}</div>
-          </div>
-          <div class="att-bar-bg">
-            <div class="att-bar-fill" style="width:{% if a.total > 0 %}{{ a.pct }}{% else %}0{% endif %}%;background:{% if a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}"></div>
-          </div>
-          <div class="att-pct" style="color:{% if a.total == 0 %}var(--muted){% elif a.pct >= a.threshold %}var(--teal){% elif a.pct >= att_rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}">
-            {% if a.total > 0 %}{{ a.pct }}%{% else %}N/A{% endif %}
-          </div>
-          <div class="att-count">{{ a.present }}/{{ a.total }}</div>
-        </div>
-        <!-- Predictor — uses rule-engine threshold -->
-        {% if a.total > 0 %}
-          {% if a.can_miss is not None %}
-            <span class="pred-pill pred-safe"><i class="fas fa-shield-check"></i> Can miss {{ a.can_miss }} more class{{ a.can_miss|pluralize }}</span>
-          {% elif a.classes_needed is not None %}
-            <span class="pred-pill pred-warn"><i class="fas fa-triangle-exclamation"></i> Attend {{ a.classes_needed }} consecutive class{{ a.classes_needed|pluralize }} to reach {{ a.threshold }}%</span>
-          {% endif %}
-        {% endif %}
-        <!-- Absence dates -->
-        {% if a.absent_dates %}
-        <div style="margin-top:6px">
-          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Absent on: </span>
-          {% for d in a.absent_dates %}<span class="absence-chip">{{ d|date:"d M" }}</span>{% endfor %}
-        </div>
-        {% endif %}
+    <!-- Legend + search -->
+    <div class="att-table-controls">
+      <div class="att-legend">
+        <span class="att-legend-dot" style="background:#ef4444"></span><span>Below {{ att_rule.effective_min_subject }}%</span>
+        <span class="att-legend-dot" style="background:#0d7377;margin-left:14px"></span><span>{{ att_rule.effective_min_subject }}% or above</span>
       </div>
-      {% endfor %}
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;color:var(--muted)">Search:</label>
+        <input id="att-search" type="text" oninput="filterAttTable()" placeholder="Subject name or code…"
+          style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
+      </div>
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
-    {% endif %}
-  </div>
+
+    <!-- Course-wise table -->
+    <div class="d-card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px 10px;font-size:14px;font-weight:800;color:var(--deep)">Course wise percentage</div>
+      <div class="table-scroll">
+        <table class="att-course-table" id="att-course-table">
+          <thead>
+            <tr>
+              <th style="width:120px">Course code</th>
+              <th>Course name</th>
+              <th style="width:280px">Percentage</th>
+              <th style="width:80px;text-align:center">Present</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in attendance_data %}
+            <tr class="att-course-row" data-name="{{ a.subject.name|lower }}" data-code="{{ a.subject.code|lower }}">
+              <td style="font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
+              <td style="font-size:13px;color:var(--deep)">{{ a.subject.name }}</td>
+              <td>
+                {% if a.total > 0 %}
+                <div style="font-size:12px;font-weight:700;color:{% if a.pct >= a.threshold %}var(--deep){% else %}#dc2626{% endif %};margin-bottom:4px">{{ a.pct }}%</div>
+                <div class="att-prog-bg">
+                  <div class="att-prog-fill" style="width:{{ a.pct }}%;background:{% if a.pct >= a.threshold %}#0d7377{% else %}#ef4444{% endif %}"></div>
+                </div>
+                {% if a.can_miss is not None %}
+                  <div style="font-size:10px;color:#059669;margin-top:3px">Can miss {{ a.can_miss }} more</div>
+                {% elif a.classes_needed is not None %}
+                  <div style="font-size:10px;color:#dc2626;margin-top:3px"><i class="fas fa-triangle-exclamation"></i> Need {{ a.classes_needed }} more to reach {{ a.threshold }}%</div>
+                {% endif %}
+                {% else %}
+                <span style="font-size:12px;color:var(--muted)">No data</span>
+                {% endif %}
+              </td>
+              <td style="text-align:center;font-size:12px;font-weight:600;color:var(--muted)">{{ a.present }}/{{ a.total }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if not attendance_data %}<div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>{% endif %}
+    </div>
+
+  </div><!-- /semester view -->
+
+  <!-- ── CALENDAR / LOG VIEW ── -->
+  <div id="att-view-calendar" style="display:none">
+    <div class="d-card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:14px;font-weight:800;color:var(--deep)">Attendance Log</div>
+          <div class="att-view-tabs" style="margin-left:8px">
+            <button class="att-view-tab active" id="cal-filter-all" onclick="filterCalByDate('all',this)">All</button>
+            <button class="att-view-tab" id="cal-filter-today" onclick="filterCalByDate('today',this)">Today</button>
+            <button class="att-view-tab" id="cal-filter-yesterday" onclick="filterCalByDate('yesterday',this)">Yesterday</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;color:var(--muted)">Search:</label>
+          <input id="att-cal-search" type="text" oninput="filterCalTable()" placeholder="Subject or faculty…"
+            style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="att-course-table" id="att-cal-table">
+          <thead>
+            <tr>
+              <th style="width:120px">Date</th>
+              <th>Course name</th>
+              <th>Faculty name</th>
+              <th style="width:100px">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in all_att_records %}
+            <tr class="att-cal-row"
+              data-date="{{ rec.session.date|date:'Y-m-d' }}"
+              data-subj="{{ rec.session.subject.name|lower }}"
+              data-faculty="{{ rec.session.faculty.user.get_full_name|lower }}">
+              <td style="font-size:12px;font-weight:600;color:var(--deep);white-space:nowrap">{{ rec.session.date|date:"Y-m-d" }}</td>
+              <td style="font-size:13px;color:var(--deep)">{{ rec.session.subject.name }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ rec.session.faculty.user.get_full_name|default:rec.session.faculty.user.username }}</td>
+              <td>
+                {% if rec.status == 'PRESENT' %}<span style="color:#059669;font-weight:700;font-size:12px">Present</span>
+                {% elif rec.status == 'ABSENT' %}<span style="color:#dc2626;font-weight:700;font-size:12px">Absent</span>
+                {% else %}<span style="color:#d97706;font-weight:700;font-size:12px">Late</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);font-size:13px">No attendance records found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /calendar view -->
+
 </section>
 
 <section data-dashboard-pane="results" class="dashboard-pane">
@@ -454,16 +608,25 @@
 </section>
 
 <section data-dashboard-pane="timetable" class="dashboard-pane">
-  <!-- Today strip — attendance status table -->
+
+  <!-- Subject detail modal -->
+  <div id="tt-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+    <div id="tt-modal-box" style="background:#fff;border-radius:18px;padding:28px 28px 22px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative">
+      <button onclick="closeTTModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer;line-height:1">&times;</button>
+      <div id="tt-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Today's classes -->
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
-      <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Timetable</div>
+      <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Classes</div>
       <div style="display:flex;gap:10px;font-size:12px;color:var(--muted)">
         <span><i class="fas fa-graduation-cap" style="color:var(--teal)"></i> Sem {{ student.current_semester }}</span>
         <span><i class="fas fa-building" style="color:var(--teal)"></i> {{ student.department.code }}</span>
       </div>
     </div>
-    <div class="section-meta">Your classes today with attendance status.</div>
+    <div class="section-meta">Click any subject to view details. Attendance status shown where marked.</div>
 
     {% if today_timetable or today_breaks %}
     <div class="table-scroll">
@@ -474,21 +637,18 @@
             <th>Subject</th>
             <th>Faculty</th>
             <th>Room</th>
-            <th style="text-align:center;width:120px">Present (P) / Absent (A)</th>
+            <th style="text-align:center;width:110px">Status</th>
           </tr>
         </thead>
         <tbody>
-          {% comment %}Merge timetable slots and breaks sorted by start_time{% endcomment %}
-          {% for item in today_timetable %}
-          {% with t=item.slot %}
-          <tr>
+          {% for item in today_timetable %}{% with t=item.slot %}
+          <tr style="cursor:pointer" onclick="openTTModal({{ t.subject.id }},'{{ t.subject.name|escapejs }}','{{ t.subject.code|escapejs }}',{{ t.subject.credits }},{{ t.subject.lecture_hours }},{{ t.subject.tutorial_hours }},{{ t.subject.practical_hours }},'{{ t.subject.get_category_display|escapejs }}','{{ t.faculty.user.get_full_name|default:t.faculty.user.username|escapejs }}','{{ t.faculty.designation|escapejs }}','{{ t.classroom.room_number|escapejs }}','{{ t.classroom.building|escapejs }}')">
             <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
-              {{ t.start_time|time:"H:i" }}<br>
-              <span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"H:i" }}</span>
+              {{ t.start_time|time:"H:i" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"H:i" }}</span>
             </td>
             <td>
               <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }} · {{ t.subject.credits }} cr</div>
             </td>
             <td style="font-size:12px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
             <td style="font-size:12px">
@@ -497,27 +657,23 @@
             </td>
             <td style="text-align:center">
               {% if item.att_status == 'PRESENT' %}
-                <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#16a34a;background:#dcfce7;padding:4px 12px;border-radius:99px"><i class="fas fa-check"></i> P</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> P</span>
               {% elif item.att_status == 'ABSENT' %}
-                <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#dc2626;background:#fee2e2;padding:4px 12px;border-radius:99px"><i class="fas fa-times"></i> A</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#dc2626;background:#fee2e2;padding:3px 10px;border-radius:99px"><i class="fas fa-times"></i> A</span>
               {% elif item.att_status == 'LATE' %}
-                <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#d97706;background:#fef3c7;padding:4px 12px;border-radius:99px"><i class="fas fa-clock"></i> L</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#d97706;background:#fef3c7;padding:3px 10px;border-radius:99px"><i class="fas fa-clock"></i> L</span>
               {% else %}
-                <span style="font-size:11px;color:var(--muted)">Not marked</span>
+                <span style="font-size:11px;color:var(--muted)">—</span>
               {% endif %}
             </td>
           </tr>
-          {% endwith %}
-          {% endfor %}
+          {% endwith %}{% endfor %}
           {% for brk in today_breaks %}
           <tr style="background:#fef9c3">
             <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
-              {{ brk.start_time|time:"H:i" }}<br>
-              <span style="font-weight:400">{{ brk.end_time|time:"H:i" }}</span>
+              {{ brk.start_time|time:"H:i" }}<br><span style="font-weight:400">{{ brk.end_time|time:"H:i" }}</span>
             </td>
-            <td colspan="3" style="font-size:12px;font-weight:600;color:#92400e">
-              <i class="fas fa-coffee"></i> {{ brk.label }}
-            </td>
+            <td colspan="3" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
             <td style="text-align:center;font-size:11px;color:#92400e">—</td>
           </tr>
           {% endfor %}
@@ -536,34 +692,58 @@
     <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
     {% endif %}
   </div>
-  <!-- Full week grid -->
+
+  <!-- Full week matrix -->
   <div class="d-card">
     <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Timetable</div>
-    <div class="section-meta">Mon – Sat at a glance. Today's column is highlighted.</div>
-    <div class="table-scroll">
-      <div class="week-tt-grid">
-        {% for day_code, day_label, slots in week_timetable_list %}
-        <div class="week-tt-day {% if day_code == today_day %}today-col{% endif %}">
-          <div class="week-tt-day-label">
-            {{ day_label|slice:":3" }}
-            {% if day_code == today_day %}<span style="font-size:9px;background:var(--teal);color:#fff;padding:1px 5px;border-radius:99px;margin-left:4px">Today</span>{% endif %}
-          </div>
-          {% if slots %}
-            {% for t in slots %}
-            <div class="week-tt-slot">
-              <div class="week-tt-slot-time">{{ t.start_time|time:"H:i" }}</div>
-              <div class="week-tt-slot-subj">{{ t.subject.name }}</div>
-              <div class="week-tt-slot-meta">{{ t.classroom.room_number }}</div>
-            </div>
+    <div class="section-meta">Click any subject chip to view details. Today's column is highlighted.</div>
+    {% if week_timetable_matrix %}
+    <div class="week-matrix-wrap">
+      <table class="week-matrix">
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:100px">Period</th>
+            {% for day_code, day_label, slots in week_timetable_list %}
+            <th class="{% if day_code == today_day %}today-head{% endif %}">
+              {{ day_label }}
+              {% if day_code == today_day %}<span style="display:block;font-size:9px;font-weight:700;opacity:.9;margin-top:2px">Today</span>{% endif %}
+            </th>
             {% endfor %}
-          {% else %}
-            <div style="font-size:11px;color:var(--muted);text-align:center;padding:10px 0">—</div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in week_timetable_matrix %}
+          <tr class="{% if row.is_break_row %}break-row{% endif %}">
+            <td class="time-col">{{ row.label }}</td>
+            {% for cell in row.cells %}
+            <td class="{% if cell.day_code == today_day %}today-cell{% endif %}">
+              {% if cell.entries %}
+                {% for entry in cell.entries %}
+                <div class="week-chip" role="button" tabindex="0"
+                  onclick="openTTModal({{ entry.subject.id }},'{{ entry.subject.name|escapejs }}','{{ entry.subject.code|escapejs }}',{{ entry.subject.credits }},{{ entry.subject.lecture_hours }},{{ entry.subject.tutorial_hours }},{{ entry.subject.practical_hours }},'{{ entry.subject.get_category_display|escapejs }}','{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username|escapejs }}','{{ entry.faculty.designation|escapejs }}','{{ entry.classroom.room_number|escapejs }}','{{ entry.classroom.building|escapejs }}')"
+                  onkeydown="if(event.key==='Enter')this.click()">
+                  <div class="week-chip-subj">{{ entry.subject.name }}</div>
+                  <div class="week-chip-meta">{{ entry.subject.code }}{% if entry.section %} · §{{ entry.section }}{% endif %}</div>
+                  <div class="week-chip-meta">{{ entry.classroom.room_number }} · {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
+                </div>
+                {% endfor %}
+              {% elif cell.break_label %}
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0"><i class="fas fa-coffee" style="margin-right:4px"></i>{{ cell.break_label }}</div>
+              {% else %}
+                <div style="font-size:13px;color:#cbd5e1;text-align:center">—</div>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-xmark"></i>No timetable data available for your semester.</div>
+    {% endif %}
   </div>
+
 </section>
 
 <section data-dashboard-pane="assignments" class="dashboard-pane">
@@ -1200,4 +1380,68 @@ function showIntPane(id) {
   var tab = document.getElementById(tabId);
   if (tab) tab.classList.add('sem-tab-active');
 }
+
+// Attendance table search
+function filterAttTable() {
+  var q = document.getElementById('att-search').value.toLowerCase();
+  document.querySelectorAll('#att-course-table tbody tr').forEach(function(row) {
+    var name = row.dataset.name || '';
+    var code = row.dataset.code || '';
+    row.classList.toggle('att-hidden', q && name.indexOf(q) === -1 && code.indexOf(q) === -1);
+  });
+}
+function filterCalTable() {
+  var q = document.getElementById('att-cal-search').value.toLowerCase();
+  document.querySelectorAll('#att-cal-table tbody tr').forEach(function(row) {
+    var subj = row.dataset.subj || '';
+    var fac = row.dataset.faculty || '';
+    row.classList.toggle('att-hidden', q && subj.indexOf(q) === -1 && fac.indexOf(q) === -1);
+  });
+}
+var _calDateFilter = 'all';
+function filterCalByDate(filter, btn) {
+  _calDateFilter = filter;
+  document.querySelectorAll('#att-view-calendar .att-view-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  var today = new Date();
+  var todayStr = today.toISOString().slice(0,10);
+  var yest = new Date(today); yest.setDate(yest.getDate()-1);
+  var yesterdayStr = yest.toISOString().slice(0,10);
+  document.querySelectorAll('#att-cal-table tbody tr').forEach(function(row) {
+    var d = row.dataset.date || '';
+    var hide = false;
+    if (filter === 'today') hide = d !== todayStr;
+    else if (filter === 'yesterday') hide = d !== yesterdayStr;
+    row.classList.toggle('att-hidden', hide);
+  });
+}
+function switchAttView(view, btn) {
+  document.getElementById('att-view-semester').style.display = view === 'semester' ? '' : 'none';
+  document.getElementById('att-view-calendar').style.display = view === 'calendar' ? '' : 'none';
+  document.querySelectorAll('.att-view-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+// Timetable subject detail modal
+function openTTModal(id, name, code, credits, L, T, P, category, faculty, designation, room, building) {
+  var loc = room + (building ? ' · ' + building : '');
+  document.getElementById('tt-modal-body').innerHTML =
+    '<div class="tt-modal-title">' + name + '</div>' +
+    '<div class="tt-modal-code">' + code + ' &nbsp;·&nbsp; ' + category + '</div>' +
+    '<div class="tt-modal-grid">' +
+      '<div class="tt-modal-stat"><div class="tt-modal-stat-val">' + credits + '</div><div class="tt-modal-stat-lbl">Credits</div></div>' +
+      '<div class="tt-modal-stat"><div class="tt-modal-stat-val">' + L + '-' + T + '-' + P + '</div><div class="tt-modal-stat-lbl">L – T – P</div></div>' +
+    '</div>' +
+    '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Faculty</span><span style="font-weight:600;color:var(--deep)">' + faculty + '</span></div>' +
+    '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Designation</span><span>' + (designation || '—') + '</span></div>' +
+    '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Room</span><span style="font-weight:600">' + loc + '</span></div>';
+  document.getElementById('tt-modal-overlay').classList.add('open');
+}
+function closeTTModal() {
+  document.getElementById('tt-modal-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeTTModal(); });
+document.getElementById('tt-modal-overlay').addEventListener('click', function(e){
+  if(e.target === this) closeTTModal();
+});
 {% endblock %}

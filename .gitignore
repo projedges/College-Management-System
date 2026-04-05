@@ -1,3 +1,8 @@
 INTERN_CONTRIBUTION_GUIDE.md
 venv/
 *.pdf
+.kiro/
+test.txt
+
+# Environment variables — never commit real keys
+.env

@@ -1,4 +1,5 @@
 import csv
+from collections import defaultdict
 from datetime import datetime, timedelta, time as dt_time
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
@@ -328,6 +329,7 @@ def _build_registration_invite_url(request, invite):
 
 REGISTRATION_ACTIVE_STATUSES = {'SUBMITTED', 'UNDER_REVIEW', 'NEEDS_CORRECTION', 'APPROVED'}
 REGISTRATION_CONVERTIBLE_STATUSES = {'APPROVED'}
+SECTION_LABEL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 
 def _deliver_registration_request_update(reg_request, subject, body, user=None):
@@ -401,6 +403,66 @@ def _notify_registration_request_converted(reg_request, user, password_generated
         body,
         user=user,
     )
+
+
+def _section_label_for_index(index):
+    index = max(index, 0)
+    label = ''
+    while True:
+        index, remainder = divmod(index, 26)
+        label = SECTION_LABEL_ALPHABET[remainder] + label
+        if index == 0:
+            break
+        index -= 1
+    return label
+
+
+def _determine_student_section(department, admission_year):
+    capacity = max(getattr(department, 'section_capacity', 60) or 60, 1)
+    existing_count = Student.objects.filter(
+        department=department,
+        admission_year=admission_year,
+        is_deleted=False,
+    ).count()
+    return _section_label_for_index(existing_count // capacity)
+
+
+def _build_weekly_timetable_matrix(entries, breaks=None, days=None):
+    days = days or [('MON', 'Monday'), ('TUE', 'Tuesday'), ('WED', 'Wednesday'), ('THU', 'Thursday'), ('FRI', 'Friday'), ('SAT', 'Saturday')]
+    slot_map = defaultdict(lambda: {'entries': [], 'break_label': ''})
+    slot_times = set()
+
+    for entry in entries:
+        key = (entry.day_of_week, entry.start_time, entry.end_time)
+        slot_map[key]['entries'].append(entry)
+        slot_times.add((entry.start_time, entry.end_time))
+
+    for brk in breaks or []:
+        key = (brk.day_of_week, brk.start_time, brk.end_time)
+        slot_map[key]['break_label'] = brk.label
+        slot_times.add((brk.start_time, brk.end_time))
+
+    ordered_times = sorted(slot_times, key=lambda item: (item[0], item[1]))
+    rows = []
+    for start_time, end_time in ordered_times:
+        row = {
+            'label': f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}",
+            'cells': [],
+        }
+        row_is_break = True
+        for day_code, day_label in days:
+            cell = slot_map.get((day_code, start_time, end_time), {'entries': [], 'break_label': ''})
+            if cell['entries']:
+                row_is_break = False
+            row['cells'].append({
+                'day_code': day_code,
+                'day_label': day_label,
+                'entries': cell['entries'],
+                'break_label': cell['break_label'],
+            })
+        row['is_break_row'] = row_is_break and any(cell['break_label'] for cell in row['cells'])
+        rows.append(row)
+    return rows
 
 
 def _generate_roll_number(department, admission_year):
@@ -2800,6 +2862,11 @@ def student_dashboard(request):
     absence_records = Attendance.objects.filter(
         student=student, session__subject__in=subjects, status='ABSENT'
     ).select_related('session__subject').order_by('session__date')
+
+    # All attendance records for calendar/log view
+    all_att_records = Attendance.objects.filter(
+        student=student, session__subject__in=subjects
+    ).select_related('session__subject', 'session__faculty__user').order_by('-session__date', 'session__subject__name')
     absence_map = {}
     for rec in absence_records:
         sid = rec.session.subject_id
@@ -2938,7 +3005,9 @@ def student_dashboard(request):
     raw_timetable = Timetable.objects.filter(
         subject__department=student.department,
         subject__semester=student.current_semester,
-        day_of_week=today_day
+        day_of_week=today_day,
+    ).filter(
+        Q(section='') | Q(section=student.section)
     ).select_related('subject','faculty__user','classroom').order_by('start_time').distinct()
 
     today_timetable = list(raw_timetable)
@@ -3107,12 +3176,18 @@ def student_dashboard(request):
     all_week_slots = Timetable.objects.filter(
         subject__department=student.department,
         subject__semester=student.current_semester,
+    ).filter(
+        Q(section='') | Q(section=student.section)
     ).select_related('subject','faculty__user','classroom').order_by('day_of_week','start_time').distinct()
     week_timetable = {d: [] for d in week_days}
     for slot in all_week_slots:
         if slot.day_of_week in week_timetable:
             week_timetable[slot.day_of_week].append(slot)
     week_timetable_list = [(d, week_day_labels[d], week_timetable[d]) for d in week_days]
+    week_timetable_matrix = _build_weekly_timetable_matrix(all_week_slots, breaks=TimetableBreak.objects.filter(
+        college=college,
+        applies_to_all=True,
+    ).order_by('day_of_week', 'start_time'))
 
     # Quiz history — submitted attempts
     quiz_history = QuizAttempt.objects.filter(
@@ -3140,6 +3215,7 @@ def student_dashboard(request):
         'today_day': today_day,
         'today_attendance_map': today_attendance_map,
         'today_breaks': today_breaks,
+        'week_timetable_matrix': week_timetable_matrix,
         'pending_assignments': pending_assignments_list,
         'pending_assignments_count': pending_assignments_qs.count(),
         'submitted_assignments': submitted_assignments,
@@ -3162,6 +3238,7 @@ def student_dashboard(request):
         'all_internal_semesters': all_internal_semesters,
         'all_internal_list': all_internal_list,
         'att_by_semester': att_by_semester,
+        'all_att_records': all_att_records,
         'eligibility': eligibility,
         'att_rule': att_rule,
         'assignment_score_trend': assignment_score_trend,
@@ -3328,7 +3405,11 @@ def _get_razorpay_client():
         import razorpay
     except ImportError:
         raise ImportError("razorpay package is not installed. Run: pip install razorpay")
-    return razorpay.Client(auth=(_s.RAZORPAY_KEY_ID, _s.RAZORPAY_KEY_SECRET))
+    key_id = _s.RAZORPAY_KEY_ID
+    key_secret = _s.RAZORPAY_KEY_SECRET
+    if not key_id or not key_secret:
+        raise ValueError("Razorpay keys not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env")
+    return razorpay.Client(auth=(key_id, key_secret))
 
 
 @login_required
@@ -4819,11 +4900,12 @@ def admin_student_add(request):
                     first_name=first_name, last_name=last_name
                 )
                 UserRole.objects.create(user=user, role=4, college=department.college)
-                Student.objects.create(
+                student = Student.objects.create(
                     user=user, roll_number=roll_number,
                     department=department,
                     admission_year=adm_year_int,
                     current_semester=_safe_int(semester),
+                    section=_determine_student_section(department, adm_year_int),
                     status=status
                 )
                 
@@ -4851,7 +4933,7 @@ def admin_student_add(request):
                     )
 
                 # Real-time enhancement: Auto-generate fee record
-                _create_default_fee(Student.objects.get(user=user))
+                _create_default_fee(student)
 
             if intake_request:
                 intake_request.status = 'CONVERTED'
@@ -4865,9 +4947,9 @@ def admin_student_add(request):
                     password_value=password_value,
                 )
             if password_generated:
-                messages.success(request, f'Student {roll_number} added. Temporary password: {password_value}')
+                messages.success(request, f'Student {roll_number} added in Section {student.section or "A"}. Temporary password: {password_value}')
             else:
-                messages.success(request, f'Student {roll_number} added.')
+                messages.success(request, f'Student {roll_number} added in Section {student.section or "A"}.')
             return redirect('/dashboard/admin/#students')
     return render(request, 'admin_panel/student_form.html', {
         'departments': departments,
@@ -5024,6 +5106,7 @@ def admin_bulk_import(request):
                             department=dept,
                             admission_year=adm_year,
                             current_semester=_safe_int(row.get('current_semester'), default=1),
+                            section=(row.get('section') or '').strip().upper() or _determine_student_section(dept, adm_year),
                         )
                         _create_default_fee(student)
                     else:
@@ -5449,14 +5532,29 @@ def admin_academic_planner(request):
                 messages.error(request, 'Room number is required.')
         return redirect(f"{reverse('admin_academic_planner')}?dept={department.pk}&sem={selected_semester}")
 
+    college = _get_admin_college(request)
     faculty = Faculty.objects.filter(department__college=college).select_related('user', 'department').order_by('department__code', 'user__first_name') if department else Faculty.objects.none()
     subjects = Subject.objects.filter(department=department, semester=selected_semester).order_by('name') if department else Subject.objects.none()
     subject_assignments = FacultySubject.objects.filter(subject__in=subjects).select_related('subject', 'faculty__user').order_by('subject__name')
     availability = FacultyAvailability.objects.filter(faculty__in=faculty).select_related('faculty__user').order_by('faculty__user__first_name', 'day_of_week', 'start_time')
     timetable_entries = Timetable.objects.filter(subject__in=subjects).select_related('subject', 'faculty__user', 'classroom').order_by('day_of_week', 'start_time')
-    college = _get_admin_college(request)
     college_breaks = TimetableBreak.objects.filter(college=college).order_by('day_of_week', 'start_time') if college else TimetableBreak.objects.none()
     classrooms = Classroom.objects.filter(college=college).order_by('building', 'room_number') if college else Classroom.objects.none()
+    section_strength_summary = []
+    if department:
+        section_counts = (
+            Student.objects.filter(
+                department=department,
+                current_semester=selected_semester,
+                is_deleted=False,
+            )
+            .exclude(section='')
+            .values('section')
+            .annotate(total=Count('id'))
+            .order_by('section')
+        )
+        section_strength_summary = list(section_counts)
+    timetable_matrix = _build_weekly_timetable_matrix(timetable_entries, breaks=college_breaks)
 
     return render(request, 'admin_panel/academic_planner.html', {
         'departments': departments,
@@ -5467,8 +5565,10 @@ def admin_academic_planner(request):
         'subject_assignments': subject_assignments,
         'availability': availability,
         'timetable_entries': timetable_entries,
+        'timetable_matrix': timetable_matrix,
         'college_breaks': college_breaks,
         'classrooms': classrooms,
+        'section_strength_summary': section_strength_summary,
         'branding': _get_college_branding(college),
     })
 
@@ -5900,9 +6000,17 @@ def admin_contact_support(request):
 
 
 # ── EXAMS ────────────────────────────────────────────────
+@login_required
+def admin_exams(request):
     if not _admin_guard(request):
         return redirect('dashboard')
-    return redirect('/dashboard/admin/#exams')
+    college = _get_admin_college(request)
+    exams = _scope_exams(request).order_by('-start_date')
+    return render(request, 'admin_panel/exams.html', {
+        'exams': exams,
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required

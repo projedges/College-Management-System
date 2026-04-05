@@ -1,4 +1,5 @@
 import os
+from datetime import time
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -11,6 +12,7 @@ from .models import (
     Attendance,
     AttendanceSession,
     College,
+    Classroom,
     Department,
     Exam,
     Faculty,
@@ -25,6 +27,7 @@ from .models import (
     RevaluationRequest,
     Student,
     Subject,
+    Timetable,
     SupplyExamRegistration,
     UserRole,
 )
@@ -162,6 +165,35 @@ class AdminViewsRegressionTests(TestCase):
         self.assertEqual(response.status_code, 302)
         created = User.objects.get(username="2024-alpha-cse-001")
         self.assertTrue(created.has_usable_password())
+
+    def test_admin_student_add_auto_assigns_sections_from_department_capacity(self):
+        self.cse.section_capacity = 2
+        self.cse.save(update_fields=["section_capacity"])
+
+        for index in range(3):
+            response = self.client.post(
+                reverse("admin_student_add"),
+                {
+                    "first_name": f"Student{index}",
+                    "last_name": "User",
+                    "username": f"2024-alpha-cse-10{index}",
+                    "email": f"student{index}@example.com",
+                    "password": "pass12345",
+                    "department": str(self.cse.pk),
+                    "admission_year": "2024",
+                    "current_semester": "1",
+                    "status": "ACTIVE",
+                },
+                follow=False,
+            )
+            self.assertEqual(response.status_code, 302)
+
+        sections = list(
+            Student.objects.filter(department=self.cse, admission_year=2024)
+            .order_by("roll_number")
+            .values_list("section", flat=True)
+        )
+        self.assertEqual(sections, ["A", "A", "B"])
 
     def test_registration_request_cannot_be_marked_converted_without_student_creation(self):
         reg = RegistrationRequest.objects.create(
@@ -625,3 +657,61 @@ class StudentAcademicWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Payment.objects.filter(user=self.student_user, payment_type="REVALUATION").count(), 0)
+
+
+class StudentSectionTimetableTests(TestCase):
+    def setUp(self):
+        self.college = College.objects.create(name="Alpha College", code="ALPHA")
+        self.dept = Department.objects.create(college=self.college, name="Computer Science", code="CSE", section_capacity=2)
+        self.student_user = User.objects.create_user("sectionstu", "sectionstu@example.com", "pass12345")
+        UserRole.objects.create(user=self.student_user, role=4, college=self.college)
+        self.student = Student.objects.create(
+            user=self.student_user,
+            roll_number="2024-ALPHA-CSE-001",
+            department=self.dept,
+            admission_year=2024,
+            current_semester=3,
+            section="A",
+        )
+        self.faculty_user = User.objects.create_user("faculty-sec", "faculty-sec@example.com", "pass12345")
+        UserRole.objects.create(user=self.faculty_user, role=3, college=self.college)
+        self.faculty = Faculty.objects.create(
+            user=self.faculty_user,
+            employee_id="FAC-SEC-1",
+            department=self.dept,
+            designation="Assistant Professor",
+            qualification="MTech",
+            experience_years=4,
+            phone_number="9999999998",
+        )
+        self.subject = Subject.objects.create(name="Algorithms", code="CS301", department=self.dept, semester=3)
+        self.room_a = Classroom.objects.create(college=self.college, room_number="A-101", capacity=60)
+        self.room_b = Classroom.objects.create(college=self.college, room_number="A-102", capacity=60)
+        Timetable.objects.create(
+            subject=self.subject,
+            faculty=self.faculty,
+            day_of_week="MON",
+            start_time=time(9, 0),
+            end_time=time(10, 0),
+            classroom=self.room_a,
+            section="A",
+        )
+        Timetable.objects.create(
+            subject=self.subject,
+            faculty=self.faculty,
+            day_of_week="MON",
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            classroom=self.room_b,
+            section="B",
+        )
+
+    def test_student_dashboard_shows_only_matching_section_timetable(self):
+        self.client.force_login(self.student_user)
+
+        response = self.client.get(reverse("student_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        monday_slots = next(slots for day_code, _label, slots in response.context["week_timetable_list"] if day_code == "MON")
+        self.assertEqual(len(monday_slots), 1)
+        self.assertEqual(monday_slots[0].section, "A")

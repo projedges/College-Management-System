@@ -4,6 +4,17 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env file if present (dev convenience — no extra packages needed)
+# Always overrides environment variables so local .env takes precedence.
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    with open(_env_file) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _, _v = _line.partition('=')
+                os.environ[_k.strip()] = _v.strip()  # always override
+
 
 def _env_bool(name, default=False):
     value = os.environ.get(name)
