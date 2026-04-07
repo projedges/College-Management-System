@@ -1,8 +1,8 @@
-{% extends 'exam/base_exam.html' %}
-{% block title %}Schedule — {{ exam.name }}{% endblock %}
+﻿{% extends 'exam/base_exam.html' %}
+{% block title %}Schedule â€” {{ exam.name }}{% endblock %}
 {% block breadcrumb %} / {{ exam.name }} / Schedule{% endblock %}
-{% block page_title %}{{ exam.name }} — Schedule{% endblock %}
-{% block page_sub %}Sem {{ exam.semester }} · {{ exam.start_date|date:"d M" }} – {{ exam.end_date|date:"d M Y" }}{% endblock %}
+{% block page_title %}{{ exam.name }} â€” Schedule{% endblock %}
+{% block page_sub %}Sem {{ exam.semester }} &middot; {{ exam.start_date|date:"d M" }} â€“ {{ exam.end_date|date:"d M Y" }}{% endblock %}
 {% block content %}
 <div class="two-col" style="align-items:start">
   <div>
@@ -13,14 +13,14 @@
         <div class="form-group">
           <label>Subject <span style="color:#ef4444">*</span></label>
           <select name="subject" class="form-control" required>
-            <option value="">— Select Subject —</option>
-            {% for s in subjects %}<option value="{{ s.pk }}">{{ s.department.code }} · {{ s.name }} ({{ s.code }})</option>{% endfor %}
+            <option value="">â€” Select Subject â€”</option>
+            {% for s in subjects %}<option value="{{ s.pk }}">{{ s.department.code }} &middot; {{ s.name }} ({{ s.code }})</option>{% endfor %}
           </select>
         </div>
         <div class="form-group">
           <label>Exam Type</label>
           <select name="exam_type" class="form-control">
-            <option value="">— None —</option>
+            <option value="">â€” None â€”</option>
             {% for et in exam_types %}<option value="{{ et.pk }}">{{ et.name }}</option>{% endfor %}
           </select>
         </div>
@@ -35,7 +35,7 @@
         <div class="form-group">
           <label>Invigilator</label>
           <select name="invigilator" class="form-control">
-            <option value="">— None —</option>
+            <option value="">â€” None â€”</option>
             {% for f in faculty_list %}<option value="{{ f.pk }}">{{ f.user.get_full_name }} ({{ f.department.code }})</option>{% endfor %}
           </select>
         </div>
@@ -56,11 +56,11 @@
         <tbody>
           {% for slot in schedules %}
           <tr>
-            <td><div style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ slot.subject.code }} · {{ slot.subject.department.code }}</div></td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ slot.subject.code }} &middot; {{ slot.subject.department.code }}</div></td>
             <td style="font-size:12px">{{ slot.date|date:"d M Y" }}</td>
-            <td style="font-size:12px;color:var(--muted)">{{ slot.start_time|time:"g:i A" }}–{{ slot.end_time|time:"g:i A" }}</td>
-            <td style="font-size:12px">{{ slot.venue|default:"—" }}</td>
-            <td style="font-size:12px">{{ slot.invigilator.user.get_full_name|default:"—" }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ slot.start_time|time:"g:i A" }}â€“{{ slot.end_time|time:"g:i A" }}</td>
+            <td style="font-size:12px">{{ slot.venue|default:"â€”" }}</td>
+            <td style="font-size:12px">{{ slot.invigilator.user.get_full_name|default:"â€”" }}</td>
             <td style="text-align:center">{{ slot.max_marks }}</td>
             <td>
               <form method="POST" action="{% url 'exam_schedule_delete' exam.pk slot.pk %}" style="display:inline" onsubmit="return confirm('Remove this slot?')">

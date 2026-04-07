@@ -1,9 +1,9 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}{{ college.name }} — Super Admin{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{{ college.name }} â€” Super Admin{% endblock %}
 {% block role_label %}Super Admin{% endblock %}
 {% block role_label_foot %}Super Admin{% endblock %}
 {% block page_title %}{{ college.name }}{% endblock %}
-{% block page_sub %}{{ college.code }}{% if college.city %} · {{ college.city }}{% endif %}{% if not college.is_active %} · <span style="color:var(--red);font-weight:700">Inactive</span>{% endif %}{% endblock %}
+{% block page_sub %}{{ college.code }}{% if college.city %} &middot; {{ college.city }}{% endif %}{% if not college.is_active %} &middot; <span style="color:var(--red);font-weight:700">Inactive</span>{% endif %}{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'super_admin_dashboard' %}#colleges" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Colleges</a>
@@ -14,7 +14,7 @@
 
 <div class="hint-box" style="margin-bottom:20px;border-color:rgba(13,115,119,.3)">
   <i class="fas fa-shield-halved" style="color:var(--teal)"></i>
-  <strong style="color:var(--teal)"> Data Privacy Notice</strong> — As the platform operator you can see structural information (departments, headcount) but not student records, financial data, or user activity. College data belongs to the college.
+  <strong style="color:var(--teal)"> Data Privacy Notice</strong> â€” As the platform operator you can see structural information (departments, headcount) but not student records, financial data, or user activity. College data belongs to the college.
 </div>
 
 <div class="stat-grid">
@@ -35,7 +35,7 @@
 <div class="two-col">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-sitemap"></i> Departments</div>
-    <div class="section-meta">Department names and headcounts — no student or faculty details.</div>
+    <div class="section-meta">Department names and headcounts â€” no student or faculty details.</div>
     {% if departments %}
     <div class="table-scroll content-scroll">
       <table class="dtable">

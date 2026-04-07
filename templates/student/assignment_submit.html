@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Submit Assignment - EduTrack{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Submit Assignment{% endblock %}
-{% block page_sub %}{{ assignment.title }} · {{ assignment.subject.name }}{% endblock %}
+{% block page_sub %}{{ assignment.title }} &middot; {{ assignment.subject.name }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'student_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>

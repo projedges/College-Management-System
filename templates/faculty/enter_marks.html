@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Enter Marks - {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Enter Marks{% endblock %}
-{% block page_sub %}{{ subject.name }} · {{ exam.name }}{% endblock %}
+{% block page_sub %}{{ subject.name }} &middot; {{ exam.name }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>

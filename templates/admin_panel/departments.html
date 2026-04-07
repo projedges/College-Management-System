@@ -1,5 +1,5 @@
-{% extends 'admin_panel/base_admin.html' %}
-{% block title %}Departments — Admin{% endblock %}
+﻿{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Departments â€” Admin{% endblock %}
 {% block nav_dept %}on{% endblock %}
 {% block breadcrumb %} / Departments{% endblock %}
 {% block page_title %}Departments{% endblock %}
@@ -20,7 +20,7 @@
       <tr>
         <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
         <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">{{ d.code }}</span></td>
-        <td style="color:var(--muted)">{{ d.established_year|default:"—" }}</td>
+        <td style="color:var(--muted)">{{ d.established_year|default:"â€”" }}</td>
         <td style="text-align:center;font-weight:600">{{ d.student_count }}</td>
         <td style="text-align:center;font-weight:600">{{ d.faculty_count }}</td>
         <td>

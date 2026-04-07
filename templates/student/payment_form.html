@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+ï»¿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Pay Fees - EduTrack{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Pay Fees{% endblock %}
@@ -48,7 +48,7 @@
     <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:10px">Select What to Pay</div>
     <div style="display:grid;gap:8px;margin-bottom:18px" id="fee-components">
 
-      <!-- TUITION FEE — always shown; disabled when fully paid -->
+      <!-- TUITION FEE â€” always shown; disabled when fully paid -->
       {% if balance_due > 0 %}
       <label style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="comp_label_TUITION">
         <div style="display:flex;align-items:center;gap:10px">
@@ -56,7 +56,7 @@
                  onchange="selectComponent(this)" checked style="accent-color:var(--teal);width:16px;height:16px">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--deep)">Tuition Fee</div>
-            <div style="font-size:11px;color:var(--muted)">Semester fee · Rs {{ fee.total_amount|floatformat:0 }} total · Rs {{ fee.paid_amount|floatformat:0 }} paid</div>
+            <div style="font-size:11px;color:var(--muted)">Semester fee Â· Rs {{ fee.total_amount|floatformat:0 }} total Â· Rs {{ fee.paid_amount|floatformat:0 }} paid</div>
           </div>
         </div>
         <span style="font-size:14px;font-weight:800;color:var(--teal)">Rs {{ balance_due|floatformat:0 }} due</span>
@@ -67,14 +67,14 @@
           <i class="fas fa-check-circle" style="color:#16a34a;font-size:16px"></i>
           <div>
             <div style="font-size:13px;font-weight:600;color:#065f46">Tuition Fee</div>
-            <div style="font-size:11px;color:#16a34a">Fully paid — Rs {{ fee.total_amount|floatformat:0 }}</div>
+            <div style="font-size:11px;color:#16a34a">Fully paid â€” Rs {{ fee.total_amount|floatformat:0 }}</div>
           </div>
         </div>
         <span style="font-size:12px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px">PAID</span>
       </div>
       {% endif %}
 
-      <!-- EXAM FEE — disabled if already paid this semester -->
+      <!-- EXAM FEE â€” disabled if already paid this semester -->
       {% for key, label, amount in fee_components_display %}
       {% if key == 'EXAM' and amount > 0 %}
       {% if 'EXAM' in paid_types %}
@@ -83,7 +83,7 @@
           <i class="fas fa-check-circle" style="color:#16a34a;font-size:16px"></i>
           <div>
             <div style="font-size:13px;font-weight:600;color:#065f46">Exam Fee</div>
-            <div style="font-size:11px;color:#16a34a">Already paid this semester — admin can reset if needed</div>
+            <div style="font-size:11px;color:#16a34a">Already paid this semester â€” admin can reset if needed</div>
           </div>
         </div>
         <span style="font-size:12px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px">PAID</span>
@@ -104,7 +104,7 @@
       {% endif %}
       {% endfor %}
 
-      <!-- LIBRARY FEE — editable amount + reason dropdown, always payable multiple times -->
+      <!-- LIBRARY FEE â€” editable amount + reason dropdown, always payable multiple times -->
       {% for key, label, amount in fee_components_display %}
       {% if key == 'LIBRARY' and amount > 0 %}
       <div>
@@ -114,7 +114,7 @@
                    onchange="selectComponent(this)" style="accent-color:var(--teal);width:16px;height:16px">
             <div>
               <div style="font-size:13px;font-weight:600;color:var(--deep)">Library Fee</div>
-              <div style="font-size:11px;color:var(--muted)">Membership, fines &amp; charges — select reason below</div>
+              <div style="font-size:11px;color:var(--muted)">Membership, fines &amp; charges â€” select reason below</div>
             </div>
           </div>
           <span style="font-size:13px;font-weight:700;color:var(--teal)">Editable</span>
@@ -122,7 +122,7 @@
         <div id="desc_LIBRARY" style="display:none;padding:12px 14px;background:#f8fafc;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px">
           <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Reason <span style="color:#dc2626">*</span></label>
           <select id="reason_LIBRARY" onchange="updateLibraryReason()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:8px">
-            <option value="">— Select reason —</option>
+            <option value="">â€” Select reason â€”</option>
             <option value="Annual Membership" data-amount="{{ amount }}">Annual Membership (Rs {{ amount|floatformat:0 }})</option>
             <option value="Book Lost Fine" data-amount="500">Book Lost Fine (Rs 500)</option>
             <option value="Late Return Fine" data-amount="50">Late Return Fine (Rs 50)</option>
@@ -139,7 +139,7 @@
       {% endif %}
       {% endfor %}
 
-      <!-- SPORTS FEE — multiple payments allowed, with reason -->
+      <!-- SPORTS FEE â€” multiple payments allowed, with reason -->
       {% for key, label, amount in fee_components_display %}
       {% if key == 'SPORTS' and amount > 0 %}
       <div>
@@ -162,7 +162,7 @@
       {% endif %}
       {% endfor %}
 
-      <!-- SUPPLY EXAM FEE — redirects to subject selection -->
+      <!-- SUPPLY EXAM FEE â€” redirects to subject selection -->
       <label style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="comp_label_SUPPLY">
         <div style="display:flex;align-items:center;gap:10px">
           <input type="radio" name="fee_component" value="SUPPLY" data-type="redirect"
@@ -176,7 +176,7 @@
         <span style="font-size:12px;font-weight:700;color:var(--muted)">Select subjects &rarr;</span>
       </label>
 
-      <!-- MISCELLANEOUS — editable amount + mandatory description -->
+      <!-- MISCELLANEOUS â€” editable amount + mandatory description -->
       <div>
         <label style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="comp_label_MISC">
           <div style="display:flex;align-items:center;gap:10px">
@@ -206,7 +206,7 @@
         <div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:2px" id="selected_label">Tuition Fee</div>
           <div style="font-size:22px;font-weight:900;color:var(--teal)" id="amount_display">Rs {{ balance_due|floatformat:0 }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px" id="amount_hint">You can pay partial — enter amount below</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px" id="amount_hint">You can pay partial â€” enter amount below</div>
         </div>
         <div id="partial_input_wrap" style="display:flex;flex-direction:column;gap:6px;min-width:200px">
           <input type="number" step="1" min="1" id="pay_amount"
@@ -286,7 +286,7 @@
       }
 
       if (selectedType === 'partial') {
-        // Tuition — editable, max = balance
+        // Tuition â€” editable, max = balance
         lblEl.textContent = 'Tuition Fee Balance';
         amtDisplay.textContent = 'Rs ' + tuitionBalance.toLocaleString('en-IN');
         amtHint.textContent = 'You can pay partial. Max: Rs ' + tuitionBalance.toLocaleString('en-IN');
@@ -294,21 +294,21 @@
         document.getElementById('pay_amount').value = tuitionBalance;
         document.getElementById('pay_amount').max   = tuitionBalance;
       } else if (selectedType === 'fixed' || selectedType === 'fixed_desc') {
-        // Fixed fee — amount not editable
+        // Fixed fee â€” amount not editable
         lblEl.textContent = selectedLabel;
         amtDisplay.textContent = 'Rs ' + selectedAmt.toLocaleString('en-IN');
-        amtHint.textContent = 'Fixed amount — no partial payment';
+        amtHint.textContent = 'Fixed amount â€” no partial payment';
         partialWrap.style.display = 'none';
         document.getElementById('pay_amount').value = selectedAmt;
       } else if (selectedType === 'library') {
         lblEl.textContent = 'Library Fee';
-        amtDisplay.textContent = 'Rs —';
+        amtDisplay.textContent = 'Rs â€”';
         amtHint.textContent = 'Select reason and enter amount below';
         partialWrap.style.display = 'none';
         document.getElementById('pay_amount').value = '';
       } else if (selectedType === 'misc') {
         lblEl.textContent = 'Miscellaneous Fee';
-        amtDisplay.textContent = 'Rs —';
+        amtDisplay.textContent = 'Rs â€”';
         amtHint.textContent = 'Enter amount and description below';
         partialWrap.style.display = 'none';
         document.getElementById('pay_amount').value = '';
@@ -318,7 +318,7 @@
     function updateMiscAmount() {
       var v = document.getElementById('misc_amount').value;
       document.getElementById('pay_amount').value = v;
-      document.getElementById('amount_display').textContent = v ? 'Rs ' + parseFloat(v).toLocaleString('en-IN') : 'Rs —';
+      document.getElementById('amount_display').textContent = v ? 'Rs ' + parseFloat(v).toLocaleString('en-IN') : 'Rs â€”';
     }
 
     function updateLibraryReason() {
@@ -337,16 +337,16 @@
     function updateLibraryAmount() {
       var v = document.getElementById('library_amount').value;
       document.getElementById('pay_amount').value = v;
-      document.getElementById('amount_display').textContent = v ? 'Rs ' + parseFloat(v).toLocaleString('en-IN') : 'Rs —';
+      document.getElementById('amount_display').textContent = v ? 'Rs ' + parseFloat(v).toLocaleString('en-IN') : 'Rs â€”';
     }
 
-    // Init on load — select first available (checked or first radio)
+    // Init on load â€” select first available (checked or first radio)
     (function() {
       var first = document.querySelector('input[name="fee_component"]:checked');
       if (!first) first = document.querySelector('input[name="fee_component"]');
       if (first) { first.checked = true; selectComponent(first); }
       else {
-        // All payable components are paid — hide pay button
+        // All payable components are paid â€” hide pay button
         var btn = document.getElementById('rzp_btn');
         var act = document.getElementById('payment_action');
         if (btn) btn.style.display = 'none';
@@ -443,35 +443,6 @@
     {% endif %}
   </div>
 
-  <!-- Recent Payments -->
-  <div class="card" style="max-width:820px;margin-top:20px">
-    <h3 style="font-family:'Outfit',sans-serif;margin-bottom:14px">Recent Payments</h3>
-    {% if recent_payments %}
-    <div style="display:grid;gap:10px">
-      {% for payment in recent_payments %}
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">Rs {{ payment.amount|floatformat:0 }}
-            <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px">{{ payment.payment_type }}</span>
-          </div>
-          <div style="font-size:11px;color:var(--muted)">
-            {{ payment.payment_method }} &middot; {{ payment.transaction_id }}
-            {% if payment.paid_at %} &middot; {{ payment.paid_at|date:"d M Y, h:i A" }}{% endif %}
-            {% if payment.status == 'PENDING' %}<span style="color:#d97706;font-weight:600"> &middot; Pending</span>{% endif %}
-            {% if payment.status == 'FAILED' %}<span style="color:#dc2626;font-weight:600"> &middot; Failed</span>{% endif %}
-          </div>
-        </div>
-        {% if payment.status == 'SUCCESS' %}
-        <a href="{% url 'student_payment_receipt' payment.pk %}" class="btn btn-outline" style="font-size:12px">Receipt</a>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div style="font-size:13px;color:var(--muted)">No payments recorded yet.</div>
-    {% endif %}
-  </div>
-
   <!-- All-Semesters Fee Ledger -->
   {% if all_semester_fees %}
   <div class="card" style="max-width:820px;margin-top:20px">
@@ -481,7 +452,7 @@
     <div style="margin-bottom:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
       <div style="padding:10px 14px;background:var(--surface2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div style="font-size:13px;font-weight:700;color:var(--deep)">
-          Semester {{ f.semester|default:"—" }}
+          Semester {{ f.semester|default:"â€”" }}
           {% if f.academic_year %}<span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px">{{ f.academic_year }}</span>{% endif %}
         </div>
         <div style="display:flex;gap:16px;font-size:12px">
@@ -498,7 +469,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
           <div>
             <span style="font-weight:600;color:var(--deep)">{{ p.payment_type }}</span>
-            <span style="color:var(--muted);margin-left:8px">{{ p.payment_method }} · {{ p.transaction_id }}</span>
+            <span style="color:var(--muted);margin-left:8px">{{ p.payment_method }} Â· {{ p.transaction_id }}</span>
             {% if p.paid_at %}<span style="color:var(--muted);margin-left:8px">{{ p.paid_at|date:"d M Y" }}</span>{% endif %}
           </div>
           <div style="display:flex;align-items:center;gap:10px">

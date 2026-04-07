@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
-{% block title %}System Access — EduTrack{% endblock %}
+{% block title %}System Access â€” EduTrack{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -79,7 +79,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Security Check — What is <strong style="color:var(--teal)">{{ captcha_q }}</strong>?</label>
+        <label>Security Check â€” What is <strong style="color:var(--teal)">{{ captcha_q }}</strong>?</label>
         <div class="input-wrap">
           <i class="fas fa-shield-halved lead-icon"></i>
           <input type="number" name="captcha" placeholder="Enter the answer" required autocomplete="off"/>
@@ -88,7 +88,7 @@
       <button type="submit" class="btn-submit"><i class="fas fa-right-to-bracket"></i> Access Platform</button>
     </form>
   </div>
-  <div class="auth-footer"><a href="{% url 'home' %}">← Back to home</a></div>
+  <div class="auth-footer"><a href="{% url 'home' %}">â† Back to home</a></div>
 </div>
 
 <script>

@@ -1,9 +1,9 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}HOD Dashboard - EduTrack{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
 {% block role_label_foot %}Head of Department{% endblock %}
 {% block page_title %}HOD Dashboard{% endblock %}
-{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ dept.name }}</span>{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> &middot; <span style="color:var(--deep);font-weight:600">{{ dept.name }}</span>{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
@@ -110,7 +110,7 @@
         <div class="approval-card">
           <div class="approval-type">{{ ap.get_approval_type_display }}</div>
           <div class="approval-desc">{{ ap.description|truncatechars:100 }}</div>
-          <div class="approval-meta">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} · {{ ap.created_at|date:"d M Y" }}</div>
+          <div class="approval-meta">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
           <div class="approval-actions">
             <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
             <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="REJECTED"/><button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button></form>
@@ -134,7 +134,7 @@
       <div style="flex:1;min-width:0">
         <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
         <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ hod.employee_id }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">Head of Department · {{ dept.name }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Head of Department &middot; {{ dept.name }}</div>
         {% if hod.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ hod.phone_number }}</div>{% endif %}
       </div>
     </div>
@@ -224,7 +224,7 @@
     <div class="content-scroll">
       {% for t in today_timetable %}
       <div class="tt-row">
-        <div class="tt-time">{{ t.start_time|time:"g:i A" }} – {{ t.end_time|time:"g:i A" }}</div>
+        <div class="tt-time">{{ t.start_time|time:"g:i A" }} ΓÇô {{ t.end_time|time:"g:i A" }}</div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
@@ -253,7 +253,7 @@
         <tbody>
           {% for sa in subject_attendance %}
           <tr>
-            <td><div style="font-weight:600;color:var(--deep)">{{ sa.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ sa.subject.code }} · Sem {{ sa.subject.semester }}</div></td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ sa.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ sa.subject.code }} &middot; Sem {{ sa.subject.semester }}</div></td>
             <td style="text-align:center">{{ sa.sessions }}</td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
@@ -279,18 +279,22 @@
 <!-- FACULTY WORKLOAD (new) -->
 <section data-dashboard-pane="faculty" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty Members</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <div class="d-title" style="margin:0"><i class="fas fa-chalkboard-teacher"></i> Faculty Members</div>
+      <input id="fac-search" type="text" oninput="filterFacTable()" placeholder="Search name or ID&hellip;"
+        style="border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;outline:none;width:200px">
+    </div>
     {% if faculty_list %}
     <div class="table-scroll content-scroll">
-      <table class="dtable">
+      <table class="dtable" id="fac-table">
         <thead><tr><th>Name</th><th>Designation</th><th>Qualification</th><th>Emp ID</th><th>Phone</th></tr></thead>
         <tbody>
           {% for f in faculty_list %}
-          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_faculty_edit' f.pk %}'">
-            <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
+          <tr class="fac-row" data-name="{{ f.user.get_full_name|lower }}" data-empid="{{ f.employee_id|lower }}">
+            <td><a href="{% url 'hod_faculty_profile' f.pk %}" style="font-weight:600;color:var(--teal);text-decoration:none">{{ f.user.get_full_name|default:f.user.username }}</a></td>
             <td style="color:var(--muted)">{{ f.designation }}</td>
             <td style="color:var(--muted)">{{ f.qualification }}</td>
-            <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
+            <td style="color:var(--deep);font-weight:600">{{ f.employee_id }}</td>
             <td style="color:var(--muted)">{{ f.phone_number }}</td>
           </tr>
           {% endfor %}
@@ -302,7 +306,7 @@
     {% endif %}
   </div>
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-briefcase"></i> Faculty Workload — This Month</div>
+    <div class="d-title"><i class="fas fa-briefcase"></i> Faculty Workload &ndash; This Month</div>
     <div class="section-meta">Subjects assigned, sessions marked, and pending assignment reviews.</div>
     {% if faculty_workload %}
     <div class="table-scroll">
@@ -339,7 +343,7 @@
         <div class="approval-card">
           <div class="approval-type">{{ ap.get_approval_type_display }}</div>
           <div class="approval-desc">{{ ap.description|truncatechars:140 }}</div>
-          <div class="approval-meta"><i class="fas fa-user" style="font-size:10px"></i> {{ ap.requested_by.get_full_name|default:ap.requested_by.username }} · {{ ap.created_at|date:"d M Y" }}</div>
+          <div class="approval-meta"><i class="fas fa-user" style="font-size:10px"></i> {{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
           <div class="approval-actions">
             <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
             <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="REJECTED"/><button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button></form>
@@ -367,7 +371,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6;gap:12px">
         <div>
           <span style="font-weight:600;color:var(--deep)">{{ ap.get_approval_type_display }}</span>
-          <div style="font-size:11px;color:var(--muted)">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} · {{ ap.created_at|date:"d M Y" }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
         </div>
         <span class="status-badge status-{{ ap.status|lower }}">{{ ap.get_status_display }}</span>
       </div>
@@ -397,4 +401,15 @@
     {% endif %}
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+function filterFacTable() {
+  var q = document.getElementById('fac-search').value.toLowerCase();
+  document.querySelectorAll('#fac-table tbody tr').forEach(function(row) {
+    var name = row.dataset.name || '';
+    var empid = row.dataset.empid || '';
+    row.style.display = (!q || name.indexOf(q) !== -1 || empid.indexOf(q) !== -1) ? '' : 'none';
+  });
+}
 {% endblock %}

@@ -1,9 +1,9 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Faculty Dashboard - EduTrack{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block role_label_foot %}Faculty{% endblock %}
 {% block page_title %}Faculty Dashboard{% endblock %}
-{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ faculty.designation }}</span> · {{ faculty.department.code }}{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> &middot; <span style="color:var(--deep);font-weight:600">{{ faculty.designation }}</span> &middot; {{ faculty.department.code }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
@@ -41,6 +41,23 @@
   .req-type{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:3px}
   .req-desc{font-size:13px;color:var(--deep)}
   .req-meta{font-size:11px;color:var(--muted);margin-top:3px}
+  /* Faculty timetable matrix */
+  .fac-matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px}
+  .fac-matrix{width:100%;border-collapse:separate;border-spacing:0;min-width:680px}
+  .fac-matrix th{background:var(--deep);color:#fff;font-size:11px;font-weight:800;padding:10px 8px;text-align:center}
+  .fac-matrix td{background:#f8fafc;border:2px solid #fff;vertical-align:top;padding:8px;min-width:100px;font-size:11px}
+  .fac-matrix .time-col{background:#eef2f7;color:var(--deep);font-size:11px;font-weight:700;white-space:nowrap;text-align:right;padding-right:10px}
+  .fac-matrix .today-head{background:var(--teal)}
+  .fac-matrix .today-cell{background:rgba(13,115,119,.06)}
+  .fac-matrix .free-cell{background:#f0fdf4}
+  .fac-chip{border-radius:8px;padding:7px 8px;background:rgba(13,115,119,.09);border:1px solid rgba(13,115,119,.18);margin-bottom:4px}
+  .fac-chip:last-child{margin-bottom:0}
+  .fac-chip-subj{font-weight:700;color:var(--deep);line-height:1.3}
+  .fac-chip-meta{color:var(--muted);margin-top:2px}
+  .free-slot{font-size:10px;color:#16a34a;font-weight:600;text-align:center;padding:4px 0}
+  /* Availability slots */
+  .avail-slot{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:12px}
+  .avail-day{font-weight:700;color:var(--teal);min-width:36px}
   @media(max-width:600px){.subj-card{flex-wrap:wrap}.subj-actions{width:100%;margin-left:0}}
 </style>
 {% endblock %}
@@ -95,7 +112,7 @@
           <div class="subj-icon"><i class="fas fa-book-open"></i></div>
           <div>
             <div class="subj-name">{{ item.subject.name }}</div>
-            <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div>
+            <div class="subj-meta">{{ item.subject.code }} &middot; Sem {{ item.subject.semester }}</div>
           </div>
           <div class="subj-actions">
             <a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal"><i class="fas fa-calendar-check"></i> Attendance</a>
@@ -152,7 +169,7 @@
       <div style="flex:1;min-width:0">
         <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
         <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ faculty.employee_id }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ faculty.designation }} · {{ faculty.department.name }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ faculty.designation }} &middot; {{ faculty.department.name }}</div>
         {% if faculty.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ faculty.phone_number }}</div>{% endif %}
       </div>
     </div>
@@ -182,7 +199,7 @@
         <div class="subj-icon"><i class="fas fa-book-open"></i></div>
         <div>
           <div class="subj-name">{{ item.subject.name }}</div>
-          <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }} · {{ item.subject.department.code }}</div>
+          <div class="subj-meta">{{ item.subject.code }} &middot; Sem {{ item.subject.semester }} &middot; {{ item.subject.department.code }}</div>
         </div>
         <div class="subj-actions">
           <a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal"><i class="fas fa-calendar-check"></i> Attendance</a>
@@ -202,7 +219,7 @@
 <!-- ATTENDANCE -->
 <section data-dashboard-pane="attendance" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions — Per Subject</div>
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions â€” Per Subject</div>
     <div class="section-meta">Sessions marked, class average, and defaulter count per subject.</div>
     {% if subject_cards %}
     <div class="table-scroll">
@@ -211,7 +228,7 @@
         <tbody>
           {% for item in subject_cards %}
           <tr>
-            <td><div style="font-weight:600;color:var(--deep)">{{ item.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div></td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ item.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ item.subject.code }} &middot; Sem {{ item.subject.semester }}</div></td>
             <td style="text-align:center;font-weight:600">{{ item.total_sessions }}</td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
@@ -264,52 +281,33 @@
 
 <!-- TIMETABLE -->
 <section data-dashboard-pane="timetable" class="dashboard-pane">
+
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
       <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Classes</div>
-      <div style="font-size:12px;color:var(--muted)">{{ faculty.department.code }} · {{ today_timetable|length }} class{{ today_timetable|length|pluralize }}</div>
+      <div style="font-size:12px;color:var(--muted)">{{ faculty.department.code }} &middot; {{ today_timetable|length }} class{{ today_timetable|length|pluralize }}</div>
     </div>
     {% if today_timetable or today_breaks %}
     <div class="table-scroll" style="margin-top:12px">
       <table class="dtable" style="min-width:480px">
-        <thead>
-          <tr>
-            <th style="width:90px">Time</th>
-            <th>Subject</th>
-            <th>Room</th>
-            <th style="text-align:center">Status</th>
-          </tr>
-        </thead>
+        <thead><tr><th style="width:100px">Time</th><th>Subject</th><th>Room</th><th style="text-align:center">Status</th></tr></thead>
         <tbody>
           {% for t in today_timetable %}
           <tr style="{% if t.subject.id in marked_subject_ids %}background:rgba(13,115,119,.03){% endif %}">
-            <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
-              {{ t.start_time|time:"g:i A" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"g:i A" }}</span>
-            </td>
-            <td>
-              <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
-            </td>
-            <td style="font-size:12px">
-              <span style="font-weight:600">{{ t.classroom.room_number }}</span>
-              {% if t.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ t.classroom.building }}</div>{% endif %}
-            </td>
+            <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">{{ t.start_time|time:"g:i A" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"g:i A" }}</span></td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}{% if t.section %} &middot; Sec {{ t.section }}{% endif %}</div></td>
+            <td style="font-size:12px"><span style="font-weight:600">{{ t.classroom.room_number }}</span>{% if t.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ t.classroom.building }}</div>{% endif %}</td>
             <td style="text-align:center">
-              {% if t.subject.id in marked_subject_ids %}
-                <span style="font-size:11px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> Marked</span>
-              {% else %}
-                <a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:4px 10px;border-radius:7px;text-decoration:none;white-space:nowrap"><i class="fas fa-calendar-check"></i> Mark</a>
-              {% endif %}
+              {% if t.subject.id in marked_subject_ids %}<span style="font-size:11px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> Marked</span>
+              {% else %}<a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:4px 10px;border-radius:7px;text-decoration:none;white-space:nowrap"><i class="fas fa-calendar-check"></i> Mark</a>{% endif %}
             </td>
           </tr>
           {% endfor %}
           {% for brk in today_breaks %}
           <tr style="background:#fef9c3">
-            <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
-              {{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span>
-            </td>
+            <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">{{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span></td>
             <td colspan="2" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
-            <td style="text-align:center;font-size:11px;color:#92400e">—</td>
+            <td style="text-align:center;font-size:11px;color:#92400e">&ndash;</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -319,32 +317,93 @@
     <div class="empty"><i class="fas fa-mug-hot"></i>No classes today.</div>
     {% endif %}
   </div>
+
   <div class="d-card">
     <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Schedule</div>
-    <div class="section-meta">Your complete teaching schedule Mon – Sat.</div>
-    <div class="table-scroll">
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
-        {% for day_code, day_label, slots in faculty_week_timetable %}
-        <div style="background:var(--surface2);border-radius:12px;padding:10px;min-height:70px;{% if day_code == today_day %}border:1px solid rgba(13,115,119,.3);background:rgba(13,115,119,.05){% endif %}">
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">
-            {{ day_label|slice:":3" }}{% if day_code == today_day %} <span style="font-size:9px;background:var(--teal);color:#fff;padding:1px 5px;border-radius:99px">Today</span>{% endif %}
+    <div class="section-meta">Your complete teaching schedule Mon &ndash; Sat. Free slots shown in green.</div>
+    {% if week_timetable_matrix %}
+    <div class="fac-matrix-wrap">
+      <table class="fac-matrix">
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:90px">Period</th>
+            {% for day_code, day_label, slots in faculty_week_timetable %}
+            <th class="{% if day_code == today_day %}today-head{% endif %}">{{ day_label|slice:":3" }}{% if day_code == today_day %}<span style="display:block;font-size:9px;opacity:.9;margin-top:1px">Today</span>{% endif %}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in week_timetable_matrix %}
+          <tr class="{% if row.is_break_row %}break-row{% endif %}">
+            <td class="time-col">{{ row.label }}</td>
+            {% for cell in row.cells %}
+            <td class="{% if cell.day_code == today_day %}today-cell{% endif %}{% if not cell.entries and not cell.break_label and not row.is_break_row %} free-cell{% endif %}">
+              {% if cell.entries %}{% for entry in cell.entries %}
+              <div class="fac-chip">
+                <div class="fac-chip-subj">{{ entry.subject.name }}</div>
+                <div class="fac-chip-meta">{{ entry.subject.code }}{% if entry.section %} &middot; Sec {{ entry.section }}{% endif %}</div>
+                <div class="fac-chip-meta">{{ entry.classroom.room_number }}</div>
+              </div>
+              {% endfor %}
+              {% elif cell.break_label %}<div style="font-size:10px;font-weight:700;color:var(--muted);text-align:center"><i class="fas fa-coffee"></i> {{ cell.break_label }}</div>
+              {% elif not row.is_break_row %}<div class="free-slot"><i class="fas fa-circle-check"></i> Free</div>
+              {% else %}<div style="font-size:11px;color:#cbd5e1;text-align:center">&ndash;</div>{% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty" style="margin-top:8px"><i class="fas fa-calendar-xmark"></i>No timetable assigned yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-clock"></i> My Availability Slots</div>
+    <div class="section-meta">Set your free periods so admin can schedule classes and substitutions accordingly.</div>
+    <div class="two-col" style="gap:20px;align-items:start">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Add Free Slot</div>
+        <form method="POST" action="{% url 'faculty_availability_add' %}">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div><label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Day</label>
+              <select name="day_of_week" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <option value="MON">Monday</option><option value="TUE">Tuesday</option>
+                <option value="WED">Wednesday</option><option value="THU">Thursday</option>
+                <option value="FRI">Friday</option><option value="SAT">Saturday</option>
+              </select></div>
+            <div><label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Start</label>
+              <input type="time" name="start_time" value="09:00" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+            <div><label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">End</label>
+              <input type="time" name="end_time" value="10:00" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+            <div style="display:flex;align-items:flex-end">
+              <button type="submit" class="btn-sm btn-sm-teal" style="width:100%;justify-content:center"><i class="fas fa-plus"></i> Add</button></div>
           </div>
-          {% if slots %}{% for t in slots %}
-          <div style="background:#fff;border-radius:8px;padding:6px 8px;margin-bottom:5px;border:1px solid var(--border);font-size:11px">
-            <div style="font-weight:700;color:var(--teal)">{{ t.start_time|time:"g:i A" }}</div>
-            <div style="font-weight:600;color:var(--deep);line-height:1.3">{{ t.subject.name }}</div>
-            <div style="color:var(--muted)">{{ t.classroom.room_number }}{% if t.classroom.building %} · {{ t.classroom.building }}{% endif %}</div>
-          </div>
-          {% endfor %}{% else %}
-          <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">—</div>
-          {% endif %}
+        </form>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Current Free Slots</div>
+        {% if availability_slots %}
+        {% for slot in availability_slots %}
+        <div class="avail-slot">
+          <span class="avail-day">{{ slot.get_day_of_week_display|slice:":3" }}</span>
+          <span style="flex:1;color:var(--deep)">{{ slot.start_time|time:"g:i A" }} &ndash; {{ slot.end_time|time:"g:i A" }}</span>
+          <form method="POST" action="{% url 'faculty_availability_delete' slot.pk %}">{% csrf_token %}
+            <button type="submit" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;padding:2px 6px"><i class="fas fa-times"></i></button>
+          </form>
         </div>
         {% endfor %}
+        {% else %}
+        <div style="font-size:12px;color:var(--muted);padding:10px 0">No slots set yet.</div>
+        {% endif %}
       </div>
     </div>
   </div>
-</section>
 
+</section>
 <!-- ASSIGNMENTS & REVIEWS -->
 <section data-dashboard-pane="submissions" class="dashboard-pane">
   <div class="d-card">
@@ -358,7 +417,7 @@
       <div class="sub-row">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.student.user.get_full_name|default:sub.student.roll_number }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.title }} · {{ sub.assignment.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.title }} &middot; {{ sub.assignment.subject.name }}</div>
         </div>
         <a href="{% url 'faculty_review_submission' sub.pk %}" class="btn-sm btn-sm-teal" style="margin-left:auto"><i class="fas fa-check"></i> Review</a>
         <span style="font-size:11px;color:var(--muted)">{{ sub.submitted_at|date:"d M" }}</span>
@@ -378,8 +437,8 @@
       <div class="sub-row">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ assignment.subject.name }} · Due {{ assignment.deadline|date:"d M Y H:i" }}
-            {% if assignment.submission_count %} · <span style="color:var(--teal);font-weight:600">{{ assignment.submission_count }} submitted</span>{% endif %}
+          <div style="font-size:11px;color:var(--muted)">{{ assignment.subject.name }} &middot; Due {{ assignment.deadline|date:"d M Y H:i" }}
+            {% if assignment.submission_count %} &middot; <span style="color:var(--teal);font-weight:600">{{ assignment.submission_count }} submitted</span>{% endif %}
           </div>
         </div>
         {% if not assignment.is_published %}
@@ -402,7 +461,7 @@
 <!-- INTERNAL MARKS -->
 <section data-dashboard-pane="internals" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-table-list"></i> Internal Marks — Select Subject</div>
+    <div class="d-title"><i class="fas fa-table-list"></i> Internal Marks â€” Select Subject</div>
     <div class="section-meta">IA1, IA2, Assignment, and Attendance components per student.</div>
     {% if subject_cards %}
     {% for item in subject_cards %}
@@ -410,7 +469,7 @@
       <div class="subj-icon"><i class="fas fa-book-open"></i></div>
       <div>
         <div class="subj-name">{{ item.subject.name }}</div>
-        <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div>
+        <div class="subj-meta">{{ item.subject.code }} &middot; Sem {{ item.subject.semester }}</div>
       </div>
       <div class="subj-actions">
         <a href="{% url 'faculty_internal_marks' item.subject.id %}" class="btn-sm" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-table-list"></i> Enter Internals</a>
@@ -443,7 +502,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:10px">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ leave.get_leave_type_display }}</div>
-            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} – {{ leave.to_date|date:"d M Y" }} · {{ leave.days }} day{{ leave.days|pluralize }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} â€“ {{ leave.to_date|date:"d M Y" }} &middot; {{ leave.days }} day{{ leave.days|pluralize }}</div>
             {% if leave.reason %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ leave.reason|truncatechars:60 }}</div>{% endif %}
           </div>
           <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ leave.get_status_display }}</span>
@@ -475,7 +534,7 @@
         </div>
         <div style="margin-bottom:16px">
           <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Details</label>
-          <textarea name="description" rows="4" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Describe your request clearly…"></textarea>
+          <textarea name="description" rows="4" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Describe your request clearly&hellip;"></textarea>
         </div>
         <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
       </form>

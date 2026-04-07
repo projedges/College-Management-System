@@ -1,9 +1,33 @@
-{% extends 'exam/base_exam.html' %}
-{% block title %}Results — {{ exam.name }}{% endblock %}
+﻿{% extends 'exam/base_exam.html' %}
+{% block title %}Results &ndash; {{ exam.name }}{% endblock %}
 {% block breadcrumb %} / {{ exam.name }} / Results{% endblock %}
-{% block page_title %}Results — {{ exam.name }}{% endblock %}
-{% block page_sub %}Compute → Verify → Publish workflow for Sem {{ exam.semester }}{% endblock %}
+{% block page_title %}Results &ndash; {{ exam.name }}{% endblock %}
+{% block page_sub %}Compute &rarr; Verify &rarr; Publish workflow for Sem {{ exam.semester }}{% endblock %}
 {% block content %}
+
+{% if is_frozen %}
+<div style="padding:12px 18px;background:#fee2e2;border:1.5px solid #fca5a5;border-radius:10px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <i class="fas fa-lock" style="color:#dc2626;font-size:18px;flex-shrink:0"></i>
+  <div style="flex:1">
+    <div style="font-size:13px;font-weight:700;color:#991b1b">Results are Frozen</div>
+    <div style="font-size:12px;color:#b91c1c;margin-top:2px">
+      Frozen by {{ freeze_rec.frozen_by.get_full_name|default:freeze_rec.frozen_by.username }} on {{ freeze_rec.frozen_at|date:"d M Y, g:i A" }}.
+      No edits allowed until unfrozen.
+    </div>
+  </div>
+  <form method="POST" style="display:flex;gap:8px;align-items:center">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="unfreeze">
+    <input type="text" name="unfreeze_reason" placeholder="Reason to unfreeze&hellip;" required
+      style="padding:7px 12px;border:1px solid #fca5a5;border-radius:8px;font-size:12px;width:220px">
+    <button type="submit" class="btn btn-outline" style="font-size:12px;border-color:#dc2626;color:#dc2626"
+      onclick="return confirm('Unfreeze results? This allows edits.')">
+      <i class="fas fa-lock-open"></i> Unfreeze
+    </button>
+  </form>
+</div>
+{% endif %}
+
 <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:20px">
   <div class="stat-card"><div class="s-val" style="font-size:20px">{{ summary.total }}</div><div class="s-lbl">Total Students</div></div>
   <div class="stat-card"><div class="s-val" style="font-size:20px;color:#7c3aed">{{ summary.computed }}</div><div class="s-lbl">Computed</div></div>
@@ -16,22 +40,39 @@
 <div class="d-card">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
     <div class="d-title" style="margin:0"><i class="fas fa-chart-bar"></i> Result Actions</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <form method="GET" style="display:inline">
         <select name="dept" class="form-control" style="width:auto;padding:7px 12px;font-size:12px" onchange="this.form.submit()">
           <option value="">All Departments</option>
           {% for d in departments %}<option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>{% endfor %}
         </select>
       </form>
-      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="compute"><button type="submit" class="btn-purple" style="background:#6366f1" onclick="return confirm('Compute results for all students?')"><i class="fas fa-calculator"></i> Compute</button></form>
-      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="verify"><button type="submit" class="btn-purple" style="background:#7c3aed" onclick="return confirm('Mark all computed results as Verified?')"><i class="fas fa-shield-check"></i> Verify</button></form>
-      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="publish"><button type="submit" class="btn-purple" style="background:var(--teal)" onclick="return confirm('Publish results? Students will be able to see them.')"><i class="fas fa-bullhorn"></i> Publish</button></form>
+
+      {% if not is_frozen %}
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="compute">
+        <button type="submit" style="background:#6366f1;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" onclick="return confirm('Compute results for all students?')"><i class="fas fa-calculator"></i> Compute</button>
+      </form>
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="verify">
+        <button type="submit" style="background:#7c3aed;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" onclick="return confirm('Mark all computed results as Verified?')"><i class="fas fa-shield-check"></i> Verify</button>
+      </form>
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="publish">
+        <button type="submit" style="background:var(--teal);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" onclick="return confirm('Publish results? Students will be able to see them.')"><i class="fas fa-bullhorn"></i> Publish</button>
+      </form>
+      <a href="{% url 'exam_marks_moderation' exam.pk %}" style="background:rgba(230,168,23,.12);color:#b88510;border:1px solid rgba(230,168,23,.3);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none"><i class="fas fa-sliders"></i> Moderation</a>
+      {% endif %}
+
+      {% if summary.published > 0 and not is_frozen %}
+      <form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="freeze">
+        <button type="submit" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" onclick="return confirm('Freeze results? No further edits will be allowed.')"><i class="fas fa-lock"></i> Freeze</button>
+      </form>
+      {% endif %}
     </div>
   </div>
+
   {% if rows %}
   <div class="table-scroll">
     <table class="dtable">
-      <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Marks</th><th>%</th><th>Grade</th><th>Pass/Fail</th><th>Status</th></tr></thead>
+      <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Marks</th><th>%</th><th>SGPA</th><th>Grade</th><th>Pass/Fail</th><th>Status</th></tr></thead>
       <tbody>
         {% for row in rows %}
         <tr>
@@ -41,7 +82,12 @@
           {% if row.result %}
           <td style="text-align:center">{{ row.result.total_marks_obtained|floatformat:0 }}/{{ row.result.total_max_marks|floatformat:0 }}</td>
           <td style="text-align:center;font-weight:700;color:{% if row.result.percentage >= 60 %}var(--teal){% elif row.result.percentage >= 40 %}var(--gold){% else %}#ef4444{% endif %}">{{ row.result.percentage|floatformat:1 }}%</td>
-          <td><span class="dbadge dbadge-purple">{{ row.result.grade|default:"—" }}</span></td>
+          <td style="text-align:center;font-weight:700;color:var(--teal)">
+            {% with sgpa=row.student.result_set.all %}
+            {% for r in sgpa %}{% if r.semester == exam.semester %}{{ r.sgpa|floatformat:2 }}{% endif %}{% endfor %}
+            {% endwith %}
+          </td>
+          <td><span class="dbadge" style="background:rgba(99,102,241,.1);color:#6366f1">{{ row.result.grade|default:"&ndash;" }}</span></td>
           <td>{% if row.result.is_pass %}<span class="dbadge dbadge-active">Pass</span>{% else %}<span class="dbadge dbadge-red">Fail</span>{% endif %}</td>
           <td>
             {% if row.result.status == 'PUBLISHED' %}<span class="dbadge dbadge-active">Published</span>
@@ -49,7 +95,7 @@
             {% else %}<span class="dbadge dbadge-warning">Draft</span>{% endif %}
           </td>
           {% else %}
-          <td colspan="5" style="color:var(--muted);font-size:12px;text-align:center">No marks entered</td>
+          <td colspan="6" style="color:var(--muted);font-size:12px;text-align:center">No marks entered</td>
           {% endif %}
         </tr>
         {% endfor %}

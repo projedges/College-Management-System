@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Mark Attendance — {{ subject.name }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Mark Attendance â€” {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Mark Attendance{% endblock %}
-{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Semester {{ subject.semester }}{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
@@ -36,9 +36,9 @@
 <div class="att-form">
   <div class="att-header">
     <div>
-      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subject · Semester {{ subject.semester }}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subject &middot; Semester {{ subject.semester }}</div>
       <div style="font-size:16px;font-weight:700;color:var(--deep)">{{ subject.name }} <span style="color:var(--muted);font-weight:400;font-size:13px">({{ subject.code }})</span></div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ subject.department.name }} · {{ students|length }} student{{ students|length|pluralize }}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ subject.department.name }} &middot; {{ students|length }} student{{ students|length|pluralize }}</div>
     </div>
     <div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Date</div>

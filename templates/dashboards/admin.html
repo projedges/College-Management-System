@@ -1,11 +1,11 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}College Admin Dashboard{% endblock %}
 {% block dashboard_default_section %}overview{% endblock %}
 {% block dashboard_section_aliases %}{"academics":"departments"}{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}College Admin Workspace{% endblock %}
-{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span>{% if college %} · <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endif %}{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span>{% if college %} &middot; <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endif %}{% endblock %}
 
 {% block sidebar_links %}
 <p class="sb-nav-label">Overview</p>
@@ -190,7 +190,7 @@
   </div>
 
   <div class="hint-box" style="margin-top:20px">
-    <strong>Profile settings</strong> — contact your platform administrator to update account details.
+    <strong>Profile settings</strong> â€” contact your platform administrator to update account details.
     <div style="margin-top:10px">
       <a href="{% url 'admin_contact_support' %}" class="qa-btn qa-teal" style="font-size:12px;padding:8px 16px"><i class="fas fa-headset"></i> Contact Platform Support</a>
     </div>
@@ -288,7 +288,7 @@
     </div>
     {% if all_students_full %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <input type="text" id="stu-search" placeholder="Search by name or roll no…" oninput="filterTable('stu-search','stu-tbody','stu-count')"
+      <input type="text" id="stu-search" placeholder="Search by name or roll no&hellip;" oninput="filterTable('stu-search','stu-tbody','stu-count')"
         style="flex:1;min-width:200px;max-width:300px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       <span id="stu-count" style="font-size:12px;color:var(--muted)"></span>
@@ -327,7 +327,7 @@
     </div>
     {% if all_faculty_full %}
     <div style="margin-bottom:12px">
-      <input type="text" id="fac-search" placeholder="Search by name, dept or emp ID…" oninput="filterTable('fac-search','fac-tbody','fac-count')"
+      <input type="text" id="fac-search" placeholder="Search by name, dept or emp ID&hellip;" oninput="filterTable('fac-search','fac-tbody','fac-count')"
         style="width:100%;max-width:320px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       <span id="fac-count" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
@@ -342,7 +342,7 @@
             <td>{{ f.department.code }}</td>
             <td style="color:var(--muted)">{{ f.designation }}</td>
             <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
-            <td style="color:var(--muted)">{{ f.phone_number|default:"—" }}</td>
+            <td style="color:var(--muted)">{{ f.phone_number|default:"â€”" }}</td>
             <td><a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a></td>
           </tr>
           {% endfor %}
@@ -385,7 +385,7 @@
     </div>
     {% if all_departments %}
     <div style="margin-bottom:12px">
-      <input type="text" id="dept-search" placeholder="Search departments…" oninput="filterTable('dept-search','dept-tbody','dept-count')"
+      <input type="text" id="dept-search" placeholder="Search departments&hellip;" oninput="filterTable('dept-search','dept-tbody','dept-count')"
         style="width:100%;max-width:320px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       <span id="dept-count" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
@@ -418,7 +418,7 @@
     {% if all_subjects %}
     <!-- Subject filters -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <input type="text" id="subj-search" placeholder="Search subjects…" oninput="filterSubjects()"
+      <input type="text" id="subj-search" placeholder="Search subjects&hellip;" oninput="filterSubjects()"
         style="flex:1;min-width:180px;max-width:280px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       <select id="subj-dept-filter" onchange="filterSubjects()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
@@ -521,9 +521,9 @@
         <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ inv.invited_email }}</div>
           <div style="font-size:11px;color:var(--muted)">
-            {% if inv.department %}{{ inv.department.code }}{% else %}Any dept{% endif %} ·
+            {% if inv.department %}{{ inv.department.code }}{% else %}Any dept{% endif %} &middot;
             {% if inv.used_at %}<span style="color:var(--teal)">Used</span>{% else %}<span style="color:var(--green)">Active</span>{% endif %}
-            · {{ inv.created_at|date:"d M Y" }}
+            &middot; {{ inv.created_at|date:"d M Y" }}
           </div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:7px;flex-wrap:wrap">
             <input type="text" readonly value="{{ inv.registration_url }}" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);background:#f8fafc">
@@ -549,7 +549,7 @@
           <tr>
             <td style="font-weight:600;color:var(--deep)">{{ item.first_name }} {{ item.last_name }}</td>
             <td style="color:var(--muted);font-size:12px">{{ item.email }}</td>
-            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}—{% endif %}</td>
+            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}â€”{% endif %}</td>
             <td>
               <span class="dbadge {% if item.status == 'CONVERTED' %}dbadge-active{% elif item.status == 'REJECTED' %}dbadge-red{% elif item.status == 'NEEDS_CORRECTION' %}dbadge-warning{% else %}dbadge-warning{% endif %}">
                 {{ item.get_status_display }}
@@ -646,8 +646,8 @@
           <tr>
             <td><div style="font-weight:600;color:var(--deep)">{{ fee.student.user.get_full_name|default:fee.student.user.username }}</div><div style="font-size:11px;color:var(--muted)">{{ fee.student.roll_number }}</div></td>
             <td>{{ fee.student.department.code }}</td>
-            <td style="text-align:center">{% if fee.semester %}Sem {{ fee.semester }}{% else %}—{% endif %}</td>
-            <td style="color:var(--muted);font-size:12px">{{ fee.academic_year|default:"—" }}</td>
+            <td style="text-align:center">{% if fee.semester %}Sem {{ fee.semester }}{% else %}â€”{% endif %}</td>
+            <td style="color:var(--muted);font-size:12px">{{ fee.academic_year|default:"â€”" }}</td>
             <td>Rs {{ fee.total_amount|floatformat:0 }}</td>
             <td style="color:var(--teal);font-weight:600">Rs {{ fee.paid_amount|floatformat:0 }}</td>
             <td style="color:{% if fee.balance > 0 %}var(--red){% else %}var(--teal){% endif %};font-weight:600">Rs {{ fee.balance|floatformat:0 }}</td>
@@ -676,7 +676,7 @@
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:120 }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ ann.created_by.get_full_name|default:ann.created_by.username }} · {{ ann.created_at|date:"d M Y" }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ ann.created_by.get_full_name|default:ann.created_by.username }} &middot; {{ ann.created_at|date:"d M Y" }}</div>
         </div>
         <form method="POST" action="{% url 'admin_announcement_delete' ann.pk %}" style="flex-shrink:0" onsubmit="return confirm('Delete?')">
           {% csrf_token %}<button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px"><i class="fas fa-trash"></i></button>
@@ -778,7 +778,7 @@
 {% endblock %}
 
 {% block extra_js %}
-/* ── Generic table search (departments) ── */
+/* â”€â”€ Generic table search (departments) â”€â”€ */
 function filterTable(inputId, tbodyId, countId) {
   var q = document.getElementById(inputId).value.toLowerCase();
   var rows = document.getElementById(tbodyId).querySelectorAll('tr');
@@ -792,7 +792,7 @@ function filterTable(inputId, tbodyId, countId) {
   if (el) el.textContent = q ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
 }
 
-/* ── Subject multi-filter (search + dept + semester) ── */
+/* â”€â”€ Subject multi-filter (search + dept + semester) â”€â”€ */
 function filterSubjects() {
   var q    = (document.getElementById('subj-search').value || '').toLowerCase();
   var dept = document.getElementById('subj-dept-filter').value;

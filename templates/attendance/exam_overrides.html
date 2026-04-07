@@ -1,7 +1,7 @@
-{% extends 'exam/base_exam.html' %}
-{% block title %}Eligibility Overrides — {{ exam.name }}{% endblock %}
+﻿{% extends 'exam/base_exam.html' %}
+{% block title %}Eligibility Overrides â€” {{ exam.name }}{% endblock %}
 {% block breadcrumb %} / {{ exam.name }} / Overrides{% endblock %}
-{% block page_title %}Eligibility Override Requests — {{ exam.name }}{% endblock %}
+{% block page_title %}Eligibility Override Requests â€” {{ exam.name }}{% endblock %}
 {% block page_sub %}Review and approve manual eligibility overrides for detained students{% endblock %}
 {% block content %}
 {% if overrides %}
@@ -33,7 +33,7 @@
               </div>
             </form>
             {% else %}
-            <div style="font-size:11px;color:var(--muted)">{{ ov.review_note|default:"—"|truncatechars:60 }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ ov.review_note|default:"â€”"|truncatechars:60 }}</div>
             {% endif %}
           </td>
         </tr>

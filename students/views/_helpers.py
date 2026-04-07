@@ -368,50 +368,137 @@ def _student_result_breakdown(student):
 # ── Timetable auto-generation ─────────────────────────────────────────────────
 
 def _auto_generate_timetable(department, semester):
+    """
+    Generate timetable from SectionSubjectFacultyMap (preferred) or FacultySubject (fallback).
+    50-min periods, lab = 2x50 min. Conflict-free college-wide.
+    """
+    from datetime import time as dt_time
+
+    def add_min(t, m):
+        total = t.hour * 60 + t.minute + m
+        return dt_time(total // 60, total % 60)
+
+    LECTURE_GRID = []
+    for day in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']:
+        for h in [9, 10, 11, 12]:
+            s = dt_time(h, 0)
+            LECTURE_GRID.append((day, s, add_min(s, 50)))
+        for h in [14, 15]:
+            s = dt_time(h, 0)
+            LECTURE_GRID.append((day, s, add_min(s, 50)))
+
+    # Lab = 2 consecutive 50-min slots on the same day (14:00–14:50 then 14:50–15:40)
+    # Stored as two separate Timetable rows, not one merged block
+    LAB_PAIRS = []
+    for day in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']:
+        s1 = dt_time(14, 0);  e1 = add_min(s1, 50)   # 14:00–14:50
+        s2 = dt_time(14, 50); e2 = add_min(s2, 50)   # 14:50–15:40
+        LAB_PAIRS.append((day, s1, e1, s2, e2))
+
     subjects = list(Subject.objects.filter(department=department, semester=semester).order_by('name'))
-    faculty_assignments = list(
-        FacultySubject.objects.filter(subject__in=subjects)
-        .select_related('faculty__user', 'subject')
-        .order_by('subject__name', 'faculty__user__first_name')
-    )
-    if not subjects or not faculty_assignments:
+    if not subjects:
         return 0
+
+    from students.models import SectionSubjectFacultyMap
+    ssf_maps = list(
+        SectionSubjectFacultyMap.objects.filter(
+            section__department=department, section__semester=semester
+        ).select_related('subject', 'faculty', 'section', 'classroom')
+    )
+
+    assignments = []
+    if ssf_maps:
+        for m in ssf_maps:
+            assignments.append((m.subject, m.faculty, m.section.label, m.classroom))
+    else:
+        fa_qs = (FacultySubject.objects
+                 .filter(subject__in=subjects)
+                 .select_related('faculty__user', 'subject')
+                 .order_by('subject__name', 'faculty__user__first_name'))
+        subj_count = {}
+        for fa in fa_qs:
+            idx = subj_count.get(fa.subject_id, 0)
+            subj_count[fa.subject_id] = idx + 1
+            label = chr(65 + idx) if subj_count[fa.subject_id] > 1 else ''
+            assignments.append((fa.subject, fa.faculty, label, None))
+
+    if not assignments:
+        return 0
+
     classrooms = list(Classroom.objects.filter(college=department.college).order_by('room_number'))
     if not classrooms:
-        classrooms.append(Classroom.objects.create(
+        classrooms = [Classroom.objects.create(
             college=department.college, room_number=f"{department.code}-101", capacity=60
-        ))
-    availability_map = {}
-    for slot in FacultyAvailability.objects.filter(
-        faculty__in=[a.faculty for a in faculty_assignments], is_available=True,
-    ).order_by('day_of_week', 'start_time'):
-        availability_map.setdefault(slot.faculty_id, []).append(slot)
-    default_slots = [
-        ('MON', dt_time(9, 0), dt_time(10, 0)), ('MON', dt_time(10, 0), dt_time(11, 0)),
-        ('TUE', dt_time(9, 0), dt_time(10, 0)), ('TUE', dt_time(10, 0), dt_time(11, 0)),
-        ('WED', dt_time(9, 0), dt_time(10, 0)), ('THU', dt_time(9, 0), dt_time(10, 0)),
-        ('FRI', dt_time(9, 0), dt_time(10, 0)), ('SAT', dt_time(9, 0), dt_time(10, 0)),
-    ]
+        )]
+
+    used_faculty: set = set()
+    used_rooms: set = set()
+    existing = Timetable.objects.filter(
+        subject__department__college=department.college
+    ).exclude(
+        subject__department=department, subject__semester=semester
+    ).values_list('faculty_id', 'classroom_id', 'day_of_week', 'start_time')
+    for fac_id, room_id, day, start in existing:
+        used_faculty.add((fac_id, day, start))
+        used_rooms.add((room_id, day, start))
+
     Timetable.objects.filter(subject__department=department, subject__semester=semester).delete()
-    used_faculty_slots, used_room_slots, created_count = set(), set(), 0
-    for index, assignment in enumerate(faculty_assignments):
-        candidate_slots = availability_map.get(assignment.faculty_id) or default_slots
-        for slot_index, slot in enumerate(candidate_slots):
-            if hasattr(slot, 'day_of_week'):
-                day_of_week, start_time, end_time = slot.day_of_week, slot.start_time, slot.end_time
-            else:
-                day_of_week, start_time, end_time = slot
-            faculty_key = (assignment.faculty_id, day_of_week, start_time)
-            classroom = classrooms[(index + slot_index) % len(classrooms)]
-            room_key = (classroom.id, day_of_week, start_time)
-            if faculty_key in used_faculty_slots or room_key in used_room_slots:
-                continue
-            Timetable.objects.create(
-                subject=assignment.subject, faculty=assignment.faculty,
-                day_of_week=day_of_week, start_time=start_time, end_time=end_time, classroom=classroom,
-            )
-            used_faculty_slots.add(faculty_key)
-            used_room_slots.add(room_key)
-            created_count += 1
-            break
+
+    created_count = 0
+    for idx, (subj, faculty, section, preferred_room) in enumerate(assignments):
+        is_lab = '_LAB' in subj.code or subj.practical_hours >= 4
+
+        if is_lab:
+            # Lab: find a day where BOTH consecutive slots are free for faculty + room
+            for day, s1, e1, s2, e2 in LAB_PAIRS:
+                fkey1 = (faculty.id, day, s1)
+                fkey2 = (faculty.id, day, s2)
+                if fkey1 in used_faculty or fkey2 in used_faculty:
+                    continue
+                room = None
+                for r in ([preferred_room] if preferred_room else []) + classrooms:
+                    if not r:
+                        continue
+                    if (r.id, day, s1) not in used_rooms and (r.id, day, s2) not in used_rooms:
+                        room = r
+                        break
+                if not room:
+                    continue
+                # Create two separate 50-min rows
+                for s, e in [(s1, e1), (s2, e2)]:
+                    Timetable.objects.create(
+                        subject=subj, faculty=faculty,
+                        day_of_week=day, start_time=s, end_time=e,
+                        classroom=room, section=section,
+                    )
+                    used_faculty.add((faculty.id, day, s))
+                    used_rooms.add((room.id, day, s))
+                    created_count += 1
+                break  # lab scheduled, move to next subject
+        else:
+            slots_needed = max(subj.lecture_hours, 1)
+            placed = 0
+            for day, start, end in LECTURE_GRID:
+                if placed >= slots_needed:
+                    break
+                fkey = (faculty.id, day, start)
+                if fkey in used_faculty:
+                    continue
+                room = None
+                for r in ([preferred_room] if preferred_room else []) + classrooms:
+                    if r and (r.id, day, start) not in used_rooms:
+                        room = r
+                        break
+                if not room:
+                    continue
+                Timetable.objects.create(
+                    subject=subj, faculty=faculty,
+                    day_of_week=day, start_time=start, end_time=end,
+                    classroom=room, section=section,
+                )
+                used_faculty.add(fkey)
+                used_rooms.add((room.id, day, start))
+                placed += 1
+                created_count += 1
     return created_count
+

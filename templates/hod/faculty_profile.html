@@ -1,0 +1,96 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{{ faculty.user.get_full_name }} &mdash; Faculty Profile{% endblock %}
+{% block role_label %}Head of Department{% endblock %}
+{% block page_title %}Faculty Profile{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ faculty.user.get_full_name }}</span> &middot; {{ dept.name }}{% endblock %}
+{% block sidebar_links %}
+<a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+{% block dashboard_content %}
+<div style="max-width:860px">
+
+  <!-- Identity card -->
+  <div class="d-card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:#fff;flex-shrink:0">
+        {{ faculty.user.first_name|first|upper }}{{ faculty.user.last_name|first|upper }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">{{ faculty.user.get_full_name }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:2px">{{ faculty.employee_id }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ faculty.designation }} &middot; {{ faculty.qualification }} &middot; {{ faculty.experience_years }} yrs exp</div>
+        {% if faculty.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ faculty.phone_number }}</div>{% endif %}
+        {% if faculty.user.email %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-envelope" style="font-size:10px;margin-right:4px"></i>{{ faculty.user.email }}</div>{% endif %}
+      </div>
+      <!-- Quick stats -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="text-align:center;padding:12px 16px;background:var(--surface2);border-radius:10px;min-width:80px">
+          <div style="font-size:22px;font-weight:900;color:var(--teal)">{{ assigned_subjects|length }}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Subjects</div>
+        </div>
+        <div style="text-align:center;padding:12px 16px;background:var(--surface2);border-radius:10px;min-width:80px">
+          <div style="font-size:22px;font-weight:900;color:var(--deep)">{{ sessions_this_month }}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Sessions (Month)</div>
+        </div>
+        <div style="text-align:center;padding:12px 16px;background:var(--surface2);border-radius:10px;min-width:80px">
+          <div style="font-size:22px;font-weight:900;color:{% if pending_reviews > 0 %}var(--gold){% else %}var(--teal){% endif %}">{{ pending_reviews }}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">Pending Reviews</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+    <!-- Subjects + attendance -->
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-book"></i> Assigned Subjects</div>
+      {% if subject_stats %}
+      {% for item in subject_stats %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ item.subject.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ item.subject.code }} &middot; Sem {{ item.subject.semester }}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:700;color:{% if item.pct >= 75 %}var(--teal){% elif item.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ item.pct }}%</div>
+            <div style="font-size:10px;color:var(--muted)">{{ item.present }}/{{ item.total }} present</div>
+          </div>
+        </div>
+        <div style="background:#f3f4f6;border-radius:99px;height:5px;overflow:hidden">
+          <div style="height:5px;border-radius:99px;width:{{ item.pct }}%;background:{% if item.pct >= 75 %}var(--teal){% elif item.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}"></div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-book"></i>No subjects assigned.</div>
+      {% endif %}
+    </div>
+
+    <!-- Leave history -->
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-calendar-minus"></i> Leave History</div>
+      {% if leave_history %}
+      {% for leave in leave_history %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f3f4f6;gap:10px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ leave.get_leave_type_display }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} &ndash; {{ leave.to_date|date:"d M Y" }} &middot; {{ leave.days }} day{{ leave.days|pluralize }}</div>
+          {% if leave.reason %}<div style="font-size:11px;color:var(--muted)">{{ leave.reason|truncatechars:60 }}</div>{% endif %}
+        </div>
+        <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;
+          background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};
+          color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">
+          {{ leave.get_status_display }}
+        </span>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-check"></i>No leave applications.</div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

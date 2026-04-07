@@ -1,9 +1,9 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Defaulters Report — {{ dept.name }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Defaulters Report â€” {{ dept.name }}{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
 {% block role_label_foot %}Head of Department{% endblock %}
 {% block page_title %}Defaulters Report{% endblock %}
-{% block page_sub %}{{ dept.name }} · Eligibility status per student based on configured rules{% endblock %}
+{% block page_sub %}{{ dept.name }} &middot; Eligibility status per student based on configured rules{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-home"></i> Dashboard</a>
@@ -31,7 +31,7 @@
     {% if semester_filter %}<a href="{% url 'hod_defaulters_report' %}" style="font-size:12px;color:var(--muted);text-decoration:none">Clear</a>{% endif %}
   </form>
   <span style="font-size:13px;color:var(--muted);margin-left:auto">
-    {{ rows|length }} students ·
+    {{ rows|length }} students &middot;
     <span style="color:var(--red);font-weight:600">{{ rows|length }} checked</span>
   </span>
 </div>

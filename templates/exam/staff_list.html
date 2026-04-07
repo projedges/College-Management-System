@@ -1,7 +1,7 @@
-{% extends 'exam/base_exam.html' %}
-{% block title %}Exam Staff — {{ ec.college.name }}{% endblock %}
+﻿{% extends 'exam/base_exam.html' %}
+{% block title %}Exam Staff â€” {{ ec.college.name }}{% endblock %}
 {% block page_title %}Exam Staff Roster{% endblock %}
-{% block page_sub %}{{ ec.college.name }} · Manage examination department personnel{% endblock %}
+{% block page_sub %}{{ ec.college.name }} &middot; Manage examination department personnel{% endblock %}
 {% block nav_staff %}active{% endblock %}
 
 {% block content %}
@@ -18,7 +18,7 @@
 <div style="margin-bottom:20px;padding:16px 20px;background:rgba(124,58,237,.05);border:1.5px solid rgba(124,58,237,.2);border-radius:12px">
   <div style="font-size:13px;font-weight:700;color:#4c1d95;margin-bottom:8px"><i class="fas fa-circle-info" style="color:#7c3aed"></i> How Exam Department Access Works</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;font-size:12px;color:#5b21b6">
-    <div><strong>COE / Deputy COE</strong><br>Full access — publish results, manage staff, hall tickets</div>
+    <div><strong>COE / Deputy COE</strong><br>Full access â€” publish results, manage staff, hall tickets</div>
     <div><strong>Section Officer</strong><br>Verify results, manage schedules, scoped to assigned departments</div>
     <div><strong>Valuation Officer</strong><br>Enter marks only</div>
     <div><strong>Data Entry</strong><br>Enter marks only</div>
@@ -61,7 +61,7 @@
           </td>
           <td style="color:var(--teal);font-weight:600">{{ s.employee_id }}</td>
           <td style="color:var(--muted);font-size:12px">{{ s.user.username }}</td>
-          <td style="color:var(--muted)">{{ s.phone_number|default:"—" }}</td>
+          <td style="color:var(--muted)">{{ s.phone_number|default:"â€”" }}</td>
           <td style="font-size:12px;color:var(--muted)">
             {% if s.departments.exists %}
               {% for d in s.departments.all %}{{ d.code }}{% if not forloop.last %}, {% endif %}{% endfor %}

@@ -229,16 +229,13 @@ class Command(BaseCommand):
 
             fac_map = {}
             for uname, email, fname, lname, emp_id, desig, subj_codes in faculty_data:
-                user, uc = User.objects.get_or_create(
-                    username=uname,
-                    defaults={
-                        'email': email, 'first_name': fname, 'last_name': lname,
-                        'password': 'pbkdf2_sha256$dummy',
-                    }
-                )
+                user, uc = User.objects.get_or_create(username=uname)
+                user.email      = email
+                user.first_name = fname
+                user.last_name  = lname
+                user.set_password('Faculty@123')
+                user.save()
                 if uc:
-                    user.set_password('Faculty@123')
-                    user.save()
                     UserRole.objects.get_or_create(user=user, defaults={'role': 3, 'college': college})
 
                 fac, fc = Faculty.objects.get_or_create(
@@ -261,17 +258,13 @@ class Command(BaseCommand):
                     uname = f'ise5_{section.lower()}{i:02d}'
                     roll  = f'2021-ANU-ISE-{section}{i:03d}'
                     email = f'{uname}@student.anu.edu'
-                    user, uc = User.objects.get_or_create(
-                        username=uname,
-                        defaults={
-                            'email': email,
-                            'first_name': f'Student{i}',
-                            'last_name': f'Sec{section}',
-                        }
-                    )
+                    user, uc = User.objects.get_or_create(username=uname)
+                    user.email      = email
+                    user.first_name = f'Student{i}'
+                    user.last_name  = f'Sec{section}'
+                    user.set_password('Student@123')
+                    user.save()
                     if uc:
-                        user.set_password('student@123')
-                        user.save()
                         UserRole.objects.get_or_create(user=user, defaults={'role': 4, 'college': college})
 
                     student, sc = Student.objects.get_or_create(
@@ -346,17 +339,25 @@ class Command(BaseCommand):
 
                     start = slots[slot_idx][0]
                     if is_lab:
-                        # Lab = 2 periods (100 min, no break between)
-                        end = add_minutes(start, PERIOD * 2)
+                        # Lab = 2 separate 50-min rows back-to-back
+                        end1 = add_minutes(start, PERIOD)
+                        start2 = end1
+                        end2 = add_minutes(start2, PERIOD)
+                        for s, e in [(start, end1), (start2, end2)]:
+                            Timetable.objects.get_or_create(
+                                subject=subj, faculty=fac, day_of_week=day,
+                                start_time=s, section=section,
+                                defaults={'end_time': e, 'classroom': room}
+                            )
+                            tt_count += 1
                     else:
-                        end = slots[slot_idx][1]
-
-                    Timetable.objects.get_or_create(
-                        subject=subj, faculty=fac, day_of_week=day,
-                        start_time=start, section=section,
-                        defaults={'end_time': end, 'classroom': room}
-                    )
-                    tt_count += 1
+                        end = add_minutes(start, PERIOD)
+                        Timetable.objects.get_or_create(
+                            subject=subj, faculty=fac, day_of_week=day,
+                            start_time=start, section=section,
+                            defaults={'end_time': end, 'classroom': room}
+                        )
+                        tt_count += 1
 
             self.stdout.write(self.style.SUCCESS(f'  [+] {tt_count} timetable slots created (Sec A + B)'))
 
@@ -416,8 +417,8 @@ class Command(BaseCommand):
         self.stdout.write('Faculty  : fac_ml           / Faculty@123')
         self.stdout.write('         : fac_bd           / Faculty@123')
         self.stdout.write('         : fac_iot          / Faculty@123')
-        self.stdout.write('Student  : ise5_a01         / student@123  (Sec A)')
-        self.stdout.write('         : ise5_b01         / student@123  (Sec B)')
+        self.stdout.write('Student  : ise5_a01         / Student@123  (Sec A)')
+        self.stdout.write('         : ise5_b01         / Student@123  (Sec B)')
         self.stdout.write('─' * 55)
         self.stdout.write('TIMETABLE STRUCTURE (Mon–Sat)')
         self.stdout.write('  09:00–09:50  Period 1')

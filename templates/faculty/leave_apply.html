@@ -1,5 +1,5 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Leave Application — Faculty{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Leave Application â€” Faculty{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Leave Application{% endblock %}
 {% block page_sub %}Apply for leave and suggest a substitute for your classes{% endblock %}
@@ -62,12 +62,12 @@
         <div id="days-preview" style="margin:-8px 0 14px"></div>
         <div class="fg">
           <label>Reason <span style="color:var(--red)">*</span></label>
-          <textarea name="reason" rows="3" required class="fi" style="resize:vertical" placeholder="Briefly explain the reason for leave…"></textarea>
+          <textarea name="reason" rows="3" required class="fi" style="resize:vertical" placeholder="Briefly explain the reason for leave&hellip;"></textarea>
         </div>
         <div class="fg">
           <label>Suggest Substitute <span style="font-weight:400;color:var(--muted)">(optional but recommended)</span></label>
           <select name="suggested_substitute" class="fi">
-            <option value="">— No suggestion —</option>
+            <option value="">â€” No suggestion â€”</option>
             {% for f in dept_faculty %}
             <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }} ({{ f.designation }})</option>
             {% endfor %}
@@ -85,10 +85,10 @@
       {% for slot in timetable_slots %}
       <div class="slot-row">
         <div class="slot-day">{{ slot.day_of_week }}</div>
-        <div class="slot-time">{{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}</div>
+        <div class="slot-time">{{ slot.start_time|time:"g:i A" }} â€“ {{ slot.end_time|time:"g:i A" }}</div>
         <div style="flex:1">
           <span style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</span>
-          <span style="color:var(--muted);font-size:11px"> · {{ slot.subject.code }}</span>
+          <span style="color:var(--muted);font-size:11px"> &middot; {{ slot.subject.code }}</span>
         </div>
         <div style="font-size:11px;color:var(--muted);background:var(--border);padding:2px 8px;border-radius:6px">{{ slot.classroom.room_number }}</div>
       </div>
@@ -106,7 +106,7 @@
       <div class="leave-card">
         <div style="flex:1">
           <div class="leave-type">{{ leave.get_leave_type_display }}</div>
-          <div class="leave-dates">{{ leave.from_date|date:"d M Y" }} → {{ leave.to_date|date:"d M Y" }} <span style="font-size:11px;color:var(--muted)">({{ leave.days }} day{{ leave.days|pluralize }})</span></div>
+          <div class="leave-dates">{{ leave.from_date|date:"d M Y" }} â†’ {{ leave.to_date|date:"d M Y" }} <span style="font-size:11px;color:var(--muted)">({{ leave.days }} day{{ leave.days|pluralize }})</span></div>
           <div class="leave-reason">{{ leave.reason|truncatechars:80 }}</div>
           {% if leave.suggested_substitute %}
           <div class="leave-sub"><i class="fas fa-user-check" style="color:var(--teal)"></i> Suggested sub: {{ leave.suggested_substitute.user.get_full_name|default:leave.suggested_substitute.user.username }}</div>

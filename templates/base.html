@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -10,6 +10,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%}
     :root{
       --teal:#0d7377;--teal-lt:#14a085;--teal-dk:#095c60;
       --gold:#e6a817;--gold-lt:#f5c842;
@@ -21,8 +22,8 @@
       --sh-md:0 6px 28px rgba(7,30,38,.12);
       --r:10px;--r-lg:18px;
     }
-    html{scroll-behavior:smooth}
-    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    html{scroll-behavior:smooth;height:100%}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;margin:0;padding:0}
     ::-webkit-scrollbar{width:5px}
     ::-webkit-scrollbar-thumb{background:var(--teal);border-radius:99px}
     a{text-decoration:none}
@@ -50,7 +51,7 @@
 {% block body %}{% endblock %}
 
 {% if user.is_authenticated %}
-<!-- ── Session timeout warning modal ── -->
+<!-- â”€â”€ Session timeout warning modal â”€â”€ -->
 <div id="session-timeout-modal" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.55);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
   <div style="background:#fff;border-radius:18px;padding:32px 28px;max-width:380px;width:90%;box-shadow:0 24px 64px rgba(7,30,38,.22);text-align:center">
     <div style="width:56px;height:56px;border-radius:50%;background:rgba(230,168,23,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;color:#b88510">
@@ -58,7 +59,7 @@
     </div>
     <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:#071e26;margin-bottom:8px">Session Expiring Soon</div>
     <div style="font-size:13px;color:#5a7080;line-height:1.6;margin-bottom:20px">
-      You will be signed out in <strong id="session-countdown" style="color:#b88510;font-size:16px">—</strong> seconds due to inactivity.
+      You will be signed out in <strong id="session-countdown" style="color:#b88510;font-size:16px">â€”</strong> seconds due to inactivity.
     </div>
     <div style="display:flex;gap:10px;justify-content:center">
       <button onclick="keepSessionAlive()" style="padding:10px 22px;border-radius:9px;background:#0d7377;color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:'Inter',sans-serif">
@@ -106,7 +107,7 @@
     if (countdownEl) countdownEl.textContent = secondsLeft;
   }
 
-  // "Stay signed in" — ping the server with a lightweight fetch to reset the
+  // "Stay signed in" â€” ping the server with a lightweight fetch to reset the
   // idle timer, then hide the modal and reset our local counter.
   window.keepSessionAlive = function () {
     fetch(window.location.href, { method: 'GET', credentials: 'same-origin' })

@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Edit Quiz — {{ quiz.title }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Edit Quiz â€” {{ quiz.title }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}{{ quiz.title }}{% endblock %}
-{% block page_sub %}{{ quiz.subject.name }} · {{ quiz.duration_minutes }} min · {{ quiz.total_marks }} marks{% endblock %}
+{% block page_sub %}{{ quiz.subject.name }} &middot; {{ quiz.duration_minutes }} min &middot; {{ quiz.total_marks }} marks{% endblock %}
 {% block sidebar_links %}
 <a href="{% url 'faculty_quiz_list' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Quizzes</a>
 {% endblock %}
@@ -50,7 +50,7 @@
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div style="flex:1">
           <div class="q-text">Q{{ forloop.counter }}. {{ q.text }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">{{ q.get_question_type_display }} · {{ q.marks }} mark{{ q.marks|pluralize }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">{{ q.get_question_type_display }} &middot; {{ q.marks }} mark{{ q.marks|pluralize }}</div>
           {% for opt in q.options.all %}
           <div class="opt-row {% if opt.is_correct %}opt-correct{% endif %}">
             <i class="fas fa-{% if opt.is_correct %}check-circle{% else %}circle{% endif %}" style="font-size:12px"></i>
@@ -79,7 +79,7 @@
     <input type="hidden" name="action" value="add_question"/>
     <div style="margin-bottom:12px">
       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Question Text <span style="color:var(--red)">*</span></label>
-      <textarea name="q_text" rows="2" required class="fi" style="resize:vertical" placeholder="Enter the question…"></textarea>
+      <textarea name="q_text" rows="2" required class="fi" style="resize:vertical" placeholder="Enter the question&hellip;"></textarea>
     </div>
     <div class="form-row-2" style="margin-bottom:12px">
       <div>
