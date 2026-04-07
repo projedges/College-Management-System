@@ -200,12 +200,7 @@
 
     <div class="d-card">
       <div class="d-title"><i class="fas fa-clock"></i> Today's Classes</div>
-      <div class="section-meta" style="display: flex; justify-content: space-between; align-items: center;">
-      <span>Your classes for today at a glance.</span>
-      <span style="background: var(--surface2); padding: 2px 8px; border-radius: 6px; font-weight: 700; color: var(--teal); font-size: 11px;">
-        {% now "d M Y" %}
-      </span>
-      </div> 
+      <div class="section-meta">Your classes for today at a glance.</div>
       {% if today_timetable %}
       <div class="content-scroll soft">
         {% for item in today_timetable %}
@@ -318,61 +313,29 @@
         </div>
       </div>
       <div class="att-summary-stats">
-    <div class="att-stat-box">
-        <div class="att-stat-val">{{ attendance_data|length }}</div>
-        <div class="att-stat-lbl">Subjects</div>
-    </div>
-    
-    <div class="att-stat-box">
-        <div class="att-stat-val">{{ attendance_data|length }}</div>
-        <div class="att-stat-lbl">Tracked</div>
-    </div>
-
-    {% if att_rule %}
-    <div class="att-stat-box">
-        <div class="att-stat-val" style="color:var(--teal)">{{ att_rule.effective_min_subject }}%</div>
-        <div class="att-stat-lbl">Required</div>
-    </div>
-    {% endif %}
-
-    {% if eligibility %}
-    <div class="att-stat-box" style="background:{% if eligibility.eligible %}rgba(16,185,129,.07){% else %}rgba(239,68,68,.06){% endif %};border-color:{% if eligibility.eligible %}rgba(16,185,129,.25){% else %}rgba(239,68,68,.25){% endif %}">
-        <div class="att-stat-val" style="color:{% if eligibility.eligible %}#059669{% else %}#dc2626{% endif %}">
-            {% if eligibility.eligible %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-xmark"></i>{% endif %}
+        <div class="att-stat-box">
+          <div class="att-stat-val">{{ attendance_data|length }}</div>
+          <div class="att-stat-lbl">Subjects</div>
         </div>
-        <div class="att-stat-lbl">Exam Elig.</div>
-    </div>
-    {% endif %}
-
-    <div class="att-stat-box" style="border: 2px solid var(--teal); background: rgba(13,115,119, 0.05);">
-        <div class="att-stat-val" style="color: var(--teal);">
-            {{ overall_attendance|default:"0" }}%
+        <div class="att-stat-box">
+          <div class="att-stat-val">{{ attendance_data|length }}</div>
+          <div class="att-stat-lbl">Tracked</div>
         </div>
-        <div class="att-stat-lbl" style="color: var(--teal); font-weight: 800;">Current</div>
-    </div>
-
-    {% if student.current_semester and student.current_semester > 1 %}
-    <div class="att-stat-box" style="border: 2px solid #f59e0b; background: rgba(245,158,11,0.08);">
-        <div class="att-stat-val" style="color: #b45309;">
-            {% if last_sem_pct is not None %}{{ last_sem_pct }}%{% else %}--{% endif %}
-        </div>
-        <div class="att-stat-lbl" style="color: #b45309; font-weight: 800;">
-            Sem {{ last_semester }}
-        </div>
-    </div>
-    {% endif %}
-
-    {% for row in att_by_semester %}
-        {% if row.semester < student.current_semester and row.semester != last_semester %}
-        <div class="att-stat-box" style="border: 1px dashed var(--border); opacity: 0.85;">
-            <div class="att-stat-val" style="font-size: 15px; color: var(--muted);">
-                {{ row.pct }}%
-            </div>
-            <div class="att-stat-lbl">Sem {{ row.semester }}</div>
+        {% if att_rule %}
+        <div class="att-stat-box">
+          <div class="att-stat-val" style="color:var(--teal)">{{ att_rule.effective_min_subject }}%</div>
+          <div class="att-stat-lbl">Required</div>
         </div>
         {% endif %}
-    {% endfor %}
-</div>
+        {% if eligibility %}
+        <div class="att-stat-box" style="background:{% if eligibility.eligible %}rgba(16,185,129,.07){% else %}rgba(239,68,68,.06){% endif %};border-color:{% if eligibility.eligible %}rgba(16,185,129,.25){% else %}rgba(239,68,68,.25){% endif %}">
+          <div class="att-stat-val" style="color:{% if eligibility.eligible %}#059669{% else %}#dc2626{% endif %}">
+            {% if eligibility.eligible %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-xmark"></i>{% endif %}
+          </div>
+          <div class="att-stat-lbl">Exam Elig.</div>
+        </div>
+        {% endif %}
+      </div>
       {% if eligibility and not eligibility.eligible %}
       <div class="att-elig-warn">
         <i class="fas fa-triangle-exclamation" style="color:#dc2626;font-size:15px;flex-shrink:0"></i>
@@ -417,11 +380,9 @@
           </thead>
           <tbody>
             {% for a in attendance_data %}
-            
             <tr class="att-course-row" data-name="{{ a.subject.name|lower }}" data-code="{{ a.subject.code|lower }}">
-              
               <td style="font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
-              <td style="font-size:13px;color:var(--deep)"><a href="{% url 'subject_detail' a.subject.id %}" style="text-decoration: none; color: inherit; display: block;">{{ a.subject.name }}</td>
+              <td style="font-size:13px;color:var(--deep)">{{ a.subject.name }}</td>
               <td>
                 {% if a.total > 0 %}
                 <div style="font-size:12px;font-weight:700;color:{% if a.pct >= a.threshold %}var(--deep){% else %}#dc2626{% endif %};margin-bottom:4px">{{ a.pct }}%</div>

@@ -134,7 +134,7 @@ def _check_attendance_permission(user, subject, slot=None):
         if slot.start_time <= now.time() <= marking_end.time():
             return True, ""
         if now > marking_end and now <= edit_end:
-            return True, ""
+            return True, "Editing window: up to 60 min after class."
         return False, f"Attendance locked. Window: {slot.start_time}–{slot.end_time} (+10 min grace)."
 
     return False, "Unauthorized."

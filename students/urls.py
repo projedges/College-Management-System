@@ -188,5 +188,4 @@ urlpatterns = [
     path('dashboard/exam/schemes/<int:pk>/delete/', views.exam_scheme_delete, name='exam_scheme_delete'),
     # Valuation assignments
     path('dashboard/exam/<int:exam_id>/valuation/', views.exam_valuation, name='exam_valuation'),
-    path('subject/<int:subject_id>/', views.subject_detail_view, name='subject_detail'),
 ]

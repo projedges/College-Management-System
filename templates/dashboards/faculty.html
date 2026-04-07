@@ -3,7 +3,7 @@
 {% block role_label %}Faculty{% endblock %}
 {% block role_label_foot %}Faculty{% endblock %}
 {% block page_title %}Faculty Dashboard{% endblock %}
-{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> Â· <span style="color:var(--deep);font-weight:600">{{ faculty.designation }}</span> Â· {{ faculty.department.code }}{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ faculty.designation }}</span> · {{ faculty.department.code }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
@@ -95,7 +95,7 @@
           <div class="subj-icon"><i class="fas fa-book-open"></i></div>
           <div>
             <div class="subj-name">{{ item.subject.name }}</div>
-            <div class="subj-meta">{{ item.subject.code }} Â· Sem {{ item.subject.semester }}</div>
+            <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div>
           </div>
           <div class="subj-actions">
             <a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal"><i class="fas fa-calendar-check"></i> Attendance</a>
@@ -152,7 +152,7 @@
       <div style="flex:1;min-width:0">
         <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
         <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ faculty.employee_id }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ faculty.designation }} Â· {{ faculty.department.name }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ faculty.designation }} · {{ faculty.department.name }}</div>
         {% if faculty.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ faculty.phone_number }}</div>{% endif %}
       </div>
     </div>
@@ -182,7 +182,7 @@
         <div class="subj-icon"><i class="fas fa-book-open"></i></div>
         <div>
           <div class="subj-name">{{ item.subject.name }}</div>
-          <div class="subj-meta">{{ item.subject.code }} Â· Sem {{ item.subject.semester }} Â· {{ item.subject.department.code }}</div>
+          <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }} · {{ item.subject.department.code }}</div>
         </div>
         <div class="subj-actions">
           <a href="{% url 'faculty_mark_attendance' item.subject.id %}" class="btn-sm btn-sm-teal"><i class="fas fa-calendar-check"></i> Attendance</a>
@@ -202,7 +202,7 @@
 <!-- ATTENDANCE -->
 <section data-dashboard-pane="attendance" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions â€” Per Subject</div>
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions — Per Subject</div>
     <div class="section-meta">Sessions marked, class average, and defaulter count per subject.</div>
     {% if subject_cards %}
     <div class="table-scroll">
@@ -211,11 +211,7 @@
         <tbody>
           {% for item in subject_cards %}
           <tr>
-            <td>
-  <div style="font-weight:600;color:var(--deep)">{{ item.subject.name }}</div>
-  <div style="font-size:11px;color:var(--muted)">{{ item.subject.code }} Â· Sem {{ item.subject.semester }}</div>
-  <div style="font-size:11px;color:var(--muted)">{{ item.times }}</div>
-</td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ item.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div></td>
             <td style="text-align:center;font-weight:600">{{ item.total_sessions }}</td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
@@ -271,7 +267,7 @@
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
       <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Classes</div>
-      <div style="font-size:12px;color:var(--muted)">{{ faculty.department.code }} Â· {{ today_timetable|length }} class{{ today_timetable|length|pluralize }}</div>
+      <div style="font-size:12px;color:var(--muted)">{{ faculty.department.code }} · {{ today_timetable|length }} class{{ today_timetable|length|pluralize }}</div>
     </div>
     {% if today_timetable or today_breaks %}
     <div class="table-scroll" style="margin-top:12px">
@@ -313,7 +309,7 @@
               {{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span>
             </td>
             <td colspan="2" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
-            <td style="text-align:center;font-size:11px;color:#92400e">â€”</td>
+            <td style="text-align:center;font-size:11px;color:#92400e">—</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -325,7 +321,7 @@
   </div>
   <div class="d-card">
     <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Schedule</div>
-    <div class="section-meta">Your complete teaching schedule Mon â€“ Sat.</div>
+    <div class="section-meta">Your complete teaching schedule Mon – Sat.</div>
     <div class="table-scroll">
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
         {% for day_code, day_label, slots in faculty_week_timetable %}
@@ -337,10 +333,10 @@
           <div style="background:#fff;border-radius:8px;padding:6px 8px;margin-bottom:5px;border:1px solid var(--border);font-size:11px">
             <div style="font-weight:700;color:var(--teal)">{{ t.start_time|time:"g:i A" }}</div>
             <div style="font-weight:600;color:var(--deep);line-height:1.3">{{ t.subject.name }}</div>
-            <div style="color:var(--muted)">{{ t.classroom.room_number }}{% if t.classroom.building %} Â· {{ t.classroom.building }}{% endif %}</div>
+            <div style="color:var(--muted)">{{ t.classroom.room_number }}{% if t.classroom.building %} · {{ t.classroom.building }}{% endif %}</div>
           </div>
           {% endfor %}{% else %}
-          <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">â€”</div>
+          <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">—</div>
           {% endif %}
         </div>
         {% endfor %}
@@ -362,7 +358,7 @@
       <div class="sub-row">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.student.user.get_full_name|default:sub.student.roll_number }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.title }} Â· {{ sub.assignment.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.title }} · {{ sub.assignment.subject.name }}</div>
         </div>
         <a href="{% url 'faculty_review_submission' sub.pk %}" class="btn-sm btn-sm-teal" style="margin-left:auto"><i class="fas fa-check"></i> Review</a>
         <span style="font-size:11px;color:var(--muted)">{{ sub.submitted_at|date:"d M" }}</span>
@@ -382,8 +378,8 @@
       <div class="sub-row">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ assignment.subject.name }} Â· Due {{ assignment.deadline|date:"d M Y H:i" }}
-            {% if assignment.submission_count %} Â· <span style="color:var(--teal);font-weight:600">{{ assignment.submission_count }} submitted</span>{% endif %}
+          <div style="font-size:11px;color:var(--muted)">{{ assignment.subject.name }} · Due {{ assignment.deadline|date:"d M Y H:i" }}
+            {% if assignment.submission_count %} · <span style="color:var(--teal);font-weight:600">{{ assignment.submission_count }} submitted</span>{% endif %}
           </div>
         </div>
         {% if not assignment.is_published %}
@@ -406,7 +402,7 @@
 <!-- INTERNAL MARKS -->
 <section data-dashboard-pane="internals" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-table-list"></i> Internal Marks â€” Select Subject</div>
+    <div class="d-title"><i class="fas fa-table-list"></i> Internal Marks — Select Subject</div>
     <div class="section-meta">IA1, IA2, Assignment, and Attendance components per student.</div>
     {% if subject_cards %}
     {% for item in subject_cards %}
@@ -414,7 +410,7 @@
       <div class="subj-icon"><i class="fas fa-book-open"></i></div>
       <div>
         <div class="subj-name">{{ item.subject.name }}</div>
-        <div class="subj-meta">{{ item.subject.code }} Â· Sem {{ item.subject.semester }}</div>
+        <div class="subj-meta">{{ item.subject.code }} · Sem {{ item.subject.semester }}</div>
       </div>
       <div class="subj-actions">
         <a href="{% url 'faculty_internal_marks' item.subject.id %}" class="btn-sm" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-table-list"></i> Enter Internals</a>
@@ -447,7 +443,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:10px">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ leave.get_leave_type_display }}</div>
-            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} â€“ {{ leave.to_date|date:"d M Y" }} Â· {{ leave.days }} day{{ leave.days|pluralize }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} – {{ leave.to_date|date:"d M Y" }} · {{ leave.days }} day{{ leave.days|pluralize }}</div>
             {% if leave.reason %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ leave.reason|truncatechars:60 }}</div>{% endif %}
           </div>
           <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ leave.get_status_display }}</span>
@@ -479,7 +475,7 @@
         </div>
         <div style="margin-bottom:16px">
           <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Details</label>
-          <textarea name="description" rows="4" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Describe your request clearlyâ€¦"></textarea>
+          <textarea name="description" rows="4" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Describe your request clearly…"></textarea>
         </div>
         <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
       </form>
