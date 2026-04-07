@@ -3,6 +3,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta, time as dt_time
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
+import json
+from django.shortcuts import render, get_object_or_404
+from django.core.serializers.json import DjangoJSONEncoder
 
 from django.db import transaction
 from django.core.exceptions import PermissionDenied
@@ -144,7 +147,7 @@ def _check_attendance_permission(user, subject, slot=None):
         if slot.start_time <= now.time() <= marking_end.time():
             return True, ""
         if now > marking_end and now <= edit_end:
-            return True, "Editing window: up to 60 min after class."
+            return True, ""
         return False, f"Attendance locked. Window: {slot.start_time}–{slot.end_time} (+10 min grace)."
 
     return False, "Unauthorized."
@@ -2164,6 +2167,18 @@ def faculty_dashboard(request):
     )
     att_map = {row['session__subject_id']: row for row in att_agg_qs}
 
+    # Timetable slots per subject (for display in attendance panel)
+    day_labels = {'MON':'Mon','TUE':'Tue','WED':'Wed','THU':'Thu','FRI':'Fri','SAT':'Sat','SUN':'Sun'}
+    timetable_map = {}
+    if subject_ids:
+        slots = Timetable.objects.filter(subject_id__in=subject_ids).order_by('subject_id','day_of_week','start_time')
+        for slot in slots:
+            day = day_labels.get(slot.day_of_week, slot.day_of_week)
+            start = slot.start_time.strftime('%I:%M %p').lstrip('0')
+            end = slot.end_time.strftime('%I:%M %p').lstrip('0')
+            label = f"{day} {start}-{end}"
+            timetable_map.setdefault(slot.subject_id, []).append(label)
+
     # Defaulters per subject — single query
     student_att_qs = Attendance.objects.filter(
         session__subject_id__in=subject_ids
@@ -2213,10 +2228,12 @@ def faculty_dashboard(request):
             'att_pct': att_pct,
             'defaulter_count': defaulters_map.get(subject.id, 0),
             'enrolled': enrolled_counts.get((subject.department_id, subject.semester), 0),
+            'times': ", ".join(timetable_map.get(subject.id, [])) if timetable_map.get(subject.id) else "—",
         })
 
     now = timezone.localtime(timezone.now())
     today = now.date()
+    print(today)
 
     marked_subject_ids = set(AttendanceSession.objects.filter(
         faculty=faculty, date=today
@@ -2359,9 +2376,13 @@ def faculty_mark_attendance(request, subject_id):
         except (ValueError, TypeError):
             session_date = timezone.now().date()
 
+        if session_date.weekday() == 6:
+            messages.error(request, 'No classes on Sunday. Please choose another date.')
+            return redirect('faculty_mark_attendance', subject_id=subject.id)
+
         if session_date > timezone.now().date():
             messages.error(request, 'Cannot mark attendance for a future date.')
-            return redirect('faculty_dashboard')
+            return redirect('faculty_mark_attendance', subject_id=subject.id)
 
         session = AttendanceSession.objects.filter(subject=subject, date=session_date).first()
         created = session is None
@@ -3137,6 +3158,18 @@ def student_dashboard(request):
         pct = round(row['present'] / row['total'] * 100, 1) if row['total'] > 0 else 0
         att_by_semester.append({'semester': sem, 'pct': pct, 'present': row['present'], 'total': row['total']})
 
+    last_semester = None
+    last_sem_pct = None
+    if student.current_semester:
+        last_semester = student.current_semester - 1
+        if last_semester >= 1:
+            for row in att_by_semester:
+                if row['semester'] == last_semester:
+                    last_sem_pct = row['pct']
+                    break
+        else:
+            last_semester = None
+
     # Assignment score trend — capped at 50 most recent graded submissions
     all_graded = AssignmentSubmission.objects.filter(
         student=student, marks__isnull=False
@@ -3239,6 +3272,8 @@ def student_dashboard(request):
         'all_internal_semesters': all_internal_semesters,
         'all_internal_list': all_internal_list,
         'att_by_semester': att_by_semester,
+        'last_semester': last_semester,
+        'last_sem_pct': last_sem_pct,
         'all_att_records': all_att_records,
         'eligibility': eligibility,
         'att_rule': att_rule,
@@ -7681,3 +7716,85 @@ def student_request_override(request, exam_id):
     return render(request, 'attendance/student_override_form.html', {
         'exam': exam, 'elig': elig,
     })
+
+def subject_detail_view(request, subject_id):
+    # Ensure the user is a student to avoid errors
+    try:
+        student = Student.objects.select_related('department', 'user').get(user=request.user)
+    except Student.DoesNotExist:
+        messages.error(request, 'Student profile not found. Contact admin.')
+        return redirect('home')
+
+    subject = get_object_or_404(Subject, id=subject_id)
+    faculty_assignment = FacultySubject.objects.filter(subject=subject).select_related('faculty__user').first()
+    faculty_name = None
+    if faculty_assignment and faculty_assignment.faculty and faculty_assignment.faculty.user:
+        faculty_name = faculty_assignment.faculty.user.get_full_name() or faculty_assignment.faculty.user.username
+    
+    # Filter attendance for the logged-in user for this specific subject
+    # session__subject follows the ForeignKey from Attendance -> AttendanceSession -> Subject
+    records = Attendance.objects.filter(
+        student__user=request.user, 
+        session__subject=subject 
+    ).select_related('session')
+
+    attendance_by_date = {}
+    for rec in records:
+        if not rec.session or not rec.session.date:
+            continue
+        status = str(rec.status).upper()
+        if status in ['PRESENT', 'TRUE', '1']:
+            normalized = 'PRESENT'
+        elif status == 'LATE':
+            normalized = 'LATE'
+        else:
+            normalized = 'ABSENT'
+        attendance_by_date[rec.session.date.strftime('%Y-%m-%d')] = normalized
+
+    scheduled_days = list(
+        Timetable.objects.filter(subject=subject)
+        .values_list('day_of_week', flat=True)
+        .distinct()
+    )
+    timetable_map = {}
+    for slot in Timetable.objects.filter(subject=subject).order_by('day_of_week', 'start_time'):
+        label = f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}"
+        timetable_map.setdefault(slot.day_of_week, []).append(label)
+
+    timetable_display = {k: ", ".join(v) for k, v in timetable_map.items()}
+
+    today = timezone.localdate()
+    # Sidebar badge helpers
+    week_ago = timezone.now() - timedelta(days=7)
+    new_assignments = Assignment.objects.filter(
+        subject__department=student.department,
+        subject__semester=student.current_semester,
+        deadline__gte=timezone.now(),
+    ).exclude(assignmentsubmission__student=student).order_by('deadline')[:3]
+    new_quizzes = Quiz.objects.filter(
+        subject__department=student.department,
+        subject__semester=student.current_semester,
+        is_active=True,
+        created_at__gte=week_ago,
+    ).select_related('subject').order_by('-created_at')[:3]
+
+    context = {
+        'subject': subject,
+        'attendance_map_json': json.dumps(attendance_by_date, cls=DjangoJSONEncoder),
+        'scheduled_days_json': json.dumps(scheduled_days, cls=DjangoJSONEncoder),
+        'timetable_map_json': json.dumps(timetable_display, cls=DjangoJSONEncoder),
+        'initial_month': today.month,
+        'initial_year': today.year,
+        'faculty_name': faculty_name,
+        'student': student,
+        'college': student.department.college,
+        'notifications': Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:10],
+        'new_assignments': new_assignments,
+        'new_quizzes': new_quizzes,
+        'branding': _get_college_branding(student.department.college),
+    }
+    
+    # IMPORTANT: Ensure this path matches your file location
+    # If the file is in /templates/subject_board.html, use this:
+    return render(request, 'dashboards/subject_board.html', context)
+
