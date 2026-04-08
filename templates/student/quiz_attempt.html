@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}{{ quiz.title }}{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}{{ quiz.title }}{% endblock %}
-{% block page_sub %}{{ quiz.subject.name }} · {{ quiz.duration_minutes }} min · {{ quiz.total_marks }} marks{% endblock %}
+{% block page_sub %}{{ quiz.subject.name }} &middot; {{ quiz.duration_minutes }} min &middot; {{ quiz.total_marks }} marks{% endblock %}
 {% block sidebar_links %}
 <a href="{% url 'student_dashboard' %}#quizzes" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
 {% endblock %}
@@ -37,7 +37,7 @@
     {% csrf_token %}
     {% for q in questions %}
     <div class="q-block">
-      <div class="q-num">Question {{ forloop.counter }} · {{ q.marks }} mark{{ q.marks|pluralize }}</div>
+      <div class="q-num">Question {{ forloop.counter }} &middot; {{ q.marks }} mark{{ q.marks|pluralize }}</div>
       <div class="q-text">{{ q.text }}</div>
       {% for opt in q.options.all %}
       <label class="opt-label">
@@ -79,7 +79,7 @@
     submitted = true;
     clearInterval(iv);
     document.getElementById('submit-btn').disabled = true;
-    document.getElementById('submit-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+    document.getElementById('submit-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting&hellip;';
   });
 })();
 </script>

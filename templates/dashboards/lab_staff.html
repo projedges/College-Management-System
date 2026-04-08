@@ -1,9 +1,9 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Lab Staff Dashboard - EduTrack{% endblock %}
 {% block role_label %}Lab Technician{% endblock %}
 {% block role_label_foot %}Lab Technician{% endblock %}
 {% block page_title %}Lab Staff Dashboard{% endblock %}
-{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> &middot; <span style="color:var(--deep);font-weight:600">{{ college.name }}</span>{% endblock %}
 
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
@@ -44,7 +44,7 @@
               <td style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</td>
               <td>{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
               <td><span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">{{ t.classroom.room_number }}</span></td>
-              <td style="color:var(--muted);font-size:12px">{{ t.start_time|time:"g:i A" }} – {{ t.end_time|time:"g:i A" }}</td>
+              <td style="color:var(--muted);font-size:12px">{{ t.start_time|time:"g:i A" }} â€“ {{ t.end_time|time:"g:i A" }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -105,7 +105,7 @@
         <tbody>
           {% for t in today_schedule %}
           <tr>
-            <td style="font-weight:600;color:var(--teal);white-space:nowrap">{{ t.start_time|time:"g:i A" }} – {{ t.end_time|time:"g:i A" }}</td>
+            <td style="font-weight:600;color:var(--teal);white-space:nowrap">{{ t.start_time|time:"g:i A" }} â€“ {{ t.end_time|time:"g:i A" }}</td>
             <td style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</td>
             <td>{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
             <td><span style="background:var(--surface2);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">{{ t.classroom.room_number }}</span></td>

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>EduTrack — Academic Management Portal</title>
-  <meta name="description" content="EduTrack is a complete digital platform for managing college academics — attendance, results, timetables, fees, assignments, and communication in one secure place."/>
+  <title>EduTrack â€” Academic Management Portal</title>
+  <meta name="description" content="EduTrack is a complete digital platform for managing college academics â€” attendance, results, timetables, fees, assignments, and communication in one secure place."/>
   {% load static %}
   <!-- SVG Favicon (replace with your own later) -->
   <link rel="icon" type="image/png" href="{% static 'students/images/favicon.png' %}"/>
@@ -76,7 +76,7 @@
   .btn-hs{padding:13px 28px;border-radius:10px;font-size:15px;font-weight:600;background:#fff;color:var(--deep);border:1.5px solid var(--border);text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .25s}
   .btn-hs:hover{border-color:var(--teal);color:var(--teal);transform:translateY(-2px);box-shadow:var(--sh)}
 
-  /* hero visual — feature preview cards */
+  /* hero visual â€” feature preview cards */
   .hero-visual{position:absolute;right:5%;top:50%;transform:translateY(-50%);z-index:1;width:min(400px,40%);display:flex;flex-direction:column;gap:12px;animation:floatIn .8s .2s ease both}
   .pv-card{background:#fff;border-radius:var(--r-lg);padding:16px 18px;border:1px solid var(--border);box-shadow:var(--sh);display:flex;align-items:center;gap:14px;transition:transform .3s}
   .pv-card:hover{transform:translateX(-4px)}
@@ -199,12 +199,12 @@
       <div id="announce-ticker" style="display:flex;gap:0;white-space:nowrap;animation:ticker 28s linear infinite">
         {% for ann in platform_announcements %}
         <span style="padding:10px 40px;font-size:13px;font-weight:500;border-right:1px solid rgba(255,255,255,.15)">
-          <i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;opacity:.6"></i>{{ ann.title }}{% if ann.message %} — <span style="opacity:.8">{{ ann.message|truncatechars:80 }}</span>{% endif %}
+          <i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;opacity:.6"></i>{{ ann.title }}{% if ann.message %} â€” <span style="opacity:.8">{{ ann.message|truncatechars:80 }}</span>{% endif %}
         </span>
         {% endfor %}
         {% for ann in platform_announcements %}
         <span style="padding:10px 40px;font-size:13px;font-weight:500;border-right:1px solid rgba(255,255,255,.15)">
-          <i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;opacity:.6"></i>{{ ann.title }}{% if ann.message %} — <span style="opacity:.8">{{ ann.message|truncatechars:80 }}</span>{% endif %}
+          <i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;opacity:.6"></i>{{ ann.title }}{% if ann.message %} â€” <span style="opacity:.8">{{ ann.message|truncatechars:80 }}</span>{% endif %}
         </span>
         {% endfor %}
       </div>
@@ -268,7 +268,7 @@
   <div class="hero-content">
     <div class="hero-badge"><i class="fas fa-graduation-cap"></i> Academic Management Portal</div>
     <h1>Your Campus.<br><span class="ht">Smarter.</span> <span class="hg">Simpler.</span></h1>
-    <p class="hero-desc">A complete digital platform for managing academics — attendance, results, timetables, fees, assignments, and communication, all in one secure place.</p>
+    <p class="hero-desc">A complete digital platform for managing academics â€” attendance, results, timetables, fees, assignments, and communication, all in one secure place.</p>
     <div class="hero-btns">
       <a href="{% url 'login' %}" class="btn-hp"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
       <a href="#features" class="btn-hs"><i class="fas fa-compass"></i> See What It Does</a>
@@ -278,7 +278,7 @@
     </div>
   </div>
 
-  <!-- Feature preview cards — no real student data -->
+  <!-- Feature preview cards â€” no real student data -->
   <div class="hero-visual">
     <div class="pv-card">
       <div class="pv-icon bg-teal"><i class="fas fa-calendar-check"></i></div>
@@ -328,13 +328,13 @@
   <div class="sec-head reveal">
     <div class="sec-tag"><i class="fas fa-layer-group"></i> What's Inside</div>
     <h2 class="sec-h">Everything academic, in one place</h2>
-    <p class="sec-p">From the first day of admission to the final semester — every process is covered.</p>
+    <p class="sec-p">From the first day of admission to the final semester â€” every process is covered.</p>
   </div>
   <div class="feat-grid">
     <div class="fcard reveal">
       <div class="ficon bg-teal"><i class="fas fa-id-card"></i></div>
       <h3>Student Records</h3>
-      <p>Centralized profiles with academic history, parent details, documents, and contact information — always up to date.</p>
+      <p>Centralized profiles with academic history, parent details, documents, and contact information â€” always up to date.</p>
     </div>
     <div class="fcard reveal">
       <div class="ficon bg-gold"><i class="fas fa-calendar-check"></i></div>
@@ -359,17 +359,17 @@
     <div class="fcard reveal">
       <div class="ficon bg-teal"><i class="fas fa-bullhorn"></i></div>
       <h3>Notices & Circulars</h3>
-      <p>Publish announcements to students, faculty, or specific departments — instantly and reliably.</p>
+      <p>Publish announcements to students, faculty, or specific departments â€” instantly and reliably.</p>
     </div>
     <div class="fcard reveal">
       <div class="ficon bg-gold"><i class="fas fa-file-alt"></i></div>
       <h3>Assignments</h3>
-      <p>Faculty create and distribute assignments. Students submit online before the deadline — no paperwork.</p>
+      <p>Faculty create and distribute assignments. Students submit online before the deadline â€” no paperwork.</p>
     </div>
     <div class="fcard reveal">
       <div class="ficon bg-green"><i class="fas fa-lock"></i></div>
       <h3>Secure Role Access</h3>
-      <p>Separate portals for Super Admin, College Admin, HOD, Faculty, and Students — each with the right permissions, nothing more.</p>
+      <p>Separate portals for Super Admin, College Admin, HOD, Faculty, and Students â€” each with the right permissions, nothing more.</p>
     </div>
   </div>
 </section>
@@ -385,12 +385,12 @@
     <div class="rcard reveal">
       <div class="ricon bg-teal"><i class="fas fa-user-shield"></i></div>
       <h3>Admin</h3>
-      <p>Full control — users, departments, settings, reports, and system configuration.</p>
+      <p>Full control â€” users, departments, settings, reports, and system configuration.</p>
     </div>
     <div class="rcard reveal">
       <div class="ricon" style="background:rgba(99,102,241,.1);color:#6366f1"><i class="fas fa-user-tie"></i></div>
       <h3>Principal</h3>
-      <p>College-wide overview — departments, faculty, students, attendance health, and fee summaries.</p>
+      <p>College-wide overview â€” departments, faculty, students, attendance health, and fee summaries.</p>
     </div>
     <div class="rcard reveal">
       <div class="ricon bg-gold"><i class="fas fa-building-columns"></i></div>
@@ -435,7 +435,7 @@
 <div class="cta-wrap">
   <div class="cta-box reveal">
     <h2>Ready to <span>sign in?</span></h2>
-    <p>Access your attendance, results, timetable, assignments, and fee details — all in one place.</p>
+    <p>Access your attendance, results, timetable, assignments, and fee details â€” all in one place.</p>
     <div class="cta-btns">
       <a href="{% url 'login' %}" class="btn-cta-g"><i class="fas fa-sign-in-alt"></i> Sign In to Portal</a>
       <a href="{% url 'helpdesk' %}" class="btn-cta-w"><i class="fas fa-headset"></i> Contact Help Desk</a>
@@ -480,14 +480,14 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2026 EduTrack Academic Portal. All rights reserved.</span>
+    <span>Â© 2026 EduTrack Academic Portal. All rights reserved.</span>
     <div class="pw">Powered by <strong>Proj<em>Edge</em></strong></div>
     <div style="display:flex;gap:14px"><a href="#">Privacy</a><a href="#">Terms</a></div>
   </div>
 </footer>
 
 <script>
-// ── PARTICLE CANVAS ──
+// â”€â”€ PARTICLE CANVAS â”€â”€
 (function(){
   const c=document.getElementById('bg-canvas'),ctx=c.getContext('2d');
   let W,H,pts=[];
@@ -534,10 +534,10 @@
   loop();
 })();
 
-// ── NAV SCROLL ──
+// â”€â”€ NAV SCROLL â”€â”€
 addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('up',scrollY>10));
 
-// ── LOGO: check if image loaded correctly (not a broken/wrong file) ──
+// â”€â”€ LOGO: check if image loaded correctly (not a broken/wrong file) â”€â”€
 (function(){
   const img=document.getElementById('nav-logo-img');
   const fb=document.getElementById('nav-logo-txt');
@@ -550,17 +550,17 @@ addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('u
   else img.addEventListener('load',check);
 })();
 
-// ── MOBILE MENU ──
+// â”€â”€ MOBILE MENU â”€â”€
 function toggleMob(){document.getElementById('mob').classList.toggle('open')}
 document.querySelectorAll('.mob a').forEach(a=>a.addEventListener('click',()=>document.getElementById('mob').classList.remove('open')));
 
-// ── SCROLL REVEAL ──
+// â”€â”€ SCROLL REVEAL â”€â”€
 const ro=new IntersectionObserver((entries)=>{
   entries.forEach((e,i)=>{if(e.isIntersecting){setTimeout(()=>e.target.classList.add('vis'),i*80);ro.unobserve(e.target)}});
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
 
-// ── COUNTERS ──
+// â”€â”€ COUNTERS â”€â”€
 function runCounter(el){
   const t=+el.dataset.target;
   if(!t){el.textContent='0';return;}

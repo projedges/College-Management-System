@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Attendance Defaulters — {{ subject.name }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Attendance Defaulters â€” {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Attendance Defaulters{% endblock %}
-{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Students below 75%{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Students below 75%{% endblock %}
 {% block sidebar_links %}
 <a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
 {% endblock %}

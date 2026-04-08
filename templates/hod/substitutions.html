@@ -1,5 +1,5 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Substitutions — HOD{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Substitutions â€” HOD{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
 {% block role_label_foot %}Head of Department{% endblock %}
 {% block page_title %}Faculty Substitutions{% endblock %}
@@ -31,7 +31,7 @@
         <select name="slot_id" id="slot-select" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff" required onchange="filterSubFaculty(this.value)">
           <option value="">Select slot</option>
           {% for slot in slots %}
-          <option value="{{ slot.pk }}" data-faculty-id="{{ slot.faculty_id }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"g:i A" }} — {{ slot.subject.name }}{% if slot.section %} [Sec {{ slot.section }}]{% endif %} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
+          <option value="{{ slot.pk }}" data-faculty-id="{{ slot.faculty_id }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"g:i A" }} â€” {{ slot.subject.name }}{% if slot.section %} [Sec {{ slot.section }}]{% endif %} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
           {% endfor %}
         </select>
       </div>
@@ -63,7 +63,7 @@
       <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
         <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.timetable_slot.subject.name }}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">
-          {{ sub.date|date:"d M Y" }} &nbsp;·&nbsp;
+          {{ sub.date|date:"d M Y" }} &nbsp;&middot;&nbsp;
           <span style="color:var(--red)">{{ sub.original_faculty.user.get_full_name|default:sub.original_faculty.user.username }}</span>
           <i class="fas fa-arrow-right" style="font-size:9px;margin:0 4px"></i>
           <span style="color:var(--teal)">{{ sub.substitute_faculty.user.get_full_name|default:sub.substitute_faculty.user.username }}</span>
@@ -79,14 +79,14 @@
 
 {% block extra_js %}
 <script>
-// Server-provided map: slot PK → original faculty PK
+// Server-provided map: slot PK â†’ original faculty PK
 var SLOT_FACULTY_MAP = {{ slot_faculty_json }};
 
 function filterSubFaculty(slotId) {
   var subSelect = document.getElementById('sub-faculty-select');
   var hint      = document.getElementById('sub-faculty-hint');
 
-  // Reset — show all, clear selection
+  // Reset â€” show all, clear selection
   subSelect.value = '';
   Array.from(subSelect.options).forEach(function(opt) {
     opt.hidden   = false;
@@ -105,7 +105,7 @@ function filterSubFaculty(slotId) {
   if (originalFacultyPk === undefined) return;
 
   Array.from(subSelect.options).forEach(function(opt) {
-    // opt.value is the Faculty PK as string — compare as integers
+    // opt.value is the Faculty PK as string â€” compare as integers
     if (parseInt(opt.value, 10) === originalFacultyPk) {
       opt.hidden   = true;
       opt.disabled = true;

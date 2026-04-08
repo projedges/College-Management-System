@@ -3,7 +3,7 @@
 {% block role_label %}Student{% endblock %}
 {% block role_label_foot %}Student{% endblock %}
 {% block page_title %}My Dashboard{% endblock %}
-{% block page_sub %}<span style="color:var(--teal); font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> · <span style="color:var(--deep); font-weight:600">{{ student.roll_number }}</span> · Sem {{ student.current_semester }} · {{ student.department.code }}{% endblock %}
+{% block page_sub %}<span style="color:var(--teal); font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> &middot; <span style="color:var(--deep); font-weight:600">{{ student.roll_number }}</span> &middot; Sem {{ student.current_semester }} &middot; {{ student.department.code }}{% endblock %}
 
 {% block sidebar_links %}
 <p class="sb-nav-label">Menu</p>
@@ -200,12 +200,7 @@
 
     <div class="d-card">
       <div class="d-title"><i class="fas fa-clock"></i> Today's Classes</div>
-      <div class="section-meta" style="display: flex; justify-content: space-between; align-items: center;">
-      <span>Your classes for today at a glance.</span>
-      <span style="background: var(--surface2); padding: 2px 8px; border-radius: 6px; font-weight: 700; color: var(--teal); font-size: 11px;">
-        {% now "d M Y" %}
-      </span>
-      </div> 
+      <div class="section-meta">Your classes for today at a glance.</div>
       {% if today_timetable %}
       <div class="content-scroll soft">
         {% for item in today_timetable %}
@@ -255,7 +250,7 @@
       <div style="flex:1;min-width:0">
         <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
         <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ student.roll_number }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ student.department.name }} · Semester {{ student.current_semester }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ student.department.name }} &middot; Semester {{ student.current_semester }}</div>
         {% if profile and profile.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ profile.phone_number }}</div>{% endif %}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -278,7 +273,7 @@
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Address</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</div></div></div>
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent / Guardian</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}){% else %}Not added{% endif %}</div></div></div>
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent and parent.phone_number %}{{ parent.phone_number }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} · {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} &middot; {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
         <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Category</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.category %}{{ profile.category }}{% else %}Not added{% endif %}</div></div></div>
       </div>
     </div>
@@ -296,7 +291,7 @@
     </div>
   </div>
 
-  <!-- ── SEMESTER VIEW ── -->
+  <!-- -- SEMESTER VIEW -- -->
   <div id="att-view-semester">
 
     <!-- Summary bar -->
@@ -313,7 +308,7 @@
           {% endif %}
         </svg>
         <div class="att-donut-label">
-          <div class="att-donut-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}—{% endif %}</div>
+          <div class="att-donut-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}&mdash;{% endif %}</div>
           <div class="att-donut-sub">Overall</div>
         </div>
       </div>
@@ -340,35 +335,6 @@
           <div class="att-stat-lbl">Exam Elig.</div>
         </div>
         {% endif %}
-
-    <div class="att-stat-box" style="border: 2px solid var(--teal); background: rgba(13,115,119, 0.05);">
-        <div class="att-stat-val" style="color: var(--teal);">
-            {{ overall_attendance|default:"0" }}%
-        </div>
-        <div class="att-stat-lbl" style="color: var(--teal); font-weight: 800;">Current</div>
-    </div>
-
-    {% if student.current_semester and student.current_semester > 1 %}
-    <div class="att-stat-box" style="border: 2px solid #f59e0b; background: rgba(245,158,11,0.08);">
-        <div class="att-stat-val" style="color: #b45309;">
-            {% if last_sem_pct is not None %}{{ last_sem_pct }}%{% else %}--{% endif %}
-        </div>
-        <div class="att-stat-lbl" style="color: #b45309; font-weight: 800;">
-            Sem {{ last_semester }}
-        </div>
-    </div>
-    {% endif %}
-
-    {% for row in att_by_semester %}
-        {% if row.semester < student.current_semester and row.semester != last_semester %}
-        <div class="att-stat-box" style="border: 1px dashed var(--border); opacity: 0.85;">
-            <div class="att-stat-val" style="font-size: 15px; color: var(--muted);">
-                {{ row.pct }}%
-            </div>
-            <div class="att-stat-lbl">Sem {{ row.semester }}</div>
-        </div>
-        {% endif %}
-    {% endfor %}
       </div>
       {% if eligibility and not eligibility.eligible %}
       <div class="att-elig-warn">
@@ -394,7 +360,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <label style="font-size:12px;color:var(--muted)">Search:</label>
-        <input id="att-search" type="text" oninput="filterAttTable()" placeholder="Subject name or code…"
+        <input id="att-search" type="text" oninput="filterAttTable()" placeholder="Subject name or code&hellip;"
           style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
       </div>
     </div>
@@ -416,7 +382,7 @@
             {% for a in attendance_data %}
             <tr class="att-course-row" data-name="{{ a.subject.name|lower }}" data-code="{{ a.subject.code|lower }}">
               <td style="font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
-              <td style="font-size:13px;color:var(--deep)"><a href="{% url 'subject_detail' a.subject.id %}" style="text-decoration: none; color: inherit; display: block;">{{ a.subject.name }}</td>
+              <td style="font-size:13px;color:var(--deep)"><a href="{% url 'subject_detail' a.subject.id %}" style="text-decoration:none;color:inherit;display:block">{{ a.subject.name }}</a></td>
               <td>
                 {% if a.total > 0 %}
                 <div style="font-size:12px;font-weight:700;color:{% if a.pct >= a.threshold %}var(--deep){% else %}#dc2626{% endif %};margin-bottom:4px">{{ a.pct }}%</div>
@@ -443,7 +409,7 @@
 
   </div><!-- /semester view -->
 
-  <!-- ── CALENDAR / LOG VIEW ── -->
+  <!-- -- CALENDAR / LOG VIEW -- -->
   <div id="att-view-calendar" style="display:none">
     <div class="d-card" style="padding:0;overflow:hidden">
       <div style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -457,7 +423,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <label style="font-size:12px;color:var(--muted)">Search:</label>
-          <input id="att-cal-search" type="text" oninput="filterCalTable()" placeholder="Subject or faculty…"
+          <input id="att-cal-search" type="text" oninput="filterCalTable()" placeholder="Subject or faculty&hellip;"
             style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
         </div>
       </div>
@@ -499,13 +465,13 @@
 
 <section data-dashboard-pane="results" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results — All Years</div>
-    <div class="section-meta">Every semester, every subject, every grade — in one place.</div>
+    <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results &mdash; All Years</div>
+    <div class="section-meta">Every semester, every subject, every grade &mdash; in one place.</div>
     <div class="action-row">
       <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Download PDF Report</a>
     </div>
     {% if result_breakdown %}
-    <!-- Semester tabs — oldest to newest -->
+    <!-- Semester tabs &mdash; oldest to newest -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px" id="sem-tabs">
       {% for item in result_breakdown %}
       <button onclick="showSemPane('sem-{{ forloop.counter }}')" id="tab-sem-{{ forloop.counter }}"
@@ -652,82 +618,6 @@
     </div>
   </div>
 
-  <!-- Today's classes -->
-  <div class="d-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
-      <div class="d-title" style="margin:0"><i class="fas fa-clock"></i> Today's Classes</div>
-      <div style="display:flex;gap:10px;font-size:12px;color:var(--muted)">
-        <span><i class="fas fa-graduation-cap" style="color:var(--teal)"></i> Sem {{ student.current_semester }}</span>
-        <span><i class="fas fa-building" style="color:var(--teal)"></i> {{ student.department.code }}</span>
-      </div>
-    </div>
-    <div class="section-meta">Click any subject to view details. Attendance status shown where marked.</div>
-
-    {% if today_timetable or today_breaks %}
-    <div class="table-scroll">
-      <table class="dtable" style="min-width:500px">
-        <thead>
-          <tr>
-            <th style="width:90px">Time</th>
-            <th>Subject</th>
-            <th>Faculty</th>
-            <th>Room</th>
-            <th style="text-align:center;width:110px">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in today_timetable %}{% with t=item.slot %}
-          <tr style="cursor:pointer" onclick="openTTModal({{ t.subject.id }},'{{ t.subject.name|escapejs }}','{{ t.subject.code|escapejs }}',{{ t.subject.credits }},{{ t.subject.lecture_hours }},{{ t.subject.tutorial_hours }},{{ t.subject.practical_hours }},'{{ t.subject.get_category_display|escapejs }}','{{ t.faculty.user.get_full_name|default:t.faculty.user.username|escapejs }}','{{ t.faculty.designation|escapejs }}','{{ t.classroom.room_number|escapejs }}','{{ t.classroom.building|escapejs }}')">
-            <td style="font-weight:700;color:var(--teal);white-space:nowrap;font-size:12px">
-              {{ t.start_time|time:"g:i A" }}<br><span style="font-weight:400;color:var(--muted)">{{ t.end_time|time:"g:i A" }}</span>
-            </td>
-            <td>
-              <div style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }} · {{ t.subject.credits }} cr</div>
-            </td>
-            <td style="font-size:12px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</td>
-            <td style="font-size:12px">
-              <span style="font-weight:600;color:var(--deep)">{{ t.classroom.room_number }}</span>
-              {% if t.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ t.classroom.building }}</div>{% endif %}
-            </td>
-            <td style="text-align:center">
-              {% if item.att_status == 'PRESENT' %}
-                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> P</span>
-              {% elif item.att_status == 'ABSENT' %}
-                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#dc2626;background:#fee2e2;padding:3px 10px;border-radius:99px"><i class="fas fa-times"></i> A</span>
-              {% elif item.att_status == 'LATE' %}
-                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:#d97706;background:#fef3c7;padding:3px 10px;border-radius:99px"><i class="fas fa-clock"></i> L</span>
-              {% else %}
-                <span style="font-size:11px;color:var(--muted)">—</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endwith %}{% endfor %}
-          {% for brk in today_breaks %}
-          <tr style="background:#fef9c3">
-            <td style="font-size:12px;font-weight:700;color:#92400e;white-space:nowrap">
-              {{ brk.start_time|time:"g:i A" }}<br><span style="font-weight:400">{{ brk.end_time|time:"g:i A" }}</span>
-            </td>
-            <td colspan="3" style="font-size:12px;font-weight:600;color:#92400e"><i class="fas fa-coffee"></i> {{ brk.label }}</td>
-            <td style="text-align:center;font-size:11px;color:#92400e">—</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        {% if today_timetable %}
-        <tfoot>
-          <tr style="background:var(--surface2)">
-            <td colspan="4" style="font-size:13px;font-weight:700;color:var(--deep);padding:10px 12px">Total Classes Today</td>
-            <td style="text-align:center;font-size:13px;font-weight:800;color:var(--teal)">{{ today_timetable|length }}</td>
-          </tr>
-        </tfoot>
-        {% endif %}
-      </table>
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
-    {% endif %}
-  </div>
-
   <!-- Full week matrix -->
   <div class="d-card">
     <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Timetable</div>
@@ -758,14 +648,14 @@
                   onclick="openTTModal({{ entry.subject.id }},'{{ entry.subject.name|escapejs }}','{{ entry.subject.code|escapejs }}',{{ entry.subject.credits }},{{ entry.subject.lecture_hours }},{{ entry.subject.tutorial_hours }},{{ entry.subject.practical_hours }},'{{ entry.subject.get_category_display|escapejs }}','{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username|escapejs }}','{{ entry.faculty.designation|escapejs }}','{{ entry.classroom.room_number|escapejs }}','{{ entry.classroom.building|escapejs }}')"
                   onkeydown="if(event.key==='Enter')this.click()">
                   <div class="week-chip-subj">{{ entry.subject.name }}</div>
-                  <div class="week-chip-meta">{{ entry.subject.code }}{% if entry.section %} · §{{ entry.section }}{% endif %}</div>
-                  <div class="week-chip-meta">{{ entry.classroom.room_number }} · {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
+                  <div class="week-chip-meta">{{ entry.subject.code }}{% if entry.section %} &middot; Sec {{ entry.section }}{% endif %}</div>
+                  <div class="week-chip-meta">{{ entry.classroom.room_number }} &middot; {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
                 </div>
                 {% endfor %}
               {% elif cell.break_label %}
                 <div style="font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0"><i class="fas fa-coffee" style="margin-right:4px"></i>{{ cell.break_label }}</div>
               {% else %}
-                <div style="font-size:13px;color:#cbd5e1;text-align:center">—</div>
+                <div style="font-size:13px;color:#cbd5e1;text-align:center">&mdash;</div>
               {% endif %}
             </td>
             {% endfor %}
@@ -791,7 +681,7 @@
       <div class="asgn-row">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ item.assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ item.assignment.subject.name }} · Due {{ item.assignment.deadline|date:"d M, H:i" }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ item.assignment.subject.name }} &middot; Due {{ item.assignment.deadline|date:"d M, H:i" }}</div>
         </div>
         <a href="{% url 'student_submit_assignment' item.assignment.pk %}" class="mini-btn mini-btn-teal"><i class="fas fa-upload"></i> Submit</a>
         {% if item.urgency == 'urgent' %}
@@ -817,7 +707,7 @@
       <div class="asgn-row">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }} · Submitted {{ sub.submitted_at|date:"d M Y" }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }} &middot; Submitted {{ sub.submitted_at|date:"d M Y" }}</div>
         </div>
         <span class="deadline-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">Under Review</span>
       </div>
@@ -869,8 +759,8 @@
         <tbody>
           {% for f in all_fees %}
           <tr style="border-bottom:1px solid #f3f4f6">
-            <td style="padding:8px 10px;font-weight:600;color:var(--deep)">Sem {{ f.semester|default:"—" }}</td>
-            <td style="padding:8px 10px;color:var(--muted)">{{ f.academic_year|default:"—" }}</td>
+            <td style="padding:8px 10px;font-weight:600;color:var(--deep)">Sem {{ f.semester|default:"&mdash;" }}</td>
+            <td style="padding:8px 10px;color:var(--muted)">{{ f.academic_year|default:"&mdash;" }}</td>
             <td style="padding:8px 10px;text-align:right;font-weight:600">Rs {{ f.total_amount|floatformat:0 }}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--teal);font-weight:600">Rs {{ f.paid_amount|floatformat:0 }}</td>
             <td style="padding:8px 10px;text-align:right;font-weight:700;color:{% if f.status == 'PAID' %}var(--teal){% else %}var(--red){% endif %}">
@@ -910,7 +800,7 @@
         <div style="width:36px;height:36px;border-radius:50%;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-check"></i></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">Rs {{ entry.payment.amount|floatformat:0 }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ entry.payment.payment_method }} · {{ entry.payment.transaction_id }} · {{ entry.payment.paid_at|default:entry.payment.created_at|date:"d M Y" }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ entry.payment.payment_method }} &middot; {{ entry.payment.transaction_id }} &middot; {{ entry.payment.paid_at|default:entry.payment.created_at|date:"d M Y" }}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;font-weight:700;color:var(--teal)">Total paid: Rs {{ entry.running_total|floatformat:0 }}</div>
@@ -993,7 +883,7 @@
       <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }} · Due {{ a.deadline|date:"d M Y" }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }} &middot; Due {{ a.deadline|date:"d M Y" }}</div>
         </div>
         <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="padding:5px 12px;font-size:11px"><i class="fas fa-upload"></i> Submit</a>
       </div>
@@ -1008,7 +898,7 @@
       <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ q.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} · {{ q.duration_minutes }} min · {{ q.total_marks }} marks</div>
+          <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} &middot; {{ q.duration_minutes }} min &middot; {{ q.total_marks }} marks</div>
         </div>
         {% if q.pk in attempted_quiz_ids %}
         <span style="font-size:11px;font-weight:600;color:var(--green);background:rgba(16,185,129,.1);padding:3px 9px;border-radius:99px"><i class="fas fa-check"></i> Done</span>
@@ -1033,7 +923,7 @@
     {% endif %}
 
     {% if not new_assignments and not new_quizzes and not new_announcements %}
-    <div class="empty"><i class="fas fa-check-circle"></i>All caught up — nothing new in the last 7 days.</div>
+    <div class="empty"><i class="fas fa-check-circle"></i>All caught up &mdash; nothing new in the last 7 days.</div>
     {% endif %}
   </div>
 </section>
@@ -1042,7 +932,7 @@
 <section data-dashboard-pane="academic-track" class="dashboard-pane">
   <div class="two-col">
     <div class="d-card">
-      <div class="d-card-title"><i class="fas fa-chart-line"></i> SGPA Trend — All Semesters</div>
+      <div class="d-card-title"><i class="fas fa-chart-line"></i> SGPA Trend &mdash; All Semesters</div>
       {% if semester_results %}
       <div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:10px 0;margin-bottom:8px">
         {% for r in semester_results %}
@@ -1104,7 +994,7 @@
             <td style="font-size:12px;color:var(--muted)">{{ a.subject }}</td>
             <td><span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--teal)">{{ a.marks|floatformat:1 }}</span></td>
             <td style="font-size:12px;color:var(--muted)">{{ a.date|date:"d M Y" }}</td>
-            <td style="font-size:12px;color:var(--muted)">{{ a.feedback|default:"—"|truncatechars:50 }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ a.feedback|default:"&mdash;"|truncatechars:50 }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -1117,16 +1007,16 @@
     <div class="d-card-title"><i class="fas fa-graduation-cap"></i> Academic Standing</div>
     {% if on_probation %}
     <div style="padding:10px 14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:12px;color:#991b1b;font-weight:600;margin-bottom:14px">
-      <i class="fas fa-triangle-exclamation"></i> Academic Probation — attendance below 75% or active backlogs detected.
+      <i class="fas fa-triangle-exclamation"></i> Academic Probation &mdash; attendance below 75% or active backlogs detected.
     </div>
     {% endif %}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px">
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ cgpa|default:"—" }}</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ cgpa|default:"&mdash;" }}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">CGPA</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if overall_attendance and overall_attendance >= att_rule.effective_min_overall %}var(--teal){% else %}var(--red){% endif %}">{{ overall_attendance|default:"—" }}{% if overall_attendance %}%{% endif %}</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if overall_attendance and overall_attendance >= att_rule.effective_min_overall %}var(--teal){% else %}var(--red){% endif %}">{{ overall_attendance|default:"&mdash;" }}{% if overall_attendance %}%{% endif %}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Current Attendance</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
@@ -1138,12 +1028,12 @@
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Active Backlogs</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;color:{% if academic_standing == 'Distinction' or academic_standing == 'First Class' %}var(--teal){% elif academic_standing == 'At Risk' %}var(--red){% else %}var(--deep){% endif %}">{{ academic_standing|default:"—" }}</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;color:{% if academic_standing == 'Distinction' or academic_standing == 'First Class' %}var(--teal){% elif academic_standing == 'At Risk' %}var(--red){% else %}var(--deep){% endif %}">{{ academic_standing|default:"&mdash;" }}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Academic Class</div>
       </div>
       <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if fee and fee.status == 'PAID' %}var(--teal){% elif fee and fee.status == 'PARTIAL' %}var(--gold){% else %}var(--red){% endif %}">{{ fee.get_status_display|default:"—" }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Fee Status (Sem {{ fee.semester|default:"—" }})</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if fee and fee.status == 'PAID' %}var(--teal){% elif fee and fee.status == 'PARTIAL' %}var(--gold){% else %}var(--red){% endif %}">{{ fee.get_status_display|default:"&mdash;" }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Fee Status (Sem {{ fee.semester|default:"&mdash;" }})</div>
       </div>
     </div>
   </div>
@@ -1152,8 +1042,8 @@
 <!-- COURSE STRUCTURE -->
 <section data-dashboard-pane="course-structure" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-list-ol"></i> Semester {{ student.current_semester }} — Course Structure</div>
-    <div class="section-meta">{{ student.department.name }} · All subjects this semester with L-T-P-C breakdown</div>
+    <div class="d-card-title"><i class="fas fa-list-ol"></i> Semester {{ student.current_semester }} &mdash; Course Structure</div>
+    <div class="section-meta">{{ student.department.name }} &middot; All subjects this semester with L-T-P-C breakdown</div>
     {% if course_subjects %}
     {% with total_credits=0 %}
     <div class="table-scroll">
@@ -1194,7 +1084,7 @@
             <td style="text-align:center;color:var(--muted)">{{ subj.practical_hours }}</td>
             <td style="text-align:center;font-weight:800;color:var(--teal)">{{ subj.credits }}</td>
             <td style="color:var(--muted);font-size:12px">
-              {% for fs in subj.facultysubject_set.all %}{{ fs.faculty.user.get_full_name|default:fs.faculty.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+              {% for fs in subj.facultysubject_set.all %}{{ fs.faculty.user.get_full_name|default:fs.faculty.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}&mdash;{% endfor %}
             </td>
           </tr>
           {% endfor %}
@@ -1213,21 +1103,21 @@
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
       <span style="font-weight:700;color:var(--deep)">Legend:</span>
       <span><strong>L</strong> = Lecture</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong>T</strong> = Tutorial</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong>P</strong> = Practical</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong>C</strong> = Credits</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong style="color:var(--teal)">PC</strong> = Program Core</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong style="color:#6366f1">PE</strong> = Program Elective</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong style="color:#b88510">OE</strong> = Open Elective</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong style="color:#059669">PW</strong> = Project Work</span>
-      <span>·</span>
+      <span>&middot;</span>
       <span><strong style="color:var(--red)">MC</strong> = Mandatory Course</span>
     </div>
     {% endwith %}
@@ -1240,7 +1130,7 @@
 <!-- INTERNAL MARKS -->
 <section data-dashboard-pane="internals" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-table-list"></i> Internal Marks — All Semesters</div>
+    <div class="d-card-title"><i class="fas fa-table-list"></i> Internal Marks &mdash; All Semesters</div>
     <div class="section-meta">IA1 + IA2 + Assignment + Attendance components across every semester.</div>
     {% if all_internal_semesters %}
     <!-- Semester tabs -->
@@ -1261,10 +1151,10 @@
             {% for im in rows %}
             <tr>
               <td><div style="font-weight:600;color:var(--deep)">{{ im.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ im.subject.code }}</div></td>
-              <td style="text-align:center;font-weight:600">{% if im.ia1 is not None %}{{ im.ia1|floatformat:1 }}{% else %}—{% endif %}</td>
-              <td style="text-align:center;font-weight:600">{% if im.ia2 is not None %}{{ im.ia2|floatformat:1 }}{% else %}—{% endif %}</td>
-              <td style="text-align:center;font-weight:600">{% if im.assignment_marks is not None %}{{ im.assignment_marks|floatformat:1 }}{% else %}—{% endif %}</td>
-              <td style="text-align:center;font-weight:600">{% if im.attendance_marks is not None %}{{ im.attendance_marks|floatformat:1 }}{% else %}—{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.ia1 is not None %}{{ im.ia1|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.ia2 is not None %}{{ im.ia2|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.assignment_marks is not None %}{{ im.assignment_marks|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
+              <td style="text-align:center;font-weight:600">{% if im.attendance_marks is not None %}{{ im.attendance_marks|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
               <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--teal)">{{ im.total|floatformat:1 }}</td>
             </tr>
             {% endfor %}
@@ -1284,10 +1174,10 @@
           <tr>
             <td><div style="font-weight:600;color:var(--deep)">{{ row.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ row.subject.code }}</div></td>
             {% if row.im %}
-            <td style="text-align:center;font-weight:600">{% if row.im.ia1 is not None %}{{ row.im.ia1|floatformat:1 }}{% else %}—{% endif %}</td>
-            <td style="text-align:center;font-weight:600">{% if row.im.ia2 is not None %}{{ row.im.ia2|floatformat:1 }}{% else %}—{% endif %}</td>
-            <td style="text-align:center;font-weight:600">{% if row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:1 }}{% else %}—{% endif %}</td>
-            <td style="text-align:center;font-weight:600">{% if row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.ia1 is not None %}{{ row.im.ia1|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.ia2 is not None %}{{ row.im.ia2|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
+            <td style="text-align:center;font-weight:600">{% if row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:1 }}{% else %}&mdash;{% endif %}</td>
             <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--teal)">{{ row.im.total|floatformat:1 }}</td>
             {% else %}
             <td colspan="5" style="text-align:center;color:var(--muted);font-size:12px">Not entered yet</td>
@@ -1315,7 +1205,7 @@
       <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ q.title }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} · {{ q.duration_minutes }} min · {{ q.total_marks }} marks</div>
+        <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} &middot; {{ q.duration_minutes }} min &middot; {{ q.total_marks }} marks</div>
         {% if q.description %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ q.description|truncatechars:80 }}</div>{% endif %}
       </div>
       {% if q.pk in attempted_quiz_ids %}
@@ -1343,7 +1233,7 @@
         <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ attempt.quiz.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ attempt.quiz.subject.name }} · Attempted {{ attempt.submitted_at|date:"d M Y, H:i" }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ attempt.quiz.subject.name }} &middot; Attempted {{ attempt.submitted_at|date:"d M Y, H:i" }}</div>
         </div>
         <div style="text-align:right">
           <div class="qh-score">{{ attempt.score|default:"0"|floatformat:1 }}</div>
@@ -1459,16 +1349,16 @@ function switchAttView(view, btn) {
 
 // Timetable subject detail modal
 function openTTModal(id, name, code, credits, L, T, P, category, faculty, designation, room, building) {
-  var loc = room + (building ? ' · ' + building : '');
+  var loc = room + (building ? ' &middot; ' + building : '');
   document.getElementById('tt-modal-body').innerHTML =
     '<div class="tt-modal-title">' + name + '</div>' +
-    '<div class="tt-modal-code">' + code + ' &nbsp;·&nbsp; ' + category + '</div>' +
+    '<div class="tt-modal-code">' + code + ' &nbsp;&middot;&nbsp; ' + category + '</div>' +
     '<div class="tt-modal-grid">' +
       '<div class="tt-modal-stat"><div class="tt-modal-stat-val">' + credits + '</div><div class="tt-modal-stat-lbl">Credits</div></div>' +
-      '<div class="tt-modal-stat"><div class="tt-modal-stat-val">' + L + '-' + T + '-' + P + '</div><div class="tt-modal-stat-lbl">L – T – P</div></div>' +
+      '<div class="tt-modal-stat"><div class="tt-modal-stat-val">' + L + '-' + T + '-' + P + '</div><div class="tt-modal-stat-lbl">L &ndash; T &ndash; P</div></div>' +
     '</div>' +
     '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Faculty</span><span style="font-weight:600;color:var(--deep)">' + faculty + '</span></div>' +
-    '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Designation</span><span>' + (designation || '—') + '</span></div>' +
+    '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Designation</span><span>' + (designation || '&mdash;') + '</span></div>' +
     '<div class="tt-modal-row"><span class="tt-modal-row-lbl">Room</span><span style="font-weight:600">' + loc + '</span></div>';
   document.getElementById('tt-modal-overlay').classList.add('open');
 }

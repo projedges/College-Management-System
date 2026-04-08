@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Choose Electives{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Elective Selection{% endblock %}
@@ -12,80 +12,77 @@
   {% if messages %}
   {% for msg in messages %}
   <div style="padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;font-weight:600;
-    background:{% if msg.tags == 'error' %}#fee2e2;color:#991b1b;border:1px solid #fca5a5{% else %}#d1fae5;color:#065f46;border:1px solid #6ee7b7{% endif %}">
+    {% if msg.tags == 'error' %}background:#fee2e2;color:#991b1b;border:1px solid #fca5a5{% else %}background:#d1fae5;color:#065f46;border:1px solid #6ee7b7{% endif %}">
     {{ msg }}
   </div>
   {% endfor %}
   {% endif %}
 
-  {% if open_pools %}
-  {% for pool in open_pools %}
-  {% with my_sel=my_selections|default_if_none:'' %}
+  {% if pool_data %}
+  {% for item in pool_data %}
   <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:18px">
 
     <!-- Pool header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-size:16px;font-weight:800;color:var(--deep)">{{ pool.slot_name }}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--deep)">{{ item.pool.slot_name }}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">
-          {{ pool.get_elective_type_display }} · Semester {{ pool.semester }}
-          {% if pool.deadline %} · Deadline: <strong>{{ pool.deadline|date:"d M Y, H:i" }}</strong>{% endif %}
+          {{ item.pool.get_elective_type_display }} &middot; Semester {{ item.pool.semester }}
+          {% if item.pool.deadline %} &middot; Deadline: <strong>{{ item.pool.deadline|date:"d M Y, g:i A" }}</strong>{% endif %}
+          &middot; Min {{ item.pool.min_students_per_subject }} / Max {{ item.pool.quota_per_subject }} per subject
         </div>
       </div>
-      {% with sel=my_selections|default_if_none:'' %}
-      {% if pool.pk in my_selections %}
-        {% with sel=my_selections|get_item:pool.pk %}
-        <span style="font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px;
-          background:{% if sel.status == 'CONFIRMED' %}#d1fae5;color:#065f46{% elif sel.status == 'REJECTED' %}#fee2e2;color:#991b1b{% else %}#fef3c7;color:#92400e{% endif %}">
-          {% if sel.status == 'CONFIRMED' %}<i class="fas fa-check"></i> Confirmed: {{ sel.subject.name }}
-          {% elif sel.status == 'REJECTED' %}<i class="fas fa-times"></i> Rejected — choose again
-          {% else %}<i class="fas fa-clock"></i> Pending: {{ sel.subject.name }}{% endif %}
-        </span>
-        {% endwith %}
+      {% if item.selection %}
+      <span style="font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px;
+        {% if item.selection.status == 'CONFIRMED' %}background:#d1fae5;color:#065f46
+        {% elif item.selection.status == 'REJECTED' %}background:#fee2e2;color:#991b1b
+        {% else %}background:#fef3c7;color:#92400e{% endif %}">
+        {% if item.selection.status == 'CONFIRMED' %}<i class="fas fa-check"></i> Confirmed: {{ item.selection.subject.name }}
+        {% elif item.selection.status == 'REJECTED' %}<i class="fas fa-times"></i> Rejected â€” choose again
+        {% else %}<i class="fas fa-clock"></i> Pending: {{ item.selection.subject.name }}{% endif %}
+      </span>
       {% endif %}
-      {% endwith %}
     </div>
 
     <!-- Subject cards -->
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-      {% for subj in pool.subjects.all %}
-      {% with seats=pool.seats_remaining|default_if_none:0 %}
+      {% for subj in item.pool.subjects.all %}
       <form method="POST">
         {% csrf_token %}
-        <input type="hidden" name="pool_id" value="{{ pool.pk }}">
+        <input type="hidden" name="pool_id" value="{{ item.pool.pk }}">
         <input type="hidden" name="subject_id" value="{{ subj.pk }}">
-        <button type="submit" style="width:100%;text-align:left;background:#f8fafc;border:1.5px solid var(--border);
+        <button type="submit"
+          style="width:100%;text-align:left;background:{% if item.selection and item.selection.subject_id == subj.pk %}#f0fdfa;border-color:var(--teal){% else %}#f8fafc{% endif %};
+          border:1.5px solid {% if item.selection and item.selection.subject_id == subj.pk %}var(--teal){% else %}var(--border){% endif %};
           border-radius:12px;padding:14px;cursor:pointer;transition:all .15s"
           onmouseover="this.style.borderColor='var(--teal)';this.style.background='#f0fdfa'"
-          onmouseout="this.style.borderColor='var(--border)';this.style.background='#f8fafc'">
+          onmouseout="this.style.borderColor='{% if item.selection and item.selection.subject_id == subj.pk %}var(--teal){% else %}var(--border){% endif %}';this.style.background='{% if item.selection and item.selection.subject_id == subj.pk %}#f0fdfa{% else %}#f8fafc{% endif %}'">
           <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:4px">{{ subj.name }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ subj.code }}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:4px">
-            {{ subj.credits }} credits · {{ subj.lecture_hours }}-{{ subj.tutorial_hours }}-{{ subj.practical_hours }}
+            {{ subj.credits }} credits &middot; {{ subj.lecture_hours }}-{{ subj.tutorial_hours }}-{{ subj.practical_hours }}
           </div>
           <div style="font-size:11px;margin-top:6px;font-weight:600;color:var(--teal)">
-            <i class="fas fa-users"></i> {{ pool.quota_per_subject }} seats
+            <i class="fas fa-users"></i> {{ item.pool.quota_per_subject }} seats
           </div>
         </button>
       </form>
-      {% endwith %}
       {% endfor %}
     </div>
 
-    {% if pool.pk in my_selections %}
+    {% if item.selection %}
     <div style="margin-top:12px;font-size:12px;color:var(--muted)">
       <i class="fas fa-info-circle"></i> You can change your selection until the deadline or until it's confirmed.
     </div>
     {% endif %}
   </div>
-  {% endwith %}
   {% endfor %}
 
   {% else %}
   <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center">
     <i class="fas fa-layer-group" style="font-size:32px;color:var(--muted);margin-bottom:12px;display:block"></i>
     <div style="font-size:15px;font-weight:700;color:var(--deep);margin-bottom:6px">No open elective pools</div>
-    <div style="font-size:13px;color:var(--muted)">Your admin hasn't opened elective selection for Semester {{ student.current_semester }} yet. Check back later.</div>
+    <div style="font-size:13px;color:var(--muted)">Your admin hasn't opened elective selection for Semester {{ student.current_semester }} yet.</div>
   </div>
   {% endif %}
 
@@ -93,14 +90,16 @@
   {% if my_selections %}
   <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px;margin-top:4px">
     <div style="font-size:14px;font-weight:800;color:var(--deep);margin-bottom:12px"><i class="fas fa-list-check"></i> My Selections</div>
-    {% for pool_id, sel in my_selections.items %}
+    {% for sel in my_selections %}
     <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sel.subject.name }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ sel.pool.slot_name }} · {{ sel.subject.code }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ sel.pool.slot_name }} &middot; {{ sel.subject.code }}</div>
       </div>
       <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
-        background:{% if sel.status == 'CONFIRMED' %}#d1fae5;color:#065f46{% elif sel.status == 'REJECTED' %}#fee2e2;color:#991b1b{% else %}#fef3c7;color:#92400e{% endif %}">
+        {% if sel.status == 'CONFIRMED' %}background:#d1fae5;color:#065f46
+        {% elif sel.status == 'REJECTED' %}background:#fee2e2;color:#991b1b
+        {% else %}background:#fef3c7;color:#92400e{% endif %}">
         {{ sel.get_status_display }}
       </span>
     </div>

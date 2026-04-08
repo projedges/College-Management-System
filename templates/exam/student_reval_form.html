@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}Request Revaluation{% endblock %}
 {% block body %}
 <div style="max-width:520px;margin:60px auto;padding:0 16px">
@@ -9,13 +9,13 @@
       <div style="font-size:12px;color:var(--muted)">Subject</div>
       <div style="font-size:15px;font-weight:700;color:var(--deep)">{{ marks.subject.name }} ({{ marks.subject.code }})</div>
       <div style="font-size:12px;color:var(--muted);margin-top:6px">Exam: {{ marks.exam.name }}</div>
-      <div style="font-size:13px;font-weight:600;color:#7c3aed;margin-top:4px">Your marks: {{ marks.marks_obtained|floatformat:0 }} / {{ marks.max_marks|floatformat:0 }} — Grade: {{ marks.grade|default:"NA" }}</div>
+      <div style="font-size:13px;font-weight:600;color:#7c3aed;margin-top:4px">Your marks: {{ marks.marks_obtained|floatformat:0 }} / {{ marks.max_marks|floatformat:0 }} â€” Grade: {{ marks.grade|default:"NA" }}</div>
     </div>
     <form method="POST">
       {% csrf_token %}
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Reason (optional)</label>
-        <textarea name="reason" rows="4" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Explain why you believe your marks should be reviewed…"></textarea>
+        <textarea name="reason" rows="4" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Explain why you believe your marks should be reviewed&hellip;"></textarea>
       </div>
       <div style="display:flex;gap:10px">
         <button type="submit" style="padding:10px 20px;border-radius:9px;background:#7c3aed;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer"><i class="fas fa-paper-plane"></i> Submit Request</button>

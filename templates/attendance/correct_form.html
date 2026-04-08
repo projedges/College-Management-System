@@ -1,12 +1,12 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}Correct Attendance{% endblock %}
 {% block body %}
 <div style="max-width:480px;margin:60px auto;padding:0 16px">
   <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px">
     <h2 style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep);margin-bottom:4px">Correct Attendance Record</h2>
     <div style="background:var(--surface2);border-radius:var(--r);padding:12px;margin-bottom:18px;font-size:13px">
-      <div style="font-weight:600;color:var(--deep)">{{ att.student.user.get_full_name }} — {{ att.student.roll_number }}</div>
-      <div style="color:var(--muted);margin-top:3px">{{ subject.name }} · {{ att.session.date|date:"d M Y" }}</div>
+      <div style="font-weight:600;color:var(--deep)">{{ att.student.user.get_full_name }} â€” {{ att.student.roll_number }}</div>
+      <div style="color:var(--muted);margin-top:3px">{{ subject.name }} &middot; {{ att.session.date|date:"d M Y" }}</div>
       <div style="margin-top:6px">Current status: <span class="dbadge {% if att.status == 'PRESENT' %}dbadge-active{% elif att.status == 'ABSENT' %}dbadge-red{% else %}dbadge-warning{% endif %}">{{ att.status }}</span></div>
     </div>
     <form method="POST">
@@ -19,7 +19,7 @@
       </div>
       <div style="margin-bottom:18px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Reason for Correction <span style="color:#ef4444">*</span></label>
-        <textarea name="reason" rows="3" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Explain why this correction is needed…"></textarea>
+        <textarea name="reason" rows="3" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Explain why this correction is needed&hellip;"></textarea>
       </div>
       <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px;font-size:12px;color:#92400e;margin-bottom:16px"><i class="fas fa-triangle-exclamation"></i> All corrections are logged with your name and timestamp for audit purposes.</div>
       <div style="display:flex;gap:10px">

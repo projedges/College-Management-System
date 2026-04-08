@@ -1,5 +1,5 @@
-{% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}{{ action }} Student — Admin{% endblock %}
+﻿{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}{{ action }} Student â€” Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}{{ action }} Student{% endblock %}
@@ -13,7 +13,7 @@
   <div class="hint-box" style="margin-bottom:18px">Prefilled from registration request by {{ intake_request.first_name }} {{ intake_request.last_name }}.</div>
   {% endif %}
   {% if action == 'Add' %}
-  <div class="hint-box" style="margin-bottom:18px">Choose department and admission year first — roll number and username are auto-generated.</div>
+  <div class="hint-box" style="margin-bottom:18px">Choose department and admission year first â€” roll number and username are auto-generated.</div>
   {% endif %}
   <form method="POST">
     {% csrf_token %}

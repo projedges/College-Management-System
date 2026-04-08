@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Internal Marks — {{ subject.name }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Internal Marks â€” {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Internal Marks{% endblock %}
-{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Semester {{ subject.semester }}{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
 {% block sidebar_links %}
 <a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
 {% endblock %}
@@ -48,11 +48,11 @@
           <tr>
             <td style="font-weight:600;color:var(--teal)">{{ row.student.roll_number }}</td>
             <td style="font-weight:500;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
-            <td><input type="number" name="ia1_{{ row.student.id }}" class="im-input" min="0" max="30" step="0.5" placeholder="—" value="{% if row.im and row.im.ia1 is not None %}{{ row.im.ia1|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
-            <td><input type="number" name="ia2_{{ row.student.id }}" class="im-input" min="0" max="30" step="0.5" placeholder="—" value="{% if row.im and row.im.ia2 is not None %}{{ row.im.ia2|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
-            <td><input type="number" name="assignment_{{ row.student.id }}" class="im-input" min="0" max="20" step="0.5" placeholder="—" value="{% if row.im and row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
-            <td><input type="number" name="attendance_{{ row.student.id }}" class="im-input" min="0" max="5" step="0.5" placeholder="—" value="{% if row.im and row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
-            <td class="total-cell" id="total_{{ row.student.id }}">{% if row.im %}{{ row.im.total|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td><input type="number" name="ia1_{{ row.student.id }}" class="im-input" min="0" max="30" step="0.5" placeholder="â€”" value="{% if row.im and row.im.ia1 is not None %}{{ row.im.ia1|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td><input type="number" name="ia2_{{ row.student.id }}" class="im-input" min="0" max="30" step="0.5" placeholder="â€”" value="{% if row.im and row.im.ia2 is not None %}{{ row.im.ia2|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td><input type="number" name="assignment_{{ row.student.id }}" class="im-input" min="0" max="20" step="0.5" placeholder="â€”" value="{% if row.im and row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td><input type="number" name="attendance_{{ row.student.id }}" class="im-input" min="0" max="5" step="0.5" placeholder="â€”" value="{% if row.im and row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:'-1' }}{% endif %}" oninput="calcTotal({{ row.student.id }})"/></td>
+            <td class="total-cell" id="total_{{ row.student.id }}">{% if row.im %}{{ row.im.total|floatformat:1 }}{% else %}â€”{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -77,7 +77,7 @@ function calcTotal(sid){
     if(!isNaN(v))total+=v;
   });
   var cell=document.getElementById('total_'+sid);
-  if(cell)cell.textContent=total>0?total.toFixed(1):'—';
+  if(cell)cell.textContent=total>0?total.toFixed(1):'â€”';
 }
 </script>
 {% endblock %}

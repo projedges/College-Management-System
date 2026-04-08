@@ -1,8 +1,8 @@
-{% extends 'exam/base_exam.html' %}
-{% block title %}Exam Department — {{ college.name }}{% endblock %}
+﻿{% extends 'exam/base_exam.html' %}
+{% block title %}Exam Department â€” {{ college.name }}{% endblock %}
 {% block nav_dash %}on{% endblock %}
 {% block page_title %}Examination Department{% endblock %}
-{% block page_sub %}{{ college.name }} · {{ ec.designation }}{% endblock %}
+{% block page_sub %}{{ college.name }} &middot; {{ ec.designation }}{% endblock %}
 
 {% block content %}
 <div class="stat-grid">
@@ -48,7 +48,7 @@
           <tr>
             <td style="font-weight:600;color:var(--deep)">{{ exam.name }}</td>
             <td style="text-align:center">Sem {{ exam.semester }}</td>
-            <td style="font-size:12px;color:var(--muted)">{{ exam.start_date|date:"d M" }} – {{ exam.end_date|date:"d M Y" }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ exam.start_date|date:"d M" }} â€“ {{ exam.end_date|date:"d M Y" }}</td>
             <td>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <a href="{% url 'exam_schedule' exam.pk %}" class="dbadge dbadge-purple" style="text-decoration:none;cursor:pointer"><i class="fas fa-calendar"></i> Schedule</a>
@@ -75,7 +75,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f3f4f6">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ et.name }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ et.get_category_display }} · Max {{ et.max_marks }} · Pass {{ et.passing_marks }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ et.get_category_display }} &middot; Max {{ et.max_marks }} &middot; Pass {{ et.passing_marks }}</div>
         </div>
         <span class="dbadge dbadge-purple">{{ et.weightage_percent }}%</span>
       </div>
@@ -103,7 +103,7 @@
   <div class="d-title"><i class="fas fa-building"></i> Departments</div>
   <div style="display:flex;flex-wrap:wrap;gap:8px">
     {% for dept in departments %}
-    <span style="padding:5px 14px;border-radius:99px;background:rgba(124,58,237,.07);color:#7c3aed;font-size:12px;font-weight:600;border:1px solid rgba(124,58,237,.15)">{{ dept.code }} — {{ dept.name }}</span>
+    <span style="padding:5px 14px;border-radius:99px;background:rgba(124,58,237,.07);color:#7c3aed;font-size:12px;font-weight:600;border:1px solid rgba(124,58,237,.15)">{{ dept.code }} â€” {{ dept.name }}</span>
     {% endfor %}
   </div>
 </div>
@@ -112,7 +112,7 @@
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div class="d-title" style="margin:0"><i class="fas fa-users"></i> Exam Staff ({{ exam_staff_list|length }})</div>
-      <a href="{% url 'exam_staff_list' %}" style="font-size:12px;color:#7c3aed;text-decoration:none">Manage →</a>
+      <a href="{% url 'exam_staff_list' %}" style="font-size:12px;color:#7c3aed;text-decoration:none">Manage â†’</a>
     </div>
     {% if exam_staff_list %}
     {% for s in exam_staff_list %}
@@ -133,13 +133,13 @@
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div class="d-title" style="margin:0"><i class="fas fa-clipboard-list"></i> Evaluation Schemes</div>
-      <a href="{% url 'exam_scheme_list' %}" style="font-size:12px;color:#7c3aed;text-decoration:none">Manage →</a>
+      <a href="{% url 'exam_scheme_list' %}" style="font-size:12px;color:#7c3aed;text-decoration:none">Manage â†’</a>
     </div>
     {% if schemes %}
     {% for s in schemes %}
     <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
       <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ s.name }}</div>
-      <div style="font-size:11px;color:var(--muted)">{{ s.department.code|default:"All Depts" }} · CIE {{ s.cie_total_max }} + SEE {{ s.see_scaled_to }} = {{ s.total_max_marks }} total</div>
+      <div style="font-size:11px;color:var(--muted)">{{ s.department.code|default:"All Depts" }} &middot; CIE {{ s.cie_total_max }} + SEE {{ s.see_scaled_to }} = {{ s.total_max_marks }} total</div>
     </div>
     {% endfor %}
     {% else %}

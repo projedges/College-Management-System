@@ -1,4 +1,4 @@
-{% extends 'exam/base_exam.html' %}
+﻿{% extends 'exam/base_exam.html' %}
 {% block title %}Add Evaluation Scheme{% endblock %}
 {% block breadcrumb %} / <a href="{% url 'exam_scheme_list' %}" style="color:#7c3aed;text-decoration:none">Schemes</a> / Add{% endblock %}
 {% block page_title %}Add Evaluation Scheme{% endblock %}
@@ -16,7 +16,7 @@
         <label>Department</label>
         <select name="department" class="form-control">
           <option value="">All Departments</option>
-          {% for d in departments %}<option value="{{ d.pk }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}
+          {% for d in departments %}<option value="{{ d.pk }}">{{ d.code }} â€” {{ d.name }}</option>{% endfor %}
         </select>
       </div>
     </div>

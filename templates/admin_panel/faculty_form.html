@@ -1,5 +1,5 @@
-{% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}{{ action }} Faculty — Admin{% endblock %}
+﻿{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}{{ action }} Faculty â€” Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}{{ action }} Faculty{% endblock %}
@@ -10,7 +10,7 @@
 {% block form_content %}
 <div class="d-card" style="max-width:680px">
   {% if action == 'Add' %}
-  <div class="hint-box" style="margin-bottom:18px">Enter the employee ID first — username is auto-filled from it.</div>
+  <div class="hint-box" style="margin-bottom:18px">Enter the employee ID first â€” username is auto-filled from it.</div>
   {% endif %}
   <form method="POST">
     {% csrf_token %}

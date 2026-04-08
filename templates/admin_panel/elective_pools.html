@@ -1,4 +1,4 @@
-{% extends 'admin_panel/base_admin.html' %}
+﻿{% extends 'admin_panel/base_admin.html' %}
 {% block title %}Elective Pools{% endblock %}
 {% block breadcrumb %} / Elective Pools{% endblock %}
 {% block page_title %}Elective Pools{% endblock %}
@@ -16,7 +16,7 @@
     <tbody>
       {% for pool in pools %}
       <tr>
-        <td style="font-weight:700">{{ pool.department.code }} · Sem {{ pool.semester }}</td>
+        <td style="font-weight:700">{{ pool.department.code }} &middot; Sem {{ pool.semester }}</td>
         <td>
           <div style="font-weight:600">{{ pool.slot_name }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ pool.get_elective_type_display }}</div>
@@ -29,7 +29,7 @@
         </td>
         <td style="text-align:center;font-size:13px;font-weight:700">{{ pool.quota_per_subject }}/subj</td>
         <td style="font-size:12px;color:var(--muted)">
-          {% if pool.deadline %}{{ pool.deadline|date:"d M Y, H:i" }}{% else %}—{% endif %}
+          {% if pool.deadline %}{{ pool.deadline|date:"d M Y, H:i" }}{% else %}â€”{% endif %}
         </td>
         <td>
           {% if pool.status == 'OPEN' %}<span class="dbadge dbadge-active">Open</span>

@@ -1,4 +1,4 @@
-{% extends 'admin_panel/base_admin_form.html' %}
+﻿{% extends 'admin_panel/base_admin_form.html' %}
 {% block title %}Create Elective Pool{% endblock %}
 {% block form_title %}Create Elective Pool{% endblock %}
 {% block form_subtitle %}Define a slot where students choose one elective from a set of subjects.{% endblock %}
@@ -9,15 +9,15 @@
     <div class="form-group">
       <label class="form-label">Regulation <span class="req">*</span></label>
       <select name="regulation" class="form-control" required>
-        <option value="">— Select —</option>
-        {% for r in regulations %}<option value="{{ r.pk }}">{{ r.code }} — {{ r.name }}</option>{% endfor %}
+        <option value="">â€” Select â€”</option>
+        {% for r in regulations %}<option value="{{ r.pk }}">{{ r.code }} â€” {{ r.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="form-group">
       <label class="form-label">Department <span class="req">*</span></label>
       <select name="department" id="dept-sel" class="form-control" required onchange="loadSubjects()">
-        <option value="">— Select —</option>
-        {% for d in departments %}<option value="{{ d.pk }}" data-code="{{ d.code }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}
+        <option value="">â€” Select â€”</option>
+        {% for d in departments %}<option value="{{ d.pk }}" data-code="{{ d.code }}">{{ d.code }} â€” {{ d.name }}</option>{% endfor %}
       </select>
     </div>
     <div class="form-group">
@@ -50,7 +50,7 @@
     <div class="form-group form-group-full">
       <label class="form-label">Subjects in this Pool <span class="req">*</span></label>
       <select name="subjects" id="subjects-sel" class="form-control" multiple style="height:140px" required>
-        <option disabled>Select department first…</option>
+        <option disabled>Select department first&hellip;</option>
       </select>
       <div class="form-hint">Hold Ctrl/Cmd to select multiple. Students will choose one from these.</div>
     </div>
@@ -65,11 +65,11 @@ var subjectsByDept = {};
 {% for d in departments %}
 subjectsByDept[{{ d.pk }}] = [];
 {% endfor %}
-// Fetch subjects via simple page reload approach — dept change reloads with subjects
+// Fetch subjects via simple page reload approach â€” dept change reloads with subjects
 document.getElementById('dept-sel').addEventListener('change', function() {
   var deptId = this.value;
   var sel = document.getElementById('subjects-sel');
-  sel.innerHTML = '<option disabled>Loading…</option>';
+  sel.innerHTML = '<option disabled>Loading&hellip;</option>';
   if (!deptId) return;
   fetch('/dashboard/admin/subjects/?dept=' + deptId, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
     .then(function(r) { return r.text(); })

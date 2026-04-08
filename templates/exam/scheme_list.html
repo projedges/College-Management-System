@@ -1,4 +1,4 @@
-{% extends 'exam/base_exam.html' %}
+﻿{% extends 'exam/base_exam.html' %}
 {% block title %}Evaluation Schemes{% endblock %}
 {% block breadcrumb %} / Evaluation Schemes{% endblock %}
 {% block page_title %}Evaluation Schemes{% endblock %}
@@ -12,7 +12,7 @@
     <div>
       <div style="font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep)">{{ s.name }}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:3px">
-        {{ s.department.name|default:"All Departments" }} · {{ s.get_grading_type_display }}
+        {{ s.department.name|default:"All Departments" }} &middot; {{ s.get_grading_type_display }}
         {% if not s.is_active %}<span class="dbadge dbadge-red" style="margin-left:8px">Inactive</span>{% endif %}
       </div>
       {% if s.description %}<div style="font-size:12px;color:var(--muted);margin-top:4px">{{ s.description }}</div>{% endif %}
