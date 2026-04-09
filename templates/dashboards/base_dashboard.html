@@ -130,8 +130,8 @@ document.querySelectorAll('.auto-dismiss-msg').forEach(function(el) {
 <style>
 /* â”€â”€ Layout â”€â”€ */
 html,body{height:100%;overflow:hidden}
-body{overflow:hidden}
-.db-layout{display:flex;height:100dvh;min-height:100dvh;overflow:hidden;align-items:stretch}
+body{overflow:hidden;display:flex;align-items:stretch}
+.db-layout{display:flex;flex:1;height:100vh;min-height:100vh;height:100dvh;min-height:100dvh;overflow:hidden;align-items:stretch;margin:0}
 .db-sidebar{width:260px;background:var(--deep);color:#fff;display:flex;flex-direction:column;flex-shrink:0;height:100dvh;overflow-y:auto;transition:transform .3s ease}
 .mob-topbar{display:none;height:56px;background:#fff;border-bottom:1px solid var(--border);padding:0 16px;align-items:center;gap:12px;box-shadow:var(--sh)}
 .mob-ham{background:none;border:none;cursor:pointer;padding:6px;display:flex;flex-direction:column;gap:5px}
@@ -178,8 +178,8 @@ body{overflow:hidden}
 .sb-overlay.open{display:block}
 
 /* â”€â”€ Main â”€â”€ */
-.db-main{flex:1;padding:24px 32px 32px;min-width:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;height:100dvh}
-.db-page-head{margin-bottom:16px}
+.db-main{flex:1;padding:12px 32px 24px;min-width:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;height:100dvh}
+.db-page-head{margin-bottom:12px}
 .db-page-title{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin:0 0 4px}
 .db-page-sub{font-size:14px;color:var(--muted);margin:0}
 
@@ -271,7 +271,7 @@ body{overflow:hidden}
   .db-sidebar.open{transform:translateX(0)}
   .db-main{height:calc(100dvh - 56px)}
   .sb-close{display:block}
-  .db-main{padding:8px 16px 20px}
+  .db-main{padding:4px 16px 16px}
   .two-col,.three-col{grid-template-columns:1fr}
   .hero-grid{grid-template-columns:1fr}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
@@ -282,7 +282,7 @@ body{overflow:hidden}
   .stat-grid{grid-template-columns:1fr}
   .qa-btn{width:100%;justify-content:center}
   .d-card{padding:16px}
-  .db-main{padding:8px 12px 16px}
+  .db-main{padding:4px 12px 12px}
 }
 </style>
 
