@@ -1,0 +1,82 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Marks Moderation — {{ exam.name }}{% endblock %}
+{% block content %}
+<div style="max-width:860px">
+  <div style="margin-bottom:18px">
+    <a href="{% url 'exam_results' exam.pk %}" style="font-size:13px;color:var(--teal);text-decoration:none"><i class="fas fa-arrow-left"></i> Back to Results</a>
+  </div>
+
+  <div class="d-card" style="margin-bottom:20px">
+    <div class="d-title"><i class="fas fa-sliders"></i> Apply Marks Moderation</div>
+    <div class="section-meta">Bulk scale, add, or cap marks for a subject. Results are snapshotted before applying — fully reversible via version history.</div>
+    <form method="POST" style="margin-top:14px">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Subject</label>
+          <select name="subject" class="form-control" required>
+            <option value="">— Select —</option>
+            {% for s in subjects %}<option value="{{ s.pk }}">{{ s.code }} — {{ s.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Type</label>
+          <select name="moderation_type" class="form-control">
+            {% for val, label in mod_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Value</label>
+          <input type="number" step="0.1" name="value" class="form-control" placeholder="e.g. 5 or 1.1" required>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Reason <span style="color:var(--red)">*</span></label>
+        <input type="text" name="reason" class="form-control" placeholder="e.g. Paper was difficult, grace applied by board" required>
+      </div>
+      <button type="submit" class="btn btn-teal"><i class="fas fa-plus"></i> Create Moderation Rule</button>
+    </form>
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-list-check"></i> Moderation Rules</div>
+    {% if moderations %}
+    <table class="dtable">
+      <thead><tr><th>Subject</th><th>Type</th><th>Value</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for m in moderations %}
+        <tr>
+          <td style="font-weight:600">{{ m.subject.code }}</td>
+          <td>{{ m.get_moderation_type_display }}</td>
+          <td style="font-weight:700;color:var(--teal)">{{ m.value }}</td>
+          <td style="font-size:12px;color:var(--muted)">{{ m.reason|truncatechars:60 }}</td>
+          <td>
+            {% if m.applied %}
+              <span style="font-size:11px;font-weight:700;color:#059669;background:#d1fae5;padding:3px 8px;border-radius:99px">Applied {{ m.applied_at|date:"d M Y" }}</span>
+            {% else %}
+              <span style="font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;padding:3px 8px;border-radius:99px">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not m.applied %}
+            <form method="POST">{% csrf_token %}
+              <input type="hidden" name="action" value="apply">
+              <input type="hidden" name="mod_id" value="{{ m.pk }}">
+              <button type="submit" class="btn btn-teal" style="font-size:12px;padding:5px 12px"
+                onclick="return confirm('Apply this moderation to all marks for {{ m.subject.code }}? This cannot be undone (but results are snapshotted).')">
+                <i class="fas fa-play"></i> Apply
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><i class="fas fa-sliders"></i>No moderation rules yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

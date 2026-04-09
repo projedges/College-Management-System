@@ -1,4 +1,4 @@
-{% comment %}Shared admin sidebar — used by all admin form/standalone pages. Set active_section before including.{% endcomment %}
+﻿{% comment %}Shared admin sidebar â€” used by all admin form/standalone pages. Set active_section before including.{% endcomment %}
 <p class="sb-nav-label">Overview</p>
 <a href="{% url 'admin_dashboard' %}#overview" class="sb-link {% if active_section == 'overview' %}active{% endif %}"><i class="fas fa-home"></i> Dashboard</a>
 <a href="{% url 'admin_dashboard' %}#profile" class="sb-link {% if active_section == 'profile' %}active{% endif %}"><i class="fas fa-user-circle"></i> My Profile</a>
@@ -13,7 +13,9 @@
 <a href="{% url 'admin_dashboard' %}#academics" class="sb-link {% if active_section == 'academics' %}active{% endif %}"><i class="fas fa-book"></i> Academics</a>
 <a href="{% url 'admin_dashboard' %}#planner" class="sb-link {% if active_section == 'planner' %}active{% endif %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
 <a href="{% url 'admin_regulations' %}" class="sb-link {% if active_section == 'regulations' %}active{% endif %}"><i class="fas fa-scroll"></i> Regulations</a>
-<a href="{% url 'admin_elective_pools' %}" class="sb-link {% if active_section == 'electives' %}active{% endif %}"><i class="fas fa-layer-group"></i> Elective Pools</a>
+<a href="{% url 'admin_sections' %}" class="sb-link {% if active_section == 'sections' %}active{% endif %}"><i class="fas fa-layer-group"></i> Sections</a>
+<a href="{% url 'admin_ssf_map' %}" class="sb-link {% if active_section == 'ssf' %}active{% endif %}"><i class="fas fa-diagram-project"></i> SSF Mapping</a>
+<a href="{% url 'admin_elective_pools' %}" class="sb-link {% if active_section == 'electives' %}active{% endif %}"><i class="fas fa-list-check"></i> Elective Pools</a>
 <a href="{% url 'admin_dashboard' %}#exams" class="sb-link {% if active_section == 'exams' %}active{% endif %}"><i class="fas fa-file-pen"></i> Exams</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Finance &amp; Comms</p>

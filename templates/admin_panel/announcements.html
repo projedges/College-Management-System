@@ -1,5 +1,5 @@
-{% extends 'admin_panel/base_admin.html' %}
-{% block title %}Announcements — Admin{% endblock %}
+﻿{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Announcements â€” Admin{% endblock %}
 {% block nav_ann %}on{% endblock %}
 {% block breadcrumb %} / Announcements{% endblock %}
 {% block page_title %}Announcements{% endblock %}
@@ -19,7 +19,7 @@
         <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">{{ ann.message|truncatechars:200 }}</div>
         <div style="font-size:11px;color:var(--light)">
           <i class="fas fa-user" style="font-size:10px"></i> {{ ann.created_by.get_full_name|default:ann.created_by.username }}
-          &nbsp;·&nbsp;
+          &nbsp;&middot;&nbsp;
           <i class="fas fa-calendar" style="font-size:10px"></i> {{ ann.created_at|date:"d M Y, H:i" }}
         </div>
       </div>

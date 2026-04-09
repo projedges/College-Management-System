@@ -1,5 +1,5 @@
-{% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}Bulk Promote — Admin{% endblock %}
+﻿{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Bulk Promote â€” Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Bulk Promote Students{% endblock %}
@@ -24,8 +24,8 @@
     <div style="margin-bottom:16px">
       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Current Semester (to promote from) *</label>
       <select name="from_semester" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
-        {% for i in "1234567" %}<option value="{{ i }}">Semester {{ i }} → Semester {{ i|add:"1" }}</option>{% endfor %}
-        <option value="8">Semester 8 → Mark as Graduated ✓</option>
+        {% for i in "1234567" %}<option value="{{ i }}">Semester {{ i }} â†’ Semester {{ i|add:"1" }}</option>{% endfor %}
+        <option value="8">Semester 8 â†’ Mark as Graduated âœ“</option>
       </select>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">

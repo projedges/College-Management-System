@@ -1,9 +1,9 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Exemption Requests{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
 {% block role_label_foot %}Head of Department{% endblock %}
 {% block page_title %}Attendance Exemption Requests{% endblock %}
-{% block page_sub %}{{ hod.department.name }} · Review and approve student exemption requests{% endblock %}
+{% block page_sub %}{{ hod.department.name }} &middot; Review and approve student exemption requests{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-home"></i> Dashboard</a>
@@ -29,7 +29,7 @@
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ex.student.user.get_full_name }} <span style="color:var(--muted);font-weight:400">({{ ex.student.roll_number }})</span></div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ ex.get_reason_type_display }} · {{ ex.from_date|date:"d M Y" }} – {{ ex.to_date|date:"d M Y" }} ({{ ex.days }} day{{ ex.days|pluralize }})</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ ex.get_reason_type_display }} &middot; {{ ex.from_date|date:"d M Y" }} â€“ {{ ex.to_date|date:"d M Y" }} ({{ ex.days }} day{{ ex.days|pluralize }})</div>
         <div style="font-size:12px;color:var(--deep);margin-top:4px">{{ ex.reason|truncatechars:120 }}</div>
         {% if ex.document %}<div style="margin-top:4px"><a href="{{ ex.document.url }}" target="_blank" style="font-size:11px;color:var(--teal)"><i class="fas fa-paperclip"></i> View Document</a></div>{% endif %}
       </div>

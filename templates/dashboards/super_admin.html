@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Super Admin Dashboard - EduTrack{% endblock %}
 {% block role_label %}Super Admin{% endblock %}
 {% block role_label_foot %}Super Admin{% endblock %}
@@ -30,7 +30,7 @@
 <!-- canvas injected here, sits behind everything via fixed positioning -->
 <canvas id="sa-bg-canvas"></canvas>
 
-<!-- ── OVERVIEW ── -->
+<!-- â”€â”€ OVERVIEW â”€â”€ -->
 <section data-dashboard-pane="dashboard" class="dashboard-pane active">
   <div class="stat-grid">
     <div class="stat-card">
@@ -100,7 +100,7 @@
       {% for log in recent_activity %}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6;gap:12px">
         <div style="font-size:13px;color:var(--deep)">{{ log.action }}</div>
-        <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.user.username }} · {{ log.timestamp|date:"d M H:i" }}</div>
+        <div style="font-size:11px;color:var(--muted);white-space:nowrap">{{ log.user.username }} &middot; {{ log.timestamp|date:"d M H:i" }}</div>
       </div>
       {% endfor %}
     </div>
@@ -110,7 +110,7 @@
   </div>
 </section>
 
-<!-- ── COLLEGES ── -->
+<!-- â”€â”€ COLLEGES â”€â”€ -->
 <section data-dashboard-pane="colleges" class="dashboard-pane">
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-building"></i> All Colleges</div>
@@ -159,7 +159,7 @@
   </div>
 </section>
 
-<!-- ── COLLEGE ADMINS ── -->
+<!-- â”€â”€ COLLEGE ADMINS â”€â”€ -->
 <section data-dashboard-pane="admins" class="dashboard-pane">
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-user-shield"></i> College Admin Accounts</div>
@@ -194,7 +194,7 @@
   </div>
 </section>
 
-<!-- ── PLATFORM ANNOUNCEMENTS ── -->
+<!-- â”€â”€ PLATFORM ANNOUNCEMENTS â”€â”€ -->
 <section data-dashboard-pane="announcements" class="dashboard-pane">
   <div class="two-col">
     <div class="d-card">
@@ -238,7 +238,7 @@
   </div>
 </section>
 
-<!-- ── ACTIVITY LOG ── -->
+<!-- â”€â”€ ACTIVITY LOG â”€â”€ -->
 <section data-dashboard-pane="activity" class="dashboard-pane">
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-clock-rotate-left"></i> Platform Activity Log</div>

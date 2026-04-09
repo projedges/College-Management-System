@@ -88,11 +88,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'studentmanagementsystem.wsgi.application'
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     },
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
     # MySQL config — uncomment and comment out SQLite above when 192.168.7.21 is reachable
     # 'default': {
     #     'ENGINE': 'django.db.backends.mysql',
@@ -108,20 +108,10 @@ WSGI_APPLICATION = 'studentmanagementsystem.wsgi.application'
     #     },
     #     'CONN_MAX_AGE': 60,
     # },
-#     'sqlite': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     },
-# }
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'student_management_db',
-        'USER': 'root',          
-        'PASSWORD': 'Shayan@17',  
-        'HOST': '127.0.0.1',  
-        'PORT': '3306',
-    }
+    'sqlite': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
 }
 
 # ── Production database override via DATABASE_URL env var ────────────────────

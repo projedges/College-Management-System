@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Mark Attendance — {{ subject.name }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Mark Attendance â€” {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Mark Attendance{% endblock %}
-{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Semester {{ subject.semester }}{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
 
 {% block sidebar_links %}
 <a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
@@ -12,7 +12,6 @@
 <style>
   .att-form{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:700px}
   .att-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-  .date-box{margin-left:auto;text-align:right}
   .date-input{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
   .date-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
   .student-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6}
@@ -29,8 +28,6 @@
   .bulk-btn:hover{border-color:var(--teal);color:var(--teal)}
   .submit-btn{width:100%;padding:13px;border-radius:10px;background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:20px;transition:all .2s;font-family:'Inter',sans-serif}
   .submit-btn:hover{background:var(--teal-dk);transform:translateY(-1px)}
-  .date-error{font-size:12px;color:var(--red);margin-top:6px;display:block;min-height:16px;visibility:hidden}
-  .submit-btn[disabled]{opacity:.6;cursor:not-allowed;transform:none}
   .empty{text-align:center;padding:40px;color:var(--muted)}
 </style>
 {% endblock %}
@@ -39,14 +36,13 @@
 <div class="att-form">
   <div class="att-header">
     <div>
-      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subject · Semester {{ subject.semester }}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subject &middot; Semester {{ subject.semester }}</div>
       <div style="font-size:16px;font-weight:700;color:var(--deep)">{{ subject.name }} <span style="color:var(--muted);font-weight:400;font-size:13px">({{ subject.code }})</span></div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ subject.department.name }} · {{ students|length }} student{{ students|length|pluralize }}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ subject.department.name }} &middot; {{ students|length }} student{{ students|length|pluralize }}</div>
     </div>
-    <div class="date-box">
+    <div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Date</div>
-      <input type="date" id="date-picker" value="{{ today|date:'Y-m-d' }}" class="date-input"/>
-      <div class="date-error" id="date-error">No classes on Sunday. Please choose another date.</div>
+      <input type="date" id="date-picker" value="{{ today }}" class="date-input"/>
     </div>
   </div>
 
@@ -58,7 +54,7 @@
 
   <form method="POST">
     {% csrf_token %}
-    <input type="hidden" name="date" id="form-date" value="{{ today|date:'Y-m-d' }}"/>
+    <input type="hidden" name="date" id="form-date" value="{{ today }}"/>
 
     {% for student in students %}
     <div class="student-row">
@@ -93,36 +89,9 @@
 </div>
 
 <script>
-  (function(){
-    var datePicker = document.getElementById('date-picker');
-    var formDate = document.getElementById('form-date');
-    var errorEl = document.getElementById('date-error');
-    var submitBtn = document.querySelector('.submit-btn');
-    var lastValid = datePicker.value;
-
-    function setError(isError){
-      errorEl.style.visibility = isError ? 'visible' : 'hidden';
-      submitBtn.disabled = isError;
-    }
-
-    function isSunday(val){
-      if (!val) return false;
-      var d = new Date(val + 'T00:00:00');
-      return d.getDay() === 0;
-    }
-
-    datePicker.addEventListener('change', function(){
-      if (isSunday(this.value)){
-        setError(true);
-        datePicker.value = lastValid;
-        formDate.value = lastValid;
-        return;
-      }
-      setError(false);
-      lastValid = this.value;
-      formDate.value = this.value;
-    });
-  })();
+  document.getElementById('date-picker').addEventListener('change', function(){
+    document.getElementById('form-date').value = this.value;
+  });
   function markAll(status){
     document.querySelectorAll('input[type=radio][value=' + status + ']').forEach(r => r.checked = true);
   }

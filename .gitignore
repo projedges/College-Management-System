@@ -3,5 +3,5 @@ venv/
 *.pdf
 .kiro/
 test.txt
-
-
+*.docx
+*.csv

@@ -3,9 +3,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta, time as dt_time
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
-import json
-from django.shortcuts import render, get_object_or_404
-from django.core.serializers.json import DjangoJSONEncoder
 
 from django.db import transaction
 from django.core.exceptions import PermissionDenied
@@ -37,6 +34,13 @@ from ..models import (
     AttendanceRule, AttendanceExemption, AttendanceCorrection, EligibilityOverride,
     FeeBreakdown, SupplyExamRegistration, TimetableBreak,
     Regulation, CurriculumEntry, ElectivePool, ElectiveSelection,
+    Section, SectionSubjectFacultyMap,
+    AuditLog, FeeInstallmentPlan, FeeInstallment, LateFeeRule, FeeWaiver,
+    GraceMarksRule, GraceMarksApplication,
+    StudentRegulation, RegulationMigration, SubjectSchemeOverride,
+    ResultVersion, ResultFreeze, MarksModeration,
+    ExamEligibilityConfig, StudentLifecycleEvent, DisciplinaryRecord,
+    ElectiveWaitlist, CollegeFeatureConfig,
 )
 
 # --- Helpers for Performance and Validation ---
@@ -147,7 +151,7 @@ def _check_attendance_permission(user, subject, slot=None):
         if slot.start_time <= now.time() <= marking_end.time():
             return True, ""
         if now > marking_end and now <= edit_end:
-            return True, ""
+            return True, "Editing window: up to 60 min after class."
         return False, f"Attendance locked. Window: {slot.start_time}–{slot.end_time} (+10 min grace)."
 
     return False, "Unauthorized."
@@ -161,6 +165,29 @@ def _sync_fee_status(fee):
     else:
         fee.status = "PENDING"
     return fee
+
+
+def _audit(action_type, performed_by, description, student=None, faculty=None,
+           college=None, old_value='', new_value='', request=None):
+    """Create an AuditLog entry. Never raises — audit failures must not break flows."""
+    try:
+        ip = None
+        if request:
+            x_fwd = request.META.get('HTTP_X_FORWARDED_FOR')
+            ip = x_fwd.split(',')[0].strip() if x_fwd else request.META.get('REMOTE_ADDR')
+        AuditLog.objects.create(
+            action_type=action_type,
+            performed_by=performed_by,
+            student=student,
+            faculty=faculty,
+            college=college,
+            description=description,
+            old_value=str(old_value),
+            new_value=str(new_value),
+            ip_address=ip,
+        )
+    except Exception:
+        pass
 
 
 def _assignment_deadline_from_input(value):
@@ -450,7 +477,7 @@ def _build_weekly_timetable_matrix(entries, breaks=None, days=None):
     rows = []
     for start_time, end_time in ordered_times:
         row = {
-            'label': f"{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}",
+            'label': f"{start_time.strftime('%I:%M %p').lstrip('0')} - {end_time.strftime('%I:%M %p').lstrip('0')}",
             'cells': [],
         }
         row_is_break = True
@@ -661,15 +688,11 @@ def _auto_generate_timetable(department, semester):
         ('SAT', dt_time(9, 0),  dt_time(10, 0)),
         ('SAT', dt_time(10, 0), dt_time(11, 0)),
     ]
-    LAB_GRID = [
-        ('MON', dt_time(14, 0), dt_time(16, 0)),
-        ('TUE', dt_time(14, 0), dt_time(16, 0)),
-        ('WED', dt_time(14, 0), dt_time(16, 0)),
-        ('THU', dt_time(14, 0), dt_time(16, 0)),
-        ('FRI', dt_time(14, 0), dt_time(16, 0)),
-        ('SAT', dt_time(9, 0),  dt_time(11, 0)),
-        ('SAT', dt_time(11, 0), dt_time(13, 0)),
-    ]
+    LAB_PAIRS = []
+    for _day in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']:
+        _s1 = dt_time(14, 0);  _e1 = dt_time(14, 50)
+        _s2 = dt_time(14, 50); _e2 = dt_time(15, 40)
+        LAB_PAIRS.append((_day, _s1, _e1, _s2, _e2))
 
     # Clear existing timetable for this dept+semester
     Timetable.objects.filter(subject__department=department, subject__semester=semester).delete()
@@ -763,30 +786,30 @@ def _auto_generate_timetable(department, semester):
                     created_count += 1
                     break
 
-            # --- Schedule P practical slot (2-hr lab block) ---
+            # --- Schedule P practical slot (2 consecutive 50-min rows) ---
             if P > 0:
-                for day, start, end in LAB_GRID:
-                    fkey = (faculty.id, day, start)
-                    if fkey in used_faculty:
+                for _day, _s1, _e1, _s2, _e2 in LAB_PAIRS:
+                    fkey1 = (faculty.id, _day, _s1)
+                    fkey2 = (faculty.id, _day, _s2)
+                    if fkey1 in used_faculty or fkey2 in used_faculty:
                         continue
                     room = None
                     for ri in range(len(classrooms)):
                         candidate = classrooms[(room_idx + ri) % len(classrooms)]
-                        rkey = (candidate.id, day, start)
-                        if rkey not in used_rooms:
+                        if (candidate.id, _day, _s1) not in used_rooms and (candidate.id, _day, _s2) not in used_rooms:
                             room = candidate
                             break
                     if not room:
                         continue
-                    rkey = (room.id, day, start)
-                    Timetable.objects.create(
-                        subject=subj, faculty=faculty,
-                        day_of_week=day, start_time=start, end_time=end,
-                        classroom=room, section=section,
-                    )
-                    used_faculty.add(fkey)
-                    used_rooms.add(rkey)
-                    created_count += 1
+                    for _s, _e in [(_s1, _e1), (_s2, _e2)]:
+                        Timetable.objects.create(
+                            subject=subj, faculty=faculty,
+                            day_of_week=_day, start_time=_s, end_time=_e,
+                            classroom=room, section=section,
+                        )
+                        used_faculty.add((faculty.id, _day, _s))
+                        used_rooms.add((room.id, _day, _s))
+                        created_count += 1
                     break
 
     return created_count
@@ -1884,6 +1907,14 @@ def hod_dashboard(request):
     subjects_list  = Subject.objects.filter(department=dept)
     pending_approvals = HODApproval.objects.filter(department=dept, status='PENDING').select_related('requested_by')
     recent_approvals  = HODApproval.objects.filter(department=dept).order_by('-created_at')[:10]
+
+    # Leave applications from faculty in this department — shown to relevant HOD only
+    pending_leaves = LeaveApplication.objects.filter(
+        faculty__department=dept, status='PENDING'
+    ).select_related('faculty__user', 'suggested_substitute__user').order_by('from_date')
+    recent_leaves = LeaveApplication.objects.filter(
+        faculty__department=dept
+    ).order_by('-created_at')[:10]
     announcements  = _scope_announcements_for_college(dept.college).order_by('-created_at')[:5]
 
     today_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}.get(timezone.localtime(timezone.now()).weekday(), '')
@@ -1963,7 +1994,7 @@ def hod_dashboard(request):
 
     # Approval stats
     approval_stats = {
-        'pending': pending_approvals.count(),
+        'pending': pending_approvals.count() + pending_leaves.count(),
         'approved': HODApproval.objects.filter(department=dept, status='APPROVED').count(),
         'rejected': HODApproval.objects.filter(department=dept, status='REJECTED').count(),
     }
@@ -1974,11 +2005,13 @@ def hod_dashboard(request):
         'total_faculty': total_faculty_count,
         'total_students': total_students_count,
         'total_subjects': subjects_list.count(),
-        'pending_approvals_count': pending_approvals.count(),
+        'pending_approvals_count': pending_approvals.count() + pending_leaves.count(),
         'faculty_list': faculty_list,
         'students_list': students_list,
         'pending_approvals': pending_approvals,
         'recent_approvals': recent_approvals,
+        'pending_leaves': pending_leaves,
+        'recent_leaves': recent_leaves,
         'subject_attendance': subject_attendance,
         'today_timetable': today_timetable,
         'today_day': today_day,
@@ -2007,6 +2040,31 @@ def hod_approve(request, pk):
         approval.reviewed_at = timezone.now()
         approval.save()
         messages.success(request, f'Request {action.lower()} successfully.')
+    return redirect('hod_dashboard')
+
+
+@login_required
+def hod_leave_review(request, pk):
+    """Approve or reject a faculty LeaveApplication."""
+    try:
+        hod = HOD.objects.get(user=request.user)
+    except HOD.DoesNotExist:
+        return redirect('dashboard')
+
+    leave = get_object_or_404(LeaveApplication, pk=pk, faculty__department=hod.department)
+    action = request.POST.get('action')
+    if action in ('APPROVED', 'REJECTED'):
+        leave.status = action
+        leave.reviewed_by = request.user
+        leave.reviewed_at = timezone.now()
+        leave.hod_remarks = request.POST.get('remarks', '').strip()
+        leave.save()
+        # Notify faculty
+        Notification.objects.create(
+            user=leave.faculty.user,
+            message=f'Your {leave.get_leave_type_display()} ({leave.from_date} – {leave.to_date}) has been {action.lower()} by HOD.'
+        )
+        messages.success(request, f'Leave {action.lower()}.')
     return redirect('hod_dashboard')
 
 
@@ -2140,6 +2198,64 @@ def hod_student_profile(request, pk):
     })
 
 
+@login_required
+def hod_faculty_profile(request, pk):
+    """HOD views a read-only profile of a faculty member in their department."""
+    try:
+        hod = HOD.objects.select_related('department').get(user=request.user)
+    except HOD.DoesNotExist:
+        return redirect('dashboard')
+
+    dept = hod.department
+    faculty = get_object_or_404(Faculty.objects.select_related('user', 'department'), pk=pk, department=dept)
+
+    # Subjects assigned
+    assigned_subjects = FacultySubject.objects.filter(faculty=faculty).select_related('subject').order_by('subject__semester', 'subject__name')
+
+    # Attendance sessions this month
+    from django.utils import timezone as _tz
+    now = _tz.now()
+    sessions_this_month = AttendanceSession.objects.filter(
+        faculty=faculty, date__year=now.year, date__month=now.month
+    ).count()
+    sessions_total = AttendanceSession.objects.filter(faculty=faculty).count()
+
+    # Attendance per subject (class average)
+    subject_ids = [fs.subject_id for fs in assigned_subjects]
+    att_agg = Attendance.objects.filter(
+        session__faculty=faculty, session__subject_id__in=subject_ids
+    ).values('session__subject_id').annotate(
+        total=Count('id'), present=Count('id', filter=Q(status='PRESENT'))
+    )
+    att_map = {r['session__subject_id']: r for r in att_agg}
+
+    subject_stats = []
+    for fs in assigned_subjects:
+        agg = att_map.get(fs.subject_id, {'total': 0, 'present': 0})
+        pct = round(agg['present'] / agg['total'] * 100, 1) if agg['total'] > 0 else 0
+        subject_stats.append({'subject': fs.subject, 'total': agg['total'], 'present': agg['present'], 'pct': pct})
+
+    # Pending assignment reviews
+    pending_reviews = AssignmentSubmission.objects.filter(
+        assignment__created_by=faculty.user, marks__isnull=True
+    ).count()
+
+    # Leave history
+    leave_history = LeaveApplication.objects.filter(faculty=faculty).order_by('-from_date')[:8]
+
+    return render(request, 'hod/faculty_profile.html', {
+        'hod': hod, 'dept': dept, 'college': dept.college,
+        'faculty': faculty,
+        'assigned_subjects': assigned_subjects,
+        'subject_stats': subject_stats,
+        'sessions_this_month': sessions_this_month,
+        'sessions_total': sessions_total,
+        'pending_reviews': pending_reviews,
+        'leave_history': leave_history,
+        'branding': _get_college_branding(dept.college),
+    })
+
+
 # ── FACULTY DASHBOARD ────────────────────────────────────
 
 @login_required
@@ -2170,18 +2286,6 @@ def faculty_dashboard(request):
         present=Count('id', filter=Q(status='PRESENT'))
     )
     att_map = {row['session__subject_id']: row for row in att_agg_qs}
-
-    # Timetable slots per subject (for display in attendance panel)
-    day_labels = {'MON':'Mon','TUE':'Tue','WED':'Wed','THU':'Thu','FRI':'Fri','SAT':'Sat','SUN':'Sun'}
-    timetable_map = {}
-    if subject_ids:
-        slots = Timetable.objects.filter(subject_id__in=subject_ids).order_by('subject_id','day_of_week','start_time')
-        for slot in slots:
-            day = day_labels.get(slot.day_of_week, slot.day_of_week)
-            start = slot.start_time.strftime('%I:%M %p').lstrip('0')
-            end = slot.end_time.strftime('%I:%M %p').lstrip('0')
-            label = f"{day} {start}-{end}"
-            timetable_map.setdefault(slot.subject_id, []).append(label)
 
     # Defaulters per subject — single query
     student_att_qs = Attendance.objects.filter(
@@ -2232,12 +2336,10 @@ def faculty_dashboard(request):
             'att_pct': att_pct,
             'defaulter_count': defaulters_map.get(subject.id, 0),
             'enrolled': enrolled_counts.get((subject.department_id, subject.semester), 0),
-            'times': ", ".join(timetable_map.get(subject.id, [])) if timetable_map.get(subject.id) else "—",
         })
 
     now = timezone.localtime(timezone.now())
     today = now.date()
-    print(today)
 
     marked_subject_ids = set(AttendanceSession.objects.filter(
         faculty=faculty, date=today
@@ -2252,7 +2354,7 @@ def faculty_dashboard(request):
     today_timetable = list(raw_timetable)
     today_sessions = today_timetable
 
-    # Full week timetable
+    # Full week timetable + matrix for the new matrix view
     week_days = ['MON','TUE','WED','THU','FRI','SAT']
     week_day_labels = {'MON':'Monday','TUE':'Tuesday','WED':'Wednesday','THU':'Thursday','FRI':'Friday','SAT':'Saturday'}
     all_week_slots = Timetable.objects.filter(faculty=faculty).select_related('subject','classroom').order_by('day_of_week','start_time').distinct()
@@ -2261,6 +2363,15 @@ def faculty_dashboard(request):
         if slot.day_of_week in week_tt:
             week_tt[slot.day_of_week].append(slot)
     faculty_week_timetable = [(d, week_day_labels[d], week_tt[d]) for d in week_days]
+    week_timetable_matrix = _build_weekly_timetable_matrix(
+        all_week_slots,
+        breaks=TimetableBreak.objects.filter(college=faculty.department.college, applies_to_all=True).order_by('day_of_week','start_time')
+    )
+
+    # Faculty availability slots
+    availability_slots = FacultyAvailability.objects.filter(
+        faculty=faculty, is_available=True
+    ).order_by('day_of_week', 'start_time')
 
     my_requests_qs = HODApproval.objects.filter(requested_by=user).order_by('-created_at')
 
@@ -2308,6 +2419,8 @@ def faculty_dashboard(request):
         'today_day': today_day,
         'today_breaks': faculty_today_breaks,
         'faculty_week_timetable': faculty_week_timetable,
+        'week_timetable_matrix': week_timetable_matrix,
+        'availability_slots': availability_slots,
         'marked_subject_ids': marked_subject_ids,
         'recent_sessions': recent_sessions,
         'pending_submissions': pending_submissions_qs[:10],
@@ -2380,13 +2493,9 @@ def faculty_mark_attendance(request, subject_id):
         except (ValueError, TypeError):
             session_date = timezone.now().date()
 
-        if session_date.weekday() == 6:
-            messages.error(request, 'No classes on Sunday. Please choose another date.')
-            return redirect('faculty_mark_attendance', subject_id=subject.id)
-
         if session_date > timezone.now().date():
             messages.error(request, 'Cannot mark attendance for a future date.')
-            return redirect('faculty_mark_attendance', subject_id=subject.id)
+            return redirect('faculty_dashboard')
 
         session = AttendanceSession.objects.filter(subject=subject, date=session_date).first()
         created = session is None
@@ -2475,10 +2584,22 @@ def faculty_enter_marks(request, subject_id, exam_id):
                     messages.error(request, f'Marks {obtained} exceed max {max_marks} for {student.roll_number}.')
                     error_count += 1
                     continue
-                grade = _calculate_grade(obtained, max_marks)
-                Marks.objects.update_or_create(
+                grade = _calculate_grade(obtained, max_marks,
+                    scheme=_get_evaluation_scheme(faculty.department.college, faculty.department))
+                mark_obj, created = Marks.objects.update_or_create(
                     student=student, subject=subject, exam=exam,
-                    defaults={'marks_obtained': obtained, 'max_marks': max_marks, 'grade': grade}
+                    defaults={
+                        'marks_obtained': obtained,
+                        'max_marks': max_marks,
+                        'grade': grade,
+                        'grade_point': _grade_to_point(grade),
+                    }
+                )
+                _audit(
+                    'MARKS_UPDATED' if not created else 'MARKS_ENTERED',
+                    request.user,
+                    f"{'Entered' if created else 'Updated'} marks for {student.roll_number} in {subject.code}: {obtained}/{max_marks} ({grade})",
+                    student=student, college=faculty.department.college, request=request,
                 )
                 saved_count += 1
         if saved_count:
@@ -2566,15 +2687,68 @@ def faculty_review_submission(request, pk):
     return render(request, 'faculty/review_submission.html', {'submission': submission})
 
 
-def _calculate_grade(obtained, max_marks):
+def _get_evaluation_scheme(college, department=None):
+    """
+    Returns the active EvaluationScheme for a college/department.
+    Falls back to college-wide scheme, then to hardcoded defaults.
+    """
+    qs = EvaluationScheme.objects.filter(college=college, is_active=True)
+    if department:
+        scheme = qs.filter(department=department).first()
+        if scheme:
+            return scheme
+    return qs.filter(department__isnull=True).first()
+
+
+def _calculate_grade(obtained, max_marks, scheme=None):
+    """
+    Calculate letter grade. Uses EvaluationScheme cutoffs if available,
+    otherwise falls back to standard 10-point absolute scale.
+    """
+    if max_marks <= 0:
+        return 'F'
     pct = (obtained / max_marks) * 100
+
+    # If scheme defines custom passing minimum, use it for F boundary
+    passing_min = scheme.overall_passing_min if scheme else 40.0
+
     if pct >= 90: return 'O'
     if pct >= 80: return 'A+'
     if pct >= 70: return 'A'
     if pct >= 60: return 'B+'
     if pct >= 50: return 'B'
-    if pct >= 40: return 'C'
+    if pct >= passing_min: return 'C'
     return 'F'
+
+
+GRADE_POINTS = {'O': 10, 'A+': 9, 'A': 8, 'B+': 7, 'B': 6, 'C': 5, 'F': 0}
+
+
+def _grade_to_point(grade):
+    return GRADE_POINTS.get(grade, 0)
+
+
+def _compute_sgpa(student, semester, exam):
+    """
+    Compute SGPA for a student for a given semester.
+    SGPA = Σ(credit × grade_point) / Σ(credits)
+    Uses the Marks records for the given exam.
+    """
+    marks_qs = Marks.objects.filter(
+        student=student, exam=exam,
+        subject__semester=semester,
+    ).select_related('subject')
+
+    total_credit_points = 0.0
+    total_credits = 0
+    for m in marks_qs:
+        credits = m.subject.credits or 0
+        gp = _grade_to_point(m.grade or 'F')
+        total_credit_points += credits * gp
+        total_credits += credits
+
+    sgpa = round(total_credit_points / total_credits, 2) if total_credits > 0 else 0.0
+    return sgpa, total_credits
 
 
 # ── FACULTY: QUIZ MANAGEMENT ─────────────────────────────────────────────────
@@ -2858,6 +3032,35 @@ def faculty_leave_apply(request):
 
 
 # ── STUDENT DASHBOARD ────────────────────────────────────
+
+@login_required
+def faculty_availability_add(request):
+    """Faculty adds a free availability slot from their timetable page."""
+    if request.method != 'POST':
+        return redirect('faculty_dashboard')
+    faculty = get_object_or_404(Faculty, user=request.user)
+    day   = request.POST.get('day_of_week', '').strip().upper()
+    start = request.POST.get('start_time', '').strip()
+    end   = request.POST.get('end_time', '').strip()
+    if day and start and end:
+        FacultyAvailability.objects.get_or_create(
+            faculty=faculty, day_of_week=day, start_time=start, end_time=end,
+            defaults={'is_available': True}
+        )
+        messages.success(request, f'Free slot added: {day} {start}–{end}.')
+    else:
+        messages.error(request, 'Day, start time, and end time are required.')
+    return redirect(f"{reverse('faculty_dashboard')}#timetable")
+
+
+@login_required
+def faculty_availability_delete(request, pk):
+    """Faculty removes an availability slot."""
+    if request.method == 'POST':
+        FacultyAvailability.objects.filter(pk=pk, faculty__user=request.user).delete()
+        messages.success(request, 'Slot removed.')
+    return redirect(f"{reverse('faculty_dashboard')}#timetable")
+
 
 @login_required
 def student_dashboard(request):
@@ -3737,6 +3940,11 @@ def razorpay_verify_payment(request):
                 fee.save(update_fields=['paid_amount', 'status'])
 
     messages.success(request, f'Payment of Rs {payment.amount:.0f} successful.')
+    _audit('FEE_PAYMENT', request.user,
+           f"Fee payment Rs {payment.amount:.0f} ({payment.payment_type}) via {payment.payment_method}. Txn: {payment.transaction_id}",
+           student=Student.objects.filter(user=request.user).first(),
+           college=getattr(getattr(Student.objects.filter(user=request.user).first(), 'department', None), 'college', None),
+           request=request, new_value=str(payment.amount))
 
     # Notify college admin(s) about the payment
     try:
@@ -4525,7 +4733,6 @@ def student_result_report_pdf(request):
 
     result_breakdown, results = _student_result_breakdown(student)
     if not results.exists():
-        messages.error(request, 'No published results found yet.')
         return redirect(f"{reverse('student_dashboard')}#results")
 
     college = student.department.college
@@ -5070,30 +5277,47 @@ def admin_students_bulk_promote(request):
         else:
             with transaction.atomic():
                 if from_sem >= 8:
-                    # Final semester — graduate the students
-                    affected = Student.objects.filter(
-                        department_id=dept_id,
-                        current_semester=from_sem,
-                        status='ACTIVE',
-                        is_deleted=False
-                    ).update(status='GRADUATED')
+                    students_to_update = Student.objects.filter(
+                        department_id=dept_id, current_semester=from_sem,
+                        status='ACTIVE', is_deleted=False
+                    )
+                    affected = students_to_update.count()
+                    for student in students_to_update:
+                        StudentLifecycleEvent.objects.create(
+                            student=student, event_type='GRADUATED',
+                            from_status='ACTIVE', to_status='GRADUATED',
+                            from_semester=from_sem, to_semester=from_sem,
+                            reason='Batch graduation', performed_by=request.user,
+                        )
+                    students_to_update.update(status='GRADUATED')
+                    _audit('USER_PROMOTED', request.user,
+                           f"Batch graduation: {affected} students from {dept_id} Sem {from_sem}",
+                           college=_get_admin_college(request), request=request)
                     messages.success(request, f'{affected} student(s) marked as Graduated.')
                 else:
-                    affected = Student.objects.filter(
-                        department_id=dept_id,
-                        current_semester=from_sem,
-                        status='ACTIVE',
-                        is_deleted=False
-                    ).update(current_semester=F('current_semester') + 1)
-                    # Create fee records for the new semester
+                    students_to_update = Student.objects.filter(
+                        department_id=dept_id, current_semester=from_sem,
+                        status='ACTIVE', is_deleted=False
+                    )
+                    affected = students_to_update.count()
+                    for student in students_to_update:
+                        StudentLifecycleEvent.objects.create(
+                            student=student, event_type='PROMOTED',
+                            from_status='ACTIVE', to_status='ACTIVE',
+                            from_semester=from_sem, to_semester=from_sem + 1,
+                            reason=f'Batch promotion Sem {from_sem} → {from_sem + 1}',
+                            performed_by=request.user,
+                        )
+                    students_to_update.update(current_semester=F('current_semester') + 1)
                     promoted = Student.objects.filter(
-                        department_id=dept_id,
-                        current_semester=from_sem + 1,
-                        status='ACTIVE',
-                        is_deleted=False
+                        department_id=dept_id, current_semester=from_sem + 1,
+                        status='ACTIVE', is_deleted=False
                     )
                     for student in promoted:
                         _create_default_fee(student)
+                    _audit('USER_PROMOTED', request.user,
+                           f"Batch promotion: {affected} students from {dept_id} Sem {from_sem} → {from_sem + 1}",
+                           college=_get_admin_college(request), request=request)
                     messages.success(request, f'{affected} student(s) promoted to Semester {from_sem + 1}.')
             return redirect('/dashboard/admin/#students')
 
@@ -5751,6 +5975,14 @@ def student_elective_select(request):
         return redirect('home')
 
     # Find open pools for this student's department + semester
+    # Feature gate: check if electives are enabled for this college
+    feature_cfg = CollegeFeatureConfig.objects.filter(college=student.department.college).first()
+    if feature_cfg and not feature_cfg.enable_electives:
+        return render(request, 'student/elective_select.html', {
+            'pool_data': [], 'my_selections': [], 'student': student,
+            'feature_disabled': True,
+        })
+
     open_pools = ElectivePool.objects.filter(
         department=student.department,
         semester=student.current_semester,
@@ -5758,12 +5990,18 @@ def student_elective_select(request):
     ).prefetch_related('subjects')
 
     # Already selected pools
-    my_selections = {
-        sel.pool_id: sel
-        for sel in ElectiveSelection.objects.filter(
-            student=student, pool__in=open_pools
-        ).select_related('subject', 'pool')
-    }
+    my_selections_qs = ElectiveSelection.objects.filter(
+        student=student, pool__in=open_pools
+    ).select_related('subject', 'pool')
+
+    sel_by_pool = {sel.pool_id: sel for sel in my_selections_qs}
+
+    # Build pool_data list for template (no get_item filter needed)
+    pool_data = [
+        {'pool': pool, 'selection': sel_by_pool.get(pool.pk)}
+        for pool in open_pools
+    ]
+    my_selections = list(my_selections_qs)
 
     if request.method == 'POST':
         pool_id = request.POST.get('pool_id')
@@ -5776,10 +6014,20 @@ def student_elective_select(request):
             messages.error(request, 'Selection deadline has passed.')
             return redirect('student_elective_select')
 
-        # Check quota
+        # Check quota — add to waitlist if full
         confirmed = ElectiveSelection.objects.filter(pool=pool, subject=subject, status='CONFIRMED').count()
         if confirmed >= pool.quota_per_subject:
-            messages.error(request, f'"{subject.name}" is full ({pool.quota_per_subject} seats). Please choose another.')
+            # Add to waitlist instead of rejecting
+            student_cgpa = 0.0
+            results = Result.objects.filter(student=student)
+            if results.exists():
+                student_cgpa = round(sum(r.sgpa for r in results) / results.count(), 2)
+            position = ElectiveWaitlist.objects.filter(pool=pool, subject=subject, promoted=False).count() + 1
+            ElectiveWaitlist.objects.get_or_create(
+                student=student, pool=pool, subject=subject,
+                defaults={'position': position, 'cgpa': student_cgpa}
+            )
+            messages.warning(request, f'"{subject.name}" is full. You have been added to the waitlist (position {position}).')
             return redirect('student_elective_select')
 
         sel, created = ElectiveSelection.objects.update_or_create(
@@ -5790,7 +6038,7 @@ def student_elective_select(request):
         return redirect('student_elective_select')
 
     return render(request, 'student/elective_select.html', {
-        'open_pools': open_pools,
+        'pool_data': pool_data,
         'my_selections': my_selections,
         'student': student,
     })
@@ -5942,6 +6190,151 @@ def admin_academic_planner(request):
         'classrooms': classrooms,
         'section_strength_summary': section_strength_summary,
         'branding': _get_college_branding(college),
+    })
+
+
+# ── SECTION MANAGEMENT ────────────────────────────────────────────────────────
+
+@login_required
+def admin_sections(request):
+    """List and manage sections for a department+semester."""
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college  = _get_admin_college(request)
+    departments = _scope_departments(request).order_by('name')
+    dept_id  = request.GET.get('dept') or request.POST.get('department')
+    sem      = _safe_int(request.GET.get('sem') or request.POST.get('semester'), default=1)
+    department = departments.filter(pk=dept_id).first() if dept_id else departments.first()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        dept_id = request.POST.get('department')
+        sem     = _safe_int(request.POST.get('semester'), default=1)
+        department = get_object_or_404(departments, pk=dept_id)
+
+        if action == 'auto_create':
+            # Auto-generate sections based on student count and section capacity
+            total = Student.objects.filter(
+                department=department, current_semester=sem, status='ACTIVE'
+            ).count()
+            capacity = _safe_int(request.POST.get('capacity')) or department.section_capacity or 60
+            if total == 0:
+                messages.warning(request, 'No active students found for this semester.')
+            else:
+                n_sections = max(1, (total + capacity - 1) // capacity)
+                created = 0
+                for i in range(n_sections):
+                    label = chr(65 + i)  # A, B, C...
+                    _, c = Section.objects.get_or_create(
+                        department=department, semester=sem, label=label,
+                        defaults={'capacity': capacity}
+                    )
+                    if c:
+                        created += 1
+                # Assign students to sections in order
+                students_qs = Student.objects.filter(
+                    department=department, current_semester=sem, status='ACTIVE'
+                ).order_by('roll_number')
+                for idx, student in enumerate(students_qs):
+                    student.section = chr(65 + (idx // capacity))
+                    student.save(update_fields=['section'])
+                messages.success(request, f'{created} section(s) created, {total} students assigned.')
+
+        elif action == 'add':
+            label    = request.POST.get('label', '').strip().upper()
+            capacity = _safe_int(request.POST.get('capacity')) or 60
+            ay       = request.POST.get('academic_year', '').strip()
+            if not label:
+                messages.error(request, 'Section label is required.')
+            else:
+                _, c = Section.objects.get_or_create(
+                    department=department, semester=sem, label=label,
+                    defaults={'capacity': capacity, 'academic_year': ay}
+                )
+                messages.success(request, f'Section {label} {"created" if c else "already exists"}.')
+
+        elif action == 'delete':
+            sec_pk = request.POST.get('section_pk')
+            Section.objects.filter(pk=sec_pk, department=department).delete()
+            messages.success(request, 'Section deleted.')
+
+        return redirect(f"{reverse('admin_sections')}?dept={department.pk}&sem={sem}")
+
+    sections = Section.objects.filter(
+        department=department, semester=sem
+    ).order_by('label') if department else []
+
+    return render(request, 'admin_panel/sections.html', {
+        'departments': departments, 'department': department,
+        'sem': sem, 'sections': sections,
+        'college': college, 'branding': _get_college_branding(college),
+        'semesters': range(1, 9),
+    })
+
+
+# ── SUBJECT–SECTION–FACULTY MAPPING ──────────────────────────────────────────
+
+@login_required
+def admin_ssf_map(request):
+    """
+    Subject–Section–Faculty mapping UI.
+    Admin selects Subject → Faculty → Section → Assign.
+    """
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college     = _get_admin_college(request)
+    departments = _scope_departments(request).order_by('name')
+    dept_id     = request.GET.get('dept') or request.POST.get('department')
+    sem         = _safe_int(request.GET.get('sem') or request.POST.get('semester'), default=1)
+    department  = departments.filter(pk=dept_id).first() if dept_id else departments.first()
+
+    if request.method == 'POST':
+        action     = request.POST.get('action')
+        dept_id    = request.POST.get('department')
+        sem        = _safe_int(request.POST.get('semester'), default=1)
+        department = get_object_or_404(departments, pk=dept_id)
+
+        if action == 'assign':
+            subj_id  = request.POST.get('subject')
+            fac_id   = request.POST.get('faculty')
+            sec_pk   = request.POST.get('section')
+            room_id  = request.POST.get('classroom') or None
+            subject  = get_object_or_404(Subject, pk=subj_id, department=department)
+            faculty  = get_object_or_404(Faculty, pk=fac_id)
+            section  = get_object_or_404(Section, pk=sec_pk, department=department)
+            classroom = Classroom.objects.filter(pk=room_id).first() if room_id else None
+
+            # Also ensure FacultySubject exists (for backward compat with timetable gen)
+            FacultySubject.objects.get_or_create(faculty=faculty, subject=subject)
+
+            mapping, created = SectionSubjectFacultyMap.objects.update_or_create(
+                section=section, subject=subject,
+                defaults={'faculty': faculty, 'classroom': classroom}
+            )
+            action_word = 'assigned' if created else 'updated'
+            messages.success(request, f'{faculty.user.get_full_name()} {action_word} to {subject.code} / Sec {section.label}.')
+
+        elif action == 'remove':
+            map_pk = request.POST.get('map_pk')
+            SectionSubjectFacultyMap.objects.filter(pk=map_pk).delete()
+            messages.success(request, 'Mapping removed.')
+
+        return redirect(f"{reverse('admin_ssf_map')}?dept={department.pk}&sem={sem}")
+
+    subjects  = Subject.objects.filter(department=department, semester=sem).order_by('name') if department else []
+    sections  = Section.objects.filter(department=department, semester=sem).order_by('label') if department else []
+    faculty   = Faculty.objects.filter(department__college=college).select_related('user', 'department').order_by('user__first_name') if college else []
+    classrooms = Classroom.objects.filter(college=college).order_by('room_number') if college else []
+    mappings  = SectionSubjectFacultyMap.objects.filter(
+        section__department=department, section__semester=sem
+    ).select_related('subject', 'faculty__user', 'section', 'classroom').order_by('section__label', 'subject__name') if department else []
+
+    return render(request, 'admin_panel/ssf_map.html', {
+        'departments': departments, 'department': department,
+        'sem': sem, 'subjects': subjects, 'sections': sections,
+        'faculty': faculty, 'classrooms': classrooms, 'mappings': mappings,
+        'college': college, 'branding': _get_college_branding(college),
+        'semesters': range(1, 9),
     })
 
 
@@ -6918,20 +7311,68 @@ def exam_hall_tickets(request, exam_id):
         ).values_list('student_id', flat=True)
     )
 
+    # Load composite eligibility config (ExamEligibilityConfig takes precedence over defaults)
+    elig_config = (
+        ExamEligibilityConfig.objects.filter(college=ec.college, exam=exam, is_active=True).first()
+        or ExamEligibilityConfig.objects.filter(college=ec.college, exam__isnull=True, is_active=True).first()
+    )
+
+    # Bulk-fetch internal marks averages if config requires it
+    internal_map = {}
+    if elig_config and elig_config.check_internal_marks:
+        im_agg = InternalMark.objects.filter(
+            student__in=students_qs,
+            subject__semester=exam.semester,
+        ).values('student_id').annotate(
+            total_ia=Sum(F('ia1') + F('ia2') + F('assignment_marks') + F('attendance_marks'))
+        )
+        internal_map = {r['student_id']: r['total_ia'] or 0 for r in im_agg}
+
+    # Bulk-fetch active disciplinary records if config requires it
+    disciplinary_set = set()
+    if elig_config and elig_config.check_disciplinary:
+        disciplinary_set = set(
+            DisciplinaryRecord.objects.filter(
+                student__in=students_qs, status='ACTIVE'
+            ).values_list('student_id', flat=True)
+        )
+
     rows = []
     for student in students_qs:
         att = att_map.get(student.id, {'total': 0, 'present': 0})
         pct = round(att['present'] / att['total'] * 100, 1) if att['total'] > 0 else 0
         has_dues = student.id in fee_dues
         ht = existing_ht.get(student.id)
-        # Use rule engine for threshold
         exam_rule = _get_attendance_rule(ec.college, student.department, exam.semester)
-        threshold = exam_rule.effective_min_overall
+
+        # Composite eligibility check
+        if elig_config:
+            threshold = elig_config.min_attendance_pct
+            gates = []
+            if elig_config.check_attendance:
+                att_ok = pct >= threshold or att['total'] < exam_rule.min_sessions_for_check
+                gates.append(att_ok)
+            if elig_config.check_fee_clearance:
+                fee_ok = not has_dues or (elig_config.allow_partial_fee and student.id in fee_dues)
+                gates.append(not has_dues)
+            if elig_config.check_internal_marks:
+                im_total = internal_map.get(student.id, 0)
+                gates.append(im_total >= elig_config.min_internal_marks_pct)
+            if elig_config.check_disciplinary:
+                gates.append(student.id not in disciplinary_set)
+            eligible = all(gates) if elig_config.require_all_gates else any(gates)
+            auto_status = 'ELIGIBLE' if eligible else ('DETAINED' if (elig_config.check_attendance and pct < threshold) else 'WITHHELD')
+        else:
+            threshold = exam_rule.effective_min_overall
+            att_fail = att['total'] >= exam_rule.min_sessions_for_check and pct < threshold
+            auto_status = 'DETAINED' if att_fail else ('WITHHELD' if has_dues else 'ELIGIBLE')
+
         rows.append({
             'student': student, 'att_pct': pct,
             'has_dues': has_dues, 'hall_ticket': ht,
-            'threshold': threshold,
-            'auto_status': 'DETAINED' if (att['total'] >= exam_rule.min_sessions_for_check and pct < threshold) else ('WITHHELD' if has_dues else 'ELIGIBLE'),
+            'threshold': threshold if elig_config else exam_rule.effective_min_overall,
+            'auto_status': auto_status,
+            'has_disciplinary': student.id in disciplinary_set,
         })
 
     if request.method == 'POST' and request.POST.get('action') == 'generate':
@@ -6979,6 +7420,93 @@ def exam_hall_tickets(request, exam_id):
 
 
 # ── MARKS OVERVIEW ────────────────────────────────────────────────────────────
+
+@login_required
+@login_required
+def exam_marks_moderation(request, exam_id):
+    """Bulk scale/add/cap marks for a subject. Snapshots results before applying."""
+    ec = _exam_controller_guard(request)
+    if not ec or not ec.can_verify:
+        return redirect('exam_dashboard')
+    exam = get_object_or_404(Exam, pk=exam_id, college=ec.college)
+
+    # Block if frozen
+    freeze_rec = ResultFreeze.objects.filter(college=ec.college, exam=exam).first()
+    if freeze_rec and freeze_rec.is_frozen:
+        messages.error(request, 'Results are frozen. Unfreeze before applying moderation.')
+        return redirect('exam_results', exam_id=exam.pk)
+
+    subjects = Subject.objects.filter(
+        department__college=ec.college, semester=exam.semester
+    ).order_by('department__code', 'name')
+    moderations = MarksModeration.objects.filter(exam=exam).select_related('subject', 'created_by').order_by('-created_at')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create':
+            subj_id = request.POST.get('subject')
+            mod_type = request.POST.get('moderation_type', 'ADD')
+            value = _safe_float(request.POST.get('value', '0'))
+            reason = request.POST.get('reason', '').strip()
+            if not reason:
+                messages.error(request, 'Reason is required.')
+            else:
+                MarksModeration.objects.create(
+                    exam=exam,
+                    subject_id=subj_id,
+                    moderation_type=mod_type,
+                    value=value,
+                    reason=reason,
+                    created_by=request.user,
+                )
+                messages.success(request, 'Moderation rule created. Apply it to update marks.')
+
+        elif action == 'apply':
+            mod_id = request.POST.get('mod_id')
+            mod = get_object_or_404(MarksModeration, pk=mod_id, exam=exam, applied=False)
+            with transaction.atomic():
+                marks_qs = Marks.objects.filter(exam=exam, subject=mod.subject)
+                # Snapshot results before moderation
+                affected_students = marks_qs.values_list('student_id', flat=True).distinct()
+                for sid in affected_students:
+                    result_obj = Result.objects.filter(student_id=sid, semester=exam.semester).first()
+                    if result_obj:
+                        last_v = ResultVersion.objects.filter(result=result_obj).count()
+                        ResultVersion.objects.create(
+                            result=result_obj, version_no=last_v + 1,
+                            sgpa=result_obj.sgpa, total_marks=result_obj.total_marks,
+                            percentage=result_obj.percentage,
+                            snapshot_reason=f'Before moderation: {mod.get_moderation_type_display()} {mod.value}',
+                            created_by=request.user,
+                        )
+                # Apply moderation
+                for mark in marks_qs:
+                    if mod.moderation_type == 'ADD':
+                        mark.marks_obtained = min(mark.marks_obtained + mod.value, mark.max_marks)
+                    elif mod.moderation_type == 'SCALE':
+                        mark.marks_obtained = min(mark.marks_obtained * mod.value, mark.max_marks)
+                    elif mod.moderation_type == 'CAP':
+                        mark.marks_obtained = min(mark.marks_obtained, mod.value)
+                    mark.grade = _calculate_grade(mark.marks_obtained, mark.max_marks)
+                    mark.grade_point = _grade_to_point(mark.grade)
+                    mark.save(update_fields=['marks_obtained', 'grade', 'grade_point'])
+                mod.applied = True
+                mod.applied_by = request.user
+                mod.applied_at = timezone.now()
+                mod.save()
+                _audit('MARKS_UPDATED', request.user,
+                       f"Moderation applied: {mod.subject.code} {mod.get_moderation_type_display()} {mod.value}. Reason: {mod.reason}",
+                       college=ec.college, request=request)
+                messages.success(request, f'Moderation applied to {marks_qs.count()} marks records.')
+        return redirect('exam_marks_moderation', exam_id=exam.pk)
+
+    return render(request, 'exam/moderation.html', {
+        'ec': ec, 'exam': exam, 'subjects': subjects, 'moderations': moderations,
+        'mod_types': MarksModeration.MODERATION_TYPES,
+        'branding': _get_college_branding(ec.college),
+    })
+
 
 @login_required
 def exam_marks_overview(request, exam_id):
@@ -7054,17 +7582,53 @@ def exam_results(request, exam_id):
     existing_results = {er.student_id: er for er in ExamResult.objects.filter(exam=exam, student__in=students_qs)}
 
     action = request.POST.get('action')
-    if request.method == 'POST' and action in ('compute', 'verify', 'publish'):
+    if request.method == 'POST' and action in ('compute', 'verify', 'publish', 'freeze', 'unfreeze'):
+        # Check freeze state
+        freeze_rec = ResultFreeze.objects.filter(college=ec.college, exam=exam).first()
+        is_frozen = freeze_rec and freeze_rec.is_frozen
+
+        if is_frozen and action not in ('unfreeze',):
+            messages.error(request, 'Results are frozen. Unfreeze before making changes.')
+            return redirect('exam_results', exam_id=exam.pk)
+
         student_ids = list(students_qs.values_list('id', flat=True))
         with transaction.atomic():
-            if action == 'compute':
+            if action == 'freeze':
+                obj, _ = ResultFreeze.objects.get_or_create(college=ec.college, exam=exam)
+                obj.is_frozen = True
+                obj.frozen_by = request.user
+                obj.frozen_at = timezone.now()
+                obj.save()
+                _audit('RESULT_PUBLISHED', request.user,
+                       f"Results frozen for {exam.name}", college=ec.college, request=request)
+                messages.success(request, f'Results for {exam.name} are now frozen. No further edits allowed.')
+                return redirect('exam_results', exam_id=exam.pk)
+
+            elif action == 'unfreeze':
+                reason = request.POST.get('unfreeze_reason', '').strip()
+                if not reason:
+                    messages.error(request, 'A reason is required to unfreeze results.')
+                    return redirect('exam_results', exam_id=exam.pk)
+                if freeze_rec:
+                    freeze_rec.is_frozen = False
+                    freeze_rec.unfrozen_by = request.user
+                    freeze_rec.unfreeze_reason = reason
+                    freeze_rec.save()
+                    _audit('RESULT_PUBLISHED', request.user,
+                           f"Results unfrozen for {exam.name}. Reason: {reason}",
+                           college=ec.college, request=request)
+                messages.success(request, 'Results unfrozen.')
+                return redirect('exam_results', exam_id=exam.pk)
+
+            elif action == 'compute':
                 for sid in student_ids:
                     m = marks_map.get(sid, {'total_obtained': 0, 'total_max': 0})
                     obtained = m['total_obtained'] or 0
                     max_m = m['total_max'] or 0
                     pct = round(obtained / max_m * 100, 1) if max_m > 0 else 0
-                    grade = _calculate_grade(obtained, max_m) if max_m > 0 else 'NA'
-                    is_pass = pct >= 40
+                    _scheme = _get_evaluation_scheme(ec.college)
+                    grade = _calculate_grade(obtained, max_m, scheme=_scheme) if max_m > 0 else 'NA'
+                    is_pass = pct >= (_scheme.overall_passing_min if _scheme else 40.0)
                     ExamResult.objects.update_or_create(
                         student_id=sid, exam=exam,
                         defaults={
@@ -7076,18 +7640,48 @@ def exam_results(request, exam_id):
                             'status': 'DRAFT',
                         }
                     )
-                messages.success(request, f'Results computed for {len(student_ids)} students.')
+                    # Compute and store SGPA in Result model
+                    student_obj = Student.objects.get(pk=sid)
+                    sgpa, total_credits = _compute_sgpa(student_obj, exam.semester, exam)
+                    Result.objects.update_or_create(
+                        student_id=sid, semester=exam.semester,
+                        defaults={
+                            'gpa': sgpa,
+                            'sgpa': sgpa,
+                            'total_marks': obtained,
+                            'percentage': pct,
+                            'total_credits': total_credits,
+                        }
+                    )
+                messages.success(request, f'Results computed for {len(student_ids)} students. SGPA calculated.')
             elif action == 'verify':
                 ExamResult.objects.filter(exam=exam, student_id__in=student_ids, status='DRAFT').update(
                     status='VERIFIED', verified_by=request.user
                 )
                 messages.success(request, 'Results marked as verified.')
             elif action == 'publish':
+                # Snapshot current results before publishing (versioning)
+                for sid in student_ids:
+                    result_obj = Result.objects.filter(student_id=sid, semester=exam.semester).first()
+                    if result_obj:
+                        last_v = ResultVersion.objects.filter(result=result_obj).count()
+                        ResultVersion.objects.create(
+                            result=result_obj,
+                            version_no=last_v + 1,
+                            sgpa=result_obj.sgpa,
+                            total_marks=result_obj.total_marks,
+                            percentage=result_obj.percentage,
+                            snapshot_reason='Before publication',
+                            created_by=request.user,
+                        )
                 ExamResult.objects.filter(exam=exam, student_id__in=student_ids, status='VERIFIED').update(
                     status='PUBLISHED',
                     published_by=request.user,
                     published_at=timezone.now(),
                 )
+                _audit('RESULT_PUBLISHED', request.user,
+                       f"Results published for {exam.name} ({len(student_ids)} students)",
+                       college=ec.college, request=request)
                 messages.success(request, 'Results published. Students can now view them.')
         return redirect('exam_results', exam_id=exam.pk)
 
@@ -7105,10 +7699,14 @@ def exam_results(request, exam_id):
         'failed': sum(1 for r in rows if r['result'] and not r['result'].is_pass),
     }
 
+    freeze_rec = ResultFreeze.objects.filter(college=ec.college, exam=exam).first()
+    is_frozen = freeze_rec and freeze_rec.is_frozen
+
     departments = Department.objects.filter(college=ec.college, is_deleted=False).order_by('name')
     return render(request, 'exam/results.html', {
         'ec': ec, 'exam': exam, 'rows': rows, 'summary': summary,
         'departments': departments, 'dept_filter': dept_filter,
+        'freeze_rec': freeze_rec, 'is_frozen': is_frozen,
         'branding': _get_college_branding(ec.college),
     })
 
@@ -7147,11 +7745,21 @@ def exam_reval_update(request, pk):
             reval.revised_marks = revised_val
             reval.reviewed_by = request.user
             reval.save()
-            # Update the actual Marks record
+            old_marks = reval.marks.marks_obtained
             reval.marks.marks_obtained = revised_val
             reval.marks.grade = _calculate_grade(revised_val, reval.marks.max_marks)
-            reval.marks.save(update_fields=['marks_obtained', 'grade'])
-            messages.success(request, f'Revaluation completed. Marks updated to {revised_val}.')
+            reval.marks.grade_point = _grade_to_point(reval.marks.grade)
+            reval.marks.save(update_fields=['marks_obtained', 'grade', 'grade_point'])
+            # Recalculate SGPA for this student's semester
+            sgpa, total_credits = _compute_sgpa(reval.marks.student, reval.marks.subject.semester, reval.marks.exam)
+            Result.objects.filter(student=reval.marks.student, semester=reval.marks.subject.semester).update(
+                gpa=sgpa, sgpa=sgpa, total_credits=total_credits
+            )
+            _audit('MARKS_REVAL', request.user,
+                   f"Revaluation: {reval.marks.student.roll_number} {reval.marks.subject.code} {old_marks} → {revised_val} ({reval.marks.grade}). SGPA recalculated: {sgpa}",
+                   student=reval.marks.student, college=ec.college, request=request,
+                   old_value=str(old_marks), new_value=str(revised_val))
+            messages.success(request, f'Revaluation completed. Marks updated to {revised_val}. SGPA recalculated.')
         elif action == 'reject':
             reval.status = 'REJECTED'
             reval.reviewed_by = request.user
@@ -7525,6 +8133,10 @@ def attendance_correct(request, attendance_id):
             )
             att.status = new_status
             att.save(update_fields=['status'])
+            _audit('ATT_CORRECTED', request.user,
+                   f"Attendance corrected for {att.student.roll_number} in {subject.code}: {old_status} → {new_status}. Reason: {reason}",
+                   student=att.student, college=subject.department.college, request=request,
+                   old_value=old_status, new_value=new_status)
             messages.success(request, f'Attendance corrected: {old_status} → {new_status}.')
             return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
@@ -7734,8 +8346,18 @@ def student_request_override(request, exam_id):
         'exam': exam, 'elig': elig,
     })
 
+
+# ── SUBJECT DETAIL — ATTENDANCE CALENDAR ─────────────────────────────────────
+
+@login_required
 def subject_detail_view(request, subject_id):
-    # Ensure the user is a student to avoid errors
+    """
+    Student views a full FullCalendar attendance calendar for a specific subject.
+    Shows present/absent/late per day, month stats, timetable slot info.
+    """
+    import json
+    from django.core.serializers.json import DjangoJSONEncoder
+
     try:
         student = Student.objects.select_related('department', 'user').get(user=request.user)
     except Student.DoesNotExist:
@@ -7743,16 +8365,17 @@ def subject_detail_view(request, subject_id):
         return redirect('home')
 
     subject = get_object_or_404(Subject, id=subject_id)
+
+    # Faculty for this subject
     faculty_assignment = FacultySubject.objects.filter(subject=subject).select_related('faculty__user').first()
     faculty_name = None
     if faculty_assignment and faculty_assignment.faculty and faculty_assignment.faculty.user:
         faculty_name = faculty_assignment.faculty.user.get_full_name() or faculty_assignment.faculty.user.username
-    
-    # Filter attendance for the logged-in user for this specific subject
-    # session__subject follows the ForeignKey from Attendance -> AttendanceSession -> Subject
+
+    # Attendance records for this student + subject
     records = Attendance.objects.filter(
-        student__user=request.user, 
-        session__subject=subject 
+        student=student,
+        session__subject=subject
     ).select_related('session')
 
     attendance_by_date = {}
@@ -7760,7 +8383,7 @@ def subject_detail_view(request, subject_id):
         if not rec.session or not rec.session.date:
             continue
         status = str(rec.status).upper()
-        if status in ['PRESENT', 'TRUE', '1']:
+        if status in ('PRESENT', 'TRUE', '1'):
             normalized = 'PRESENT'
         elif status == 'LATE':
             normalized = 'LATE'
@@ -7768,21 +8391,25 @@ def subject_detail_view(request, subject_id):
             normalized = 'ABSENT'
         attendance_by_date[rec.session.date.strftime('%Y-%m-%d')] = normalized
 
+    # Scheduled days from timetable
     scheduled_days = list(
         Timetable.objects.filter(subject=subject)
         .values_list('day_of_week', flat=True)
         .distinct()
     )
+
+    # Timetable time slots per day
     timetable_map = {}
     for slot in Timetable.objects.filter(subject=subject).order_by('day_of_week', 'start_time'):
-        label = f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}"
+        label = f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')}"
         timetable_map.setdefault(slot.day_of_week, []).append(label)
-
-    timetable_display = {k: ", ".join(v) for k, v in timetable_map.items()}
+    timetable_display = {k: ', '.join(v) for k, v in timetable_map.items()}
 
     today = timezone.localdate()
+
     # Sidebar badge helpers
-    week_ago = timezone.now() - timedelta(days=7)
+    from datetime import timedelta as _td
+    week_ago = timezone.now() - _td(days=7)
     new_assignments = Assignment.objects.filter(
         subject__department=student.department,
         subject__semester=student.current_semester,
@@ -7795,6 +8422,17 @@ def subject_detail_view(request, subject_id):
         created_at__gte=week_ago,
     ).select_related('subject').order_by('-created_at')[:3]
 
+    # Last semester attendance for comparison
+    last_semester = student.current_semester - 1 if student.current_semester > 1 else None
+    last_sem_pct = None
+    if last_semester:
+        last_att = Attendance.objects.filter(
+            student=student,
+            session__subject__semester=last_semester,
+        ).aggregate(total=Count('id'), present=Count('id', filter=Q(status='PRESENT')))
+        if last_att['total']:
+            last_sem_pct = round(last_att['present'] / last_att['total'] * 100, 1)
+
     context = {
         'subject': subject,
         'attendance_map_json': json.dumps(attendance_by_date, cls=DjangoJSONEncoder),
@@ -7805,13 +8443,11 @@ def subject_detail_view(request, subject_id):
         'faculty_name': faculty_name,
         'student': student,
         'college': student.department.college,
+        'last_semester': last_semester,
+        'last_sem_pct': last_sem_pct,
         'notifications': Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:10],
         'new_assignments': new_assignments,
         'new_quizzes': new_quizzes,
         'branding': _get_college_branding(student.department.college),
     }
-    
-    # IMPORTANT: Ensure this path matches your file location
-    # If the file is in /templates/subject_board.html, use this:
     return render(request, 'dashboards/subject_board.html', context)
-

@@ -1,5 +1,5 @@
-{% extends 'base.html' %}
-{% block title %}Support Ticket #{{ ticket.id }} — EduTrack{% endblock %}
+﻿{% extends 'base.html' %}
+{% block title %}Support Ticket #{{ ticket.id }} â€” EduTrack{% endblock %}
 {% block body %}
 <style>
   :root{--teal:#0d7377;--deep:#071e26;--muted:#5a7080;--border:#d8e4ea;--surface2:#e8f0f3;--bg:#f2f6f8;--r:10px;--r-lg:18px;--sh:0 2px 14px rgba(7,30,38,.08)}
@@ -39,9 +39,9 @@
       <div>
         <div class="ticket-title">{{ ticket.subject }}</div>
         <div class="ticket-meta">
-          Ticket #{{ ticket.id }} &nbsp;·&nbsp; {{ ticket.get_issue_type_display }}
-          &nbsp;·&nbsp; {{ ticket.created_at|date:"d M Y H:i" }}
-          {% if ticket.college %}&nbsp;·&nbsp; {{ ticket.college.name }}{% endif %}
+          Ticket #{{ ticket.id }} &nbsp;&middot;&nbsp; {{ ticket.get_issue_type_display }}
+          &nbsp;&middot;&nbsp; {{ ticket.created_at|date:"d M Y H:i" }}
+          {% if ticket.college %}&nbsp;&middot;&nbsp; {{ ticket.college.name }}{% endif %}
         </div>
       </div>
       <span class="badge badge-{{ ticket.status|lower }}">{{ ticket.get_status_display }}</span>
@@ -85,7 +85,7 @@
     <form method="POST" style="margin-top:18px">
       {% csrf_token %}
       <input type="hidden" name="action" value="comment"/>
-      <textarea name="message" placeholder="Write a reply…" required></textarea>
+      <textarea name="message" placeholder="Write a reply&hellip;" required></textarea>
       <div style="margin-top:10px">
         <button type="submit" class="btn btn-teal"><i class="fas fa-paper-plane"></i> Send Reply</button>
       </div>

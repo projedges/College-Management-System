@@ -1,8 +1,8 @@
-{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Lesson Plans — {{ subject.name }}{% endblock %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Lesson Plans â€” {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Lesson Plans{% endblock %}
-{% block page_sub %}{{ subject.name }} ({{ subject.code }}) · Semester {{ subject.semester }}{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
 {% block sidebar_links %}
 <a href="{% url 'faculty_dashboard' %}#subjects" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Subjects</a>
 {% endblock %}
@@ -36,7 +36,7 @@
 {% endfor %}
 
 <div class="d-card">
-  <div class="d-card-title"><i class="fas fa-book-open"></i> Lesson Plan — {{ plans|length }} entries</div>
+  <div class="d-card-title"><i class="fas fa-book-open"></i> Lesson Plan â€” {{ plans|length }} entries</div>
   {% if plans %}
     {% for plan in plans %}
     <div class="plan-row">
@@ -101,12 +101,12 @@
     </div>
     <div class="fg">
       <label>Topics to Cover <span style="color:var(--red)">*</span></label>
-      <textarea name="topics" rows="3" required placeholder="List topics, subtopics, or learning outcomes…" class="fi" style="resize:vertical"></textarea>
+      <textarea name="topics" rows="3" required placeholder="List topics, subtopics, or learning outcomes&hellip;" class="fi" style="resize:vertical"></textarea>
     </div>
     <div class="grid-2">
       <div class="fg">
         <label>Remarks</label>
-        <input type="text" name="remarks" placeholder="Optional notes…" class="fi">
+        <input type="text" name="remarks" placeholder="Optional notes&hellip;" class="fi">
       </div>
       <div class="fg">
         <label>Attachment <span style="font-weight:400;color:var(--muted)">(PDF/DOC)</span></label>

@@ -1,7 +1,7 @@
-{% extends 'exam/base_exam.html' %}
-{% block title %}Valuation — {{ exam.name }}{% endblock %}
+﻿{% extends 'exam/base_exam.html' %}
+{% block title %}Valuation â€” {{ exam.name }}{% endblock %}
 {% block breadcrumb %} / {{ exam.name }} / Valuation{% endblock %}
-{% block page_title %}Valuation Assignments — {{ exam.name }}{% endblock %}
+{% block page_title %}Valuation Assignments â€” {{ exam.name }}{% endblock %}
 {% block page_sub %}Assign first, second, and arbitration valuators per subject{% endblock %}
 {% block content %}
 <div class="two-col" style="align-items:start">
@@ -12,8 +12,8 @@
       <div class="form-group">
         <label>Subject / Schedule <span style="color:#ef4444">*</span></label>
         <select name="schedule_id" class="form-control" required>
-          <option value="">— Select Subject —</option>
-          {% for slot in schedules %}<option value="{{ slot.pk }}">{{ slot.subject.department.code }} · {{ slot.subject.name }} ({{ slot.date|date:"d M" }})</option>{% endfor %}
+          <option value="">â€” Select Subject â€”</option>
+          {% for slot in schedules %}<option value="{{ slot.pk }}">{{ slot.subject.department.code }} &middot; {{ slot.subject.name }} ({{ slot.date|date:"d M" }})</option>{% endfor %}
         </select>
       </div>
       <div class="form-group">
@@ -26,7 +26,7 @@
       <div class="form-group">
         <label>Faculty</label>
         <select name="faculty" class="form-control">
-          <option value="">— None (use external) —</option>
+          <option value="">â€” None (use external) â€”</option>
           {% for f in faculty_list %}<option value="{{ f.pk }}">{{ f.user.get_full_name }} ({{ f.department.code }})</option>{% endfor %}
         </select>
       </div>

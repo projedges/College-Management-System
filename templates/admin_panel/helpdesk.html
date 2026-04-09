@@ -1,4 +1,4 @@
-{% extends 'admin_panel/base_admin.html' %}
+﻿{% extends 'admin_panel/base_admin.html' %}
 {% block title %}Help Desk - Admin{% endblock %}
 {% block nav_helpdesk %}on{% endblock %}
 {% block breadcrumb %} / Help Desk{% endblock %}
@@ -35,7 +35,7 @@
         </td>
         <td>
           <div style="font-weight:600;color:var(--deep)">{{ ticket.subject }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ ticket.get_issue_type_display }} · {{ ticket.description|truncatechars:90 }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ticket.get_issue_type_display }} &middot; {{ ticket.description|truncatechars:90 }}</div>
         </td>
         <td>{% if ticket.college %}{{ ticket.college.code }}{% else %}-{% endif %}</td>
         <td>
