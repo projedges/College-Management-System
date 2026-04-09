@@ -992,6 +992,10 @@ def _compute_eligibility(student, semester, college, exam=None):
         total = agg['total']
         pct = round(present / total * 100, 1) if total > 0 else 0
 
+        # ALWAYS add to the overall totals, regardless of skipping
+        overall_present += present
+        overall_total += total
+        
         # Skip subjects with too few sessions
         if total_sessions < rule.min_sessions_for_check:
             subject_breakdown.append({
@@ -3361,6 +3365,30 @@ def student_dashboard(request):
         pct = round(row['present'] / row['total'] * 100, 1) if row['total'] > 0 else 0
         att_by_semester.append({'semester': sem, 'pct': pct, 'present': row['present'], 'total': row['total']})
 
+    # last_semester = None
+    # last_sem_pct = None
+    # if student.current_semester:
+    #     last_semester = student.current_semester - 1
+    #     if last_semester >= 1:
+    #         for row in att_by_semester:
+    #             if row['semester'] == last_semester:
+    #                 last_sem_pct = row['pct']
+    #                 break
+    #     else:
+    #         last_semester = None
+
+    # Create a fast lookup dictionary from the existing data
+    db_stats = {row['semester']: row['pct'] for row in att_by_semester}
+    
+    # Generate a padded list of ALL past semesters (Current-1 down to Sem 1)
+    past_semesters_summary = []
+    if student.current_semester > 1:
+        for sem in range(student.current_semester - 1, 0, -1):
+            past_semesters_summary.append({
+                'semester': sem,
+                'pct': db_stats.get(sem, None) # Will be None if no data exists
+            })
+
     # Assignment score trend — capped at 50 most recent graded submissions
     all_graded = AssignmentSubmission.objects.filter(
         student=student, marks__isnull=False
@@ -3463,6 +3491,8 @@ def student_dashboard(request):
         'all_internal_semesters': all_internal_semesters,
         'all_internal_list': all_internal_list,
         'att_by_semester': att_by_semester,
+        # 'last_semester': last_semester,
+        # 'last_sem_pct': last_sem_pct,
         'all_att_records': all_att_records,
         'eligibility': eligibility,
         'att_rule': att_rule,
@@ -3475,6 +3505,7 @@ def student_dashboard(request):
         'all_fees': all_fees,
         'total_fees_due': total_fees_due,
         'paid_fee_types': paid_fee_types,
+        'past_semesters_summary': past_semesters_summary,
     }
     return render(request, 'dashboards/student.html', context)
 
