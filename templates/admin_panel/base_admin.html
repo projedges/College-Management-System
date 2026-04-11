@@ -97,8 +97,8 @@
   </aside>
 
   <!-- MAIN -->
-  <main style="flex:1;padding:28px 32px;overflow-y:auto;min-width:0;background:var(--bg)">
-    <div style="margin-bottom:24px">
+  <main style="flex:1;padding:14px 32px 24px;overflow-y:auto;min-width:0;background:var(--bg)">
+    <div style="margin-bottom:16px">
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
         <a href="{% url 'admin_dashboard' %}" style="color:var(--teal);text-decoration:none">Dashboard</a>
         {% block breadcrumb %}{% endblock %}
@@ -238,7 +238,7 @@
     .adm-sidebar{position:fixed;top:0;left:0;height:100%;z-index:300;transform:translateX(-100%)}
     .adm-sidebar.open{transform:translateX(0)}
     .adm-close{display:block}
-    main{padding:20px 16px !important}
+    main{padding:10px 16px 16px !important}
     .form-card{max-width:100%}
     .form-row{grid-template-columns:1fr}
     .ap-table{font-size:12px}
