@@ -1,5 +1,5 @@
-﻿{% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}{{ action }} Student â€” Admin{% endblock %}
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}{{ action }} Student &mdash; Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}{{ action }} Student{% endblock %}
@@ -13,7 +13,7 @@
   <div class="hint-box" style="margin-bottom:18px">Prefilled from registration request by {{ intake_request.first_name }} {{ intake_request.last_name }}.</div>
   {% endif %}
   {% if action == 'Add' %}
-  <div class="hint-box" style="margin-bottom:18px">Choose department and admission year first â€” roll number and username are auto-generated.</div>
+  <div class="hint-box" style="margin-bottom:18px">Choose department and admission year first &mdash; roll number and username are auto-generated.</div>
   {% endif %}
   <form method="POST">
     {% csrf_token %}
@@ -82,9 +82,27 @@
       <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Status</label>
       <select name="status" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
         <option value="ACTIVE" {% if student.status == 'ACTIVE' or not student %}selected{% endif %}>Active</option>
+        <option value="DETAINED" {% if student.status == 'DETAINED' %}selected{% endif %}>Detained</option>
+        <option value="SUSPENDED" {% if student.status == 'SUSPENDED' %}selected{% endif %}>Suspended</option>
         <option value="GRADUATED" {% if student.status == 'GRADUATED' %}selected{% endif %}>Graduated</option>
         <option value="DROPPED" {% if student.status == 'DROPPED' %}selected{% endif %}>Dropped</option>
+        <option value="TRANSFERRED" {% if student.status == 'TRANSFERRED' %}selected{% endif %}>Transferred</option>
       </select>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="flex:1;min-width:180px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Admission Type</label>
+        <select name="admission_type" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="regular" {% if not student or student.admission_type == 'regular' %}selected{% endif %}>Regular</option>
+          <option value="lateral_entry" {% if student.admission_type == 'lateral_entry' %}selected{% endif %}>Lateral Entry</option>
+          <option value="transfer" {% if student.admission_type == 'transfer' %}selected{% endif %}>Transfer</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:120px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Entry Semester</label>
+        <input type="number" name="entry_semester" min="1" max="8" value="{{ student.entry_semester|default:1 }}"
+               style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Student</button>

@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Review Submission - EduTrack{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Review Submission{% endblock %}
@@ -21,7 +21,7 @@
     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Marks</label>
     <input type="number" step="0.5" min="0" name="marks" value="{% if submission.marks is not None %}{{ submission.marks|floatformat:'-1' }}{% endif %}" style="width:180px;padding:11px 12px;border:1px solid var(--border);border-radius:10px">
     <div style="margin-top:16px">
-      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Feedback <span style="font-weight:400;color:var(--muted)">(optional â€” visible to student)</span></label>
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Feedback <span style="font-weight:400;color:var(--muted)">(optional &mdash; visible to student)</span></label>
       <textarea name="feedback" rows="4" style="width:100%;max-width:560px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;resize:vertical;outline:none" placeholder="Write feedback for the student&hellip;">{{ submission.feedback }}</textarea>
     </div>
     <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">

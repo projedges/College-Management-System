@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}HOD Dashboard - EduTrack{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
 {% block role_label_foot %}Head of Department{% endblock %}
@@ -40,6 +40,17 @@
   .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
   .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
   .tt-room{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;background:var(--border);padding:2px 8px;border-radius:6px}
+  @media(max-width:860px){
+    .hod-stat-grid{grid-template-columns:repeat(2,1fr)}
+    .hod-dept-grid{grid-template-columns:1fr}
+    .approval-row{flex-wrap:wrap;gap:8px}
+    .approval-actions{width:100%;justify-content:flex-start}
+    .tt-row{flex-wrap:wrap;gap:4px}
+    .tt-room{margin-left:0}
+  }
+  @media(max-width:480px){
+    .hod-stat-grid{grid-template-columns:1fr}
+  }
 </style>
 {% endblock %}
 

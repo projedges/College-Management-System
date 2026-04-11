@@ -100,6 +100,17 @@ class Student(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
 
+    # Point 12 — Lateral entry support
+    ADMISSION_TYPE_CHOICES = [
+        ('regular',       'Regular'),
+        ('lateral_entry', 'Lateral Entry'),
+        ('transfer',      'Transfer'),
+    ]
+    admission_type  = models.CharField(max_length=15, choices=ADMISSION_TYPE_CHOICES,
+                                       default='regular')
+    entry_semester  = models.IntegerField(default=1,
+                                          help_text="Semester student joined (1 for regular, 3 for lateral entry)")
+
     created_at = models.DateTimeField(auto_now_add=True)
     is_deleted = models.BooleanField(default=False)
 
@@ -572,18 +583,35 @@ class FacultyAvailability(models.Model):
         ('FRI', 'Friday'),
         ('SAT', 'Saturday'),
     )
+    AVAILABILITY_TYPE = (
+        ('available', 'Available'),
+        ('preferred', 'Preferred'),
+        ('blocked',   'Blocked / Unavailable'),
+    )
 
-    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='availability_slots')
-    day_of_week = models.CharField(max_length=3, choices=DAYS)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    is_available = models.BooleanField(default=True)
+    faculty          = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='availability_slots')
+    day_of_week      = models.CharField(max_length=3, choices=DAYS)
+    start_time       = models.TimeField()
+    end_time         = models.TimeField()
+    is_available     = models.BooleanField(default=True)
+
+    # Flexibility fields
+    availability_type = models.CharField(max_length=10, choices=AVAILABILITY_TYPE, default='available',
+                                         help_text="available = can teach, preferred = prefers this slot, blocked = unavailable")
+    valid_from        = models.DateField(null=True, blank=True,
+                                         help_text="Leave blank for permanent. Set for temporary slots (e.g. leave period).")
+    valid_to          = models.DateField(null=True, blank=True,
+                                         help_text="Leave blank for permanent.")
+    priority_score    = models.IntegerField(default=5,
+                                            help_text="1 (low) to 10 (high). Generator prefers higher scores when multiple slots are valid.")
+    notes             = models.CharField(max_length=200, blank=True, default='',
+                                         help_text="Optional note e.g. 'Can take labs only', 'Unavailable during exams'")
 
     class Meta:
         unique_together = ('faculty', 'day_of_week', 'start_time', 'end_time')
 
     def __str__(self):
-        return f"{self.faculty} - {self.day_of_week} {self.start_time}-{self.end_time}"
+        return f"{self.faculty} - {self.day_of_week} {self.start_time}-{self.end_time} [{self.availability_type}]"
 
 
 # SUBJECT MODEL
@@ -615,6 +643,37 @@ class Subject(models.Model):
     practical_hours = models.IntegerField(default=0, help_text="Practical/Lab hours per week (P)")
     credits         = models.IntegerField(default=3, help_text="Credits (C)")
     category        = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='PC', help_text="Subject category")
+
+    # Schedule pattern flexibility
+    SLOT_TYPE_CHOICES = [
+        ('lecture',  'Lecture'),
+        ('lab',      'Lab / Practical'),
+        ('tutorial', 'Tutorial'),
+        ('seminar',  'Seminar'),
+    ]
+    FREQUENCY_CHOICES = [
+        ('daily',      'Daily'),
+        ('alternate',  'Alternate Days'),
+        ('weekly',     'Once a Week'),
+        ('twice',      'Twice a Week'),
+        ('thrice',     'Thrice a Week'),
+    ]
+    slot_type           = models.CharField(max_length=10, choices=SLOT_TYPE_CHOICES, default='lecture',
+                                           help_text="Primary slot type for scheduling")
+    slot_duration_mins  = models.IntegerField(default=60,
+                                              help_text="Duration of each slot in minutes (e.g. 60 for lecture, 120 for lab)")
+    frequency_per_week  = models.IntegerField(default=3,
+                                              help_text="How many times per week this subject meets")
+    scheduling_constraint = models.CharField(max_length=50, blank=True, default='',
+                                             choices=[
+                                                 ('',                  'None'),
+                                                 ('no_consecutive',    'No Consecutive Slots'),
+                                                 ('prefer_morning',    'Prefer Morning'),
+                                                 ('prefer_afternoon',  'Prefer Afternoon'),
+                                                 ('continuous_block',  'Continuous Block (e.g. 3-hr lab)'),
+                                                 ('alternate_days',    'Alternate Days Only'),
+                                             ],
+                                             help_text="Optional scheduling constraint for the generator")
 
     class Meta:
         # Two departments can have the same subject code (e.g. MATH101 in CSE and ECE)
@@ -650,6 +709,16 @@ class Section(models.Model):
     academic_year = models.CharField(max_length=10, blank=True, default='',
                                      help_text='e.g. 2023-24')
 
+    # Point 14 — Section formation criteria
+    CRITERIA_CHOICES = [
+        ('auto',        'Auto — by roll number / count'),
+        ('manual',      'Manual — admin assigned'),
+        ('merit_based', 'Merit Based'),
+        ('gender',      'Gender Based'),
+        ('specialization', 'Specialization Based'),
+    ]
+    criteria = models.CharField(max_length=15, choices=CRITERIA_CHOICES, default='auto')
+
     class Meta:
         unique_together = ('department', 'semester', 'label')
         ordering = ['department', 'semester', 'label']
@@ -668,6 +737,33 @@ class Section(models.Model):
     @property
     def is_full(self):
         return self.student_count >= self.capacity
+
+    @classmethod
+    def auto_create_sections(cls, department, semester, academic_year=''):
+        """
+        Point 14 — Auto-create sections based on student count vs capacity.
+        Called after bulk admission or promotion.
+        """
+        students = Student.objects.filter(
+            department=department,
+            current_semester=semester,
+            is_deleted=False,
+            status='ACTIVE',
+        ).order_by('roll_number')
+
+        capacity = department.section_capacity or 60
+        labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        created = []
+        for i, chunk_start in enumerate(range(0, students.count(), capacity)):
+            label = labels[i] if i < len(labels) else f"S{i+1}"
+            sec, _ = cls.objects.get_or_create(
+                department=department, semester=semester, label=label,
+                defaults={'capacity': capacity, 'academic_year': academic_year}
+            )
+            chunk = students[chunk_start:chunk_start + capacity]
+            chunk.update(section=label)
+            created.append(sec)
+        return created
 
 
 # ── SUBJECT–SECTION–FACULTY MAP ───────────────────────────────────────────────
@@ -696,6 +792,183 @@ class SectionSubjectFacultyMap(models.Model):
     def __str__(self):
         return (f"{self.subject.code} | Sec {self.section.label} "
                 f"→ {self.faculty.user.get_full_name()}")
+
+
+# ── PROMOTION SYSTEM (Point 11) ───────────────────────────────────────────────
+
+class PromotionRule(models.Model):
+    """
+    Defines the rules for promoting students from one semester to the next.
+    One rule per college (can be overridden per department).
+    """
+    college                = models.ForeignKey(College, on_delete=models.CASCADE, related_name='promotion_rules')
+    department             = models.ForeignKey(Department, on_delete=models.SET_NULL,
+                                               null=True, blank=True, related_name='promotion_rules',
+                                               help_text="Leave blank for college-wide rule")
+    from_semester          = models.IntegerField(help_text="Semester being completed")
+    min_credits_required   = models.IntegerField(default=0,
+                                                  help_text="Minimum credits student must have passed to be promoted")
+    min_attendance_pct     = models.FloatField(default=75.0,
+                                               help_text="Minimum overall attendance % required for promotion")
+    allow_backlogs         = models.BooleanField(default=True,
+                                                  help_text="If True, students with backlogs can still be promoted to next semester")
+    max_backlogs_allowed   = models.IntegerField(default=2,
+                                                  help_text="Max number of backlog subjects allowed for promotion (if allow_backlogs=True)")
+    is_active              = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('college', 'department', 'from_semester')
+
+    def __str__(self):
+        dept = self.department.code if self.department else 'All'
+        return f"{self.college.code} | {dept} | Sem {self.from_semester} → {self.from_semester + 1}"
+
+
+class StudentSemesterHistory(models.Model):
+    """
+    Tracks a student's status at the end of each semester.
+    This is the source of truth for who is actually in which semester.
+    """
+    STATUS_CHOICES = [
+        ('promoted',  'Promoted'),
+        ('detained',  'Detained — Must Repeat Semester'),
+        ('backlog',   'Promoted with Backlog'),
+        ('dropped',   'Dropped Out'),
+        ('graduated', 'Graduated'),
+    ]
+
+    student          = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semester_history')
+    semester         = models.IntegerField()
+    academic_year    = models.CharField(max_length=10, blank=True, default='', help_text="e.g. 2023-24")
+    status           = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    credits_earned   = models.IntegerField(default=0)
+    backlogs         = models.ManyToManyField(Subject, blank=True, related_name='backlog_students',
+                                              help_text="Subjects the student failed / has backlog in")
+    promoted_by      = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                          related_name='promotions_done')
+    promoted_at      = models.DateTimeField(null=True, blank=True)
+    notes            = models.TextField(blank=True, default='')
+
+    class Meta:
+        unique_together = ('student', 'semester', 'academic_year')
+        ordering = ['student', 'semester']
+
+    def __str__(self):
+        return f"{self.student.roll_number} | Sem {self.semester} | {self.get_status_display()}"
+
+
+# ── LATERAL ENTRY (Point 12) ──────────────────────────────────────────────────
+
+class LateralEntryProfile(models.Model):
+    """
+    Extra profile for lateral entry students who join directly into Sem 3+.
+    Tracks their entry semester and any bridge courses they need.
+    """
+    student         = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='lateral_entry_profile')
+    entry_semester  = models.IntegerField(default=3, help_text="Semester the student joined (usually 3 for LE)")
+    previous_qualification = models.CharField(max_length=200, blank=True, default='',
+                                               help_text="e.g. Diploma in Computer Science")
+    previous_institution   = models.CharField(max_length=200, blank=True, default='')
+    bridge_courses  = models.ManyToManyField(Subject, blank=True, related_name='bridge_course_students',
+                                              help_text="Additional subjects LE student must complete")
+    notes           = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f"LE: {self.student.roll_number} (joined Sem {self.entry_semester})"
+
+
+# ── ADMISSION CYCLE (Point 13) ────────────────────────────────────────────────
+
+class AdmissionCycle(models.Model):
+    """
+    Represents one admission cycle (year + round).
+    e.g. "2024-25 Round 1", "2024-25 Lateral Entry Round"
+    """
+    college       = models.ForeignKey(College, on_delete=models.CASCADE, related_name='admission_cycles')
+    academic_year = models.CharField(max_length=10, help_text="e.g. 2024-25")
+    round_number  = models.IntegerField(default=1, help_text="1 = first round, 2 = second round, etc.")
+    round_name    = models.CharField(max_length=60, blank=True, default='',
+                                     help_text="e.g. 'Regular', 'Lateral Entry', 'NRI', 'Management Quota'")
+    start_date    = models.DateField(null=True, blank=True)
+    end_date      = models.DateField(null=True, blank=True)
+    is_active     = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('college', 'academic_year', 'round_number')
+        ordering = ['academic_year', 'round_number']
+
+    def __str__(self):
+        return f"{self.college.code} | {self.academic_year} Round {self.round_number}"
+
+
+class Admission(models.Model):
+    """
+    Tracks a student's admission record — which cycle, when, and current status.
+    Supports late admissions and multiple rounds.
+    """
+    ADMISSION_TYPE = [
+        ('regular',       'Regular'),
+        ('lateral_entry', 'Lateral Entry'),
+        ('nri',           'NRI'),
+        ('management',    'Management Quota'),
+        ('transfer',      'Transfer'),
+    ]
+    STATUS_CHOICES = [
+        ('applied',    'Applied'),
+        ('confirmed',  'Confirmed'),
+        ('enrolled',   'Enrolled'),
+        ('cancelled',  'Cancelled'),
+        ('withdrawn',  'Withdrawn'),
+    ]
+
+    student        = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='admission')
+    cycle          = models.ForeignKey(AdmissionCycle, on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name='admissions')
+    admission_type = models.CharField(max_length=15, choices=ADMISSION_TYPE, default='regular')
+    admission_date = models.DateField(null=True, blank=True)
+    status         = models.CharField(max_length=10, choices=STATUS_CHOICES, default='enrolled')
+    category       = models.CharField(max_length=20, blank=True, default='',
+                                      help_text="e.g. GEN, OBC, SC, ST, EWS")
+    notes          = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f"{self.student.roll_number} | {self.get_admission_type_display()} | {self.get_status_display()}"
+
+
+# ── BACKLOG REGISTRATION (Point 15) ───────────────────────────────────────────
+
+class BacklogRegistration(models.Model):
+    """
+    Tracks a student re-registering for a subject they failed.
+    Enables cross-semester scheduling — the student attends a class
+    in a different semester/section for the backlog subject.
+    """
+    STATUS_CHOICES = [
+        ('registered', 'Registered'),
+        ('attending',  'Attending'),
+        ('cleared',    'Cleared / Passed'),
+        ('failed',     'Failed Again'),
+        ('withdrawn',  'Withdrawn'),
+    ]
+
+    student             = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='backlog_registrations')
+    subject             = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='backlog_registrations')
+    original_semester   = models.IntegerField(help_text="Semester the student originally failed this subject")
+    semester_registered = models.IntegerField(help_text="Semester in which the student is re-attending this subject")
+    academic_year       = models.CharField(max_length=10, blank=True, default='')
+    timetable_slot      = models.ForeignKey('Timetable', on_delete=models.SET_NULL,
+                                             null=True, blank=True, related_name='backlog_students',
+                                             help_text="The specific timetable slot the student is attending for this backlog")
+    status              = models.CharField(max_length=10, choices=STATUS_CHOICES, default='registered')
+    registered_at       = models.DateTimeField(auto_now_add=True)
+    notes               = models.TextField(blank=True, default='')
+
+    class Meta:
+        unique_together = ('student', 'subject', 'semester_registered', 'academic_year')
+        ordering = ['student', 'subject']
+
+    def __str__(self):
+        return f"{self.student.roll_number} | Backlog: {self.subject.code} | Sem {self.semester_registered}"
 
 
 # ── REGULATION & CURRICULUM ───────────────────────────────────────────────────
@@ -827,7 +1100,63 @@ class ElectiveSelection(models.Model):
         return f"{self.student.roll_number} → {self.subject.code} [{self.get_status_display()}]"
 
 
-# HOD APPROVAL SYSTEM
+# ── ELECTIVE GROUP (Point 6 & 7) ──────────────────────────────────────────────
+
+class ElectiveGroup(models.Model):
+    """
+    A group of students who chose the same elective subject from a pool.
+    Acts as a virtual section for timetable scheduling and conflict detection.
+    e.g. "Sem5 PE-1 AI Group", "Sem5 PE-1 ML Group"
+    """
+    pool        = models.ForeignKey(ElectivePool, on_delete=models.CASCADE, related_name='elective_groups')
+    subject     = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='elective_groups')
+    group_label = models.CharField(max_length=20, default='',
+                                   help_text="Auto-assigned label e.g. EG-A, EG-B")
+    students    = models.ManyToManyField(Student, blank=True, related_name='elective_groups',
+                                         help_text="Students in this elective group (populated from confirmed ElectiveSelections)")
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('pool', 'subject')
+
+    def __str__(self):
+        return f"{self.pool} | {self.subject.code} [{self.group_label}]"
+
+    def sync_students(self):
+        """Sync students from confirmed ElectiveSelections into this group."""
+        confirmed = ElectiveSelection.objects.filter(
+            pool=self.pool, subject=self.subject, status='CONFIRMED'
+        ).values_list('student_id', flat=True)
+        self.students.set(confirmed)
+
+
+class StudentGroupConflict(models.Model):
+    """
+    Tracks which (student_group, day, time_slot) combinations are already occupied.
+    Used by the timetable generator to prevent a student from having two classes at the same time.
+    group_type: 'section' (regular dept section) or 'elective' (ElectiveGroup)
+    """
+    GROUP_TYPE = [
+        ('section',  'Department Section'),
+        ('elective', 'Elective Group'),
+    ]
+    college        = models.ForeignKey(College, on_delete=models.CASCADE, related_name='student_group_conflicts')
+    group_type     = models.CharField(max_length=10, choices=GROUP_TYPE)
+    group_id       = models.IntegerField(help_text="PK of Section or ElectiveGroup")
+    day_of_week    = models.CharField(max_length=3, choices=Timetable.DAYS if 'Timetable' in dir() else [])
+    start_time     = models.TimeField()
+    end_time       = models.TimeField()
+    timetable_slot = models.ForeignKey('Timetable', on_delete=models.CASCADE,
+                                        related_name='student_group_conflicts', null=True, blank=True)
+
+    class Meta:
+        unique_together = ('group_type', 'group_id', 'day_of_week', 'start_time')
+
+    def __str__(self):
+        return f"{self.group_type}:{self.group_id} — {self.day_of_week} {self.start_time}"
+
+
+
 class HODApproval(models.Model):
     APPROVAL_TYPE = (
         ('LEAVE', 'Leave Request'),
@@ -902,10 +1231,22 @@ class CourseSubject(models.Model):
         return f"{self.course.name} - {self.subject.name}"
 
 class Classroom(models.Model):
-    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='classrooms', null=True)
+    ROOM_TYPE_CHOICES = [
+        ('lecture',  'Lecture Hall'),
+        ('lab',      'Lab'),
+        ('seminar',  'Seminar Hall'),
+        ('tutorial', 'Tutorial Room'),
+        ('other',    'Other'),
+    ]
+
+    college     = models.ForeignKey(College, on_delete=models.CASCADE, related_name='classrooms', null=True)
     room_number = models.CharField(max_length=20)
-    building = models.CharField(max_length=100, blank=True, default='')
-    capacity = models.IntegerField()
+    building    = models.CharField(max_length=100, blank=True, default='')
+    capacity    = models.IntegerField()
+    room_type   = models.CharField(max_length=10, choices=ROOM_TYPE_CHOICES, default='lecture',
+                                   help_text="Type of room — used by generator to match subject slot type")
+    features    = models.CharField(max_length=200, blank=True, default='',
+                                   help_text="Comma-separated features e.g. projector,computers,ac,smartboard")
 
     class Meta:
         unique_together = ('college', 'room_number')
@@ -914,6 +1255,9 @@ class Classroom(models.Model):
         if self.building:
             return f"{self.building} - {self.room_number}"
         return f"{self.room_number} ({self.college.code if self.college else 'Global'})"
+
+    def features_list(self):
+        return [f.strip() for f in self.features.split(',') if f.strip()]
 
 class Timetable(models.Model):
     DAYS = (
@@ -935,9 +1279,33 @@ class Timetable(models.Model):
 
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
 
+    # Point 10 — Version link
+    version = models.ForeignKey('TimetableVersion', on_delete=models.CASCADE,
+                                null=True, blank=True, related_name='timetable_entries',
+                                help_text="Link to timetable version (regular/exam/backup/draft)")
+
     # Section support — e.g. "A", "B", "C" for same subject taught by different faculty
     section = models.CharField(max_length=10, blank=True, default='',
                                help_text="Section label e.g. A, B, C. Leave blank if no sections.")
+
+    # Elective group link (Point 6) — set when this slot belongs to an elective group
+    elective_group = models.ForeignKey('ElectiveGroup', on_delete=models.SET_NULL,
+                                        null=True, blank=True, related_name='timetable_slots',
+                                        help_text="Set for elective group slots to enable student-level conflict detection")
+
+    # Point 8 — Manual override lock
+    is_locked = models.BooleanField(default=False,
+                                    help_text="Locked slots are skipped by auto-generator. Admin must unlock to allow changes.")
+
+    # Generation strategy that created this entry
+    GENERATION_MODE_CHOICES = [
+        ('manual',           'Manual / CSV Upload'),
+        ('strict',           'Auto — Strict'),
+        ('balanced',         'Auto — Balanced'),
+        ('faculty_priority', 'Auto — Faculty Priority'),
+    ]
+    generation_mode = models.CharField(max_length=20, choices=GENERATION_MODE_CHOICES,
+                                       default='manual', blank=True)
 
     def __str__(self):
         sec = f" [{self.section}]" if self.section else ""
@@ -958,21 +1326,130 @@ class Substitution(models.Model):
 
 
 class TimetableBreak(models.Model):
-    """A named break slot (lunch, tea, etc.) shown in timetable views."""
+    """A named break slot (lunch, tea, event, exam) shown in timetable views."""
     DAYS = Timetable.DAYS
 
-    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='timetable_breaks')
-    label = models.CharField(max_length=50, default='Break')  # e.g. "Lunch Break", "Tea Break"
-    day_of_week = models.CharField(max_length=3, choices=DAYS)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    applies_to_all = models.BooleanField(default=True)  # college-wide vs dept-specific
+    BREAK_TYPE_CHOICES = [
+        ('regular', 'Regular Break'),
+        ('exam',    'Exam / Test'),
+        ('event',   'College Event / Fest'),
+        ('holiday', 'Holiday'),
+        ('other',   'Other'),
+    ]
+    APPLIES_TO_CHOICES = [
+        ('college',    'Entire College'),
+        ('department', 'Department Only'),
+        ('section',    'Specific Section'),
+    ]
+
+    college        = models.ForeignKey(College, on_delete=models.CASCADE, related_name='timetable_breaks')
+    department     = models.ForeignKey('Department', on_delete=models.CASCADE, null=True, blank=True,
+                                       related_name='timetable_breaks',
+                                       help_text="Set only when applies_to = department or section")
+    label          = models.CharField(max_length=50, default='Break')
+    day_of_week    = models.CharField(max_length=3, choices=DAYS)
+    start_time     = models.TimeField()
+    end_time       = models.TimeField()
+
+    # Legacy field kept for backward compat
+    applies_to_all = models.BooleanField(default=True)
+
+    # New flexibility fields
+    break_type     = models.CharField(max_length=10, choices=BREAK_TYPE_CHOICES, default='regular')
+    applies_to     = models.CharField(max_length=10, choices=APPLIES_TO_CHOICES, default='college',
+                                      help_text="Scope of this break")
+    section        = models.CharField(max_length=10, blank=True, default='',
+                                      help_text="Section label if applies_to = section")
+    valid_from     = models.DateField(null=True, blank=True,
+                                      help_text="Start date for temporary breaks (events, exams). Leave blank for recurring.")
+    valid_to       = models.DateField(null=True, blank=True,
+                                      help_text="End date for temporary breaks.")
 
     class Meta:
         ordering = ['day_of_week', 'start_time']
 
     def __str__(self):
         return f"{self.label} ({self.day_of_week} {self.start_time}–{self.end_time})"
+
+
+# ── SCHEDULING CONSTRAINT (Point 9) ───────────────────────────────────────────
+
+class SchedulingConstraint(models.Model):
+    """
+    Defines a constraint for the timetable generator with priority and weight.
+    Hard constraints MUST be satisfied. Soft constraints are preferences.
+    """
+    CONSTRAINT_TYPE = [
+        ('faculty_clash',       'Faculty Clash'),
+        ('room_clash',          'Room Clash'),
+        ('student_group_clash', 'Student Group Clash'),
+        ('faculty_availability','Faculty Availability'),
+        ('time_distribution',   'Time Distribution'),
+        ('room_type_match',     'Room Type Match'),
+        ('slot_duration_match', 'Slot Duration Match'),
+    ]
+    PRIORITY = [
+        ('hard', 'Hard — Must Satisfy'),
+        ('soft', 'Soft — Preference'),
+    ]
+
+    college         = models.ForeignKey(College, on_delete=models.CASCADE, related_name='scheduling_constraints')
+    constraint_type = models.CharField(max_length=30, choices=CONSTRAINT_TYPE)
+    priority        = models.CharField(max_length=10, choices=PRIORITY, default='hard')
+    weight          = models.IntegerField(default=10,
+                                          help_text="1 (low) to 100 (high). Used for soft constraint optimization.")
+    is_active       = models.BooleanField(default=True)
+    description     = models.CharField(max_length=200, blank=True, default='')
+
+    class Meta:
+        unique_together = ('college', 'constraint_type')
+
+    def __str__(self):
+        return f"{self.college.code} | {self.get_constraint_type_display()} [{self.priority.upper()}]"
+
+
+# ── TIMETABLE VERSION (Point 10) ──────────────────────────────────────────────
+
+class TimetableVersion(models.Model):
+    """
+    Allows multiple timetable versions (regular, exam, backup, draft).
+    Only one version per type can be active at a time per college.
+    """
+    VERSION_TYPE = [
+        ('regular', 'Regular Timetable'),
+        ('exam',    'Exam Timetable'),
+        ('backup',  'Backup Timetable'),
+        ('draft',   'Draft / Proposed'),
+    ]
+
+    college      = models.ForeignKey(College, on_delete=models.CASCADE, related_name='timetable_versions')
+    version_type = models.CharField(max_length=10, choices=VERSION_TYPE, default='regular')
+    version_name = models.CharField(max_length=100,
+                                    help_text="e.g. 'Regular 2024-25 Odd', 'Exam Dec 2024', 'Backup Rainy Day'")
+    is_active    = models.BooleanField(default=False,
+                                       help_text="Only one version per type can be active. Activating this deactivates others of same type.")
+    valid_from   = models.DateField(null=True, blank=True)
+    valid_to     = models.DateField(null=True, blank=True)
+    created_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    notes        = models.TextField(blank=True, default='')
+
+    class Meta:
+        unique_together = ('college', 'version_name')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        active = " [ACTIVE]" if self.is_active else ""
+        return f"{self.college.code} | {self.version_name}{active}"
+
+    def activate(self):
+        """Activate this version and deactivate all others of the same type."""
+        TimetableVersion.objects.filter(
+            college=self.college, version_type=self.version_type
+        ).update(is_active=False)
+        self.is_active = True
+        self.save(update_fields=['is_active'])
+
 
 class Semester(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='semesters', null=True)

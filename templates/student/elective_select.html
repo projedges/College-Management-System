@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Choose Electives{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Elective Selection{% endblock %}
@@ -38,7 +38,7 @@
         {% elif item.selection.status == 'REJECTED' %}background:#fee2e2;color:#991b1b
         {% else %}background:#fef3c7;color:#92400e{% endif %}">
         {% if item.selection.status == 'CONFIRMED' %}<i class="fas fa-check"></i> Confirmed: {{ item.selection.subject.name }}
-        {% elif item.selection.status == 'REJECTED' %}<i class="fas fa-times"></i> Rejected â€” choose again
+        {% elif item.selection.status == 'REJECTED' %}<i class="fas fa-times"></i> Rejected &mdash; choose again
         {% else %}<i class="fas fa-clock"></i> Pending: {{ item.selection.subject.name }}{% endif %}
       </span>
       {% endif %}

@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block title %}Apply for Attendance Exemption{% endblock %}
 {% block body %}
 <div style="max-width:560px;margin:40px auto;padding:0 16px">
@@ -36,7 +36,7 @@
     <div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:var(--deep);margin-bottom:12px">My Previous Requests</div>
     {% for ex in my_exemptions %}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
-      <div><div style="font-weight:600;color:var(--deep)">{{ ex.get_reason_type_display }}</div><div style="color:var(--muted)">{{ ex.from_date|date:"d M" }} â€“ {{ ex.to_date|date:"d M Y" }}</div></div>
+      <div><div style="font-weight:600;color:var(--deep)">{{ ex.get_reason_type_display }}</div><div style="color:var(--muted)">{{ ex.from_date|date:"d M" }} &ndash; {{ ex.to_date|date:"d M Y" }}</div></div>
       <span class="dbadge {% if ex.status == 'APPROVED' %}dbadge-active{% elif ex.status == 'REJECTED' %}dbadge-red{% else %}dbadge-warning{% endif %}">{{ ex.status }}</span>
     </div>
     {% endfor %}

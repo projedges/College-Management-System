@@ -1,5 +1,5 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Quiz Results â€” {{ quiz.title }}{% endblock %}
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Quiz Results &mdash; {{ quiz.title }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Quiz Results{% endblock %}
 {% block page_sub %}{{ quiz.title }} &middot; {{ quiz.subject.name }}{% endblock %}
@@ -24,7 +24,7 @@
             {% if a.score is not None %}
               {% widthratio a.score quiz.total_marks 100 as pct %}
               <span style="font-weight:600;color:{% if pct >= 75 %}var(--green){% elif pct >= 50 %}var(--gold){% else %}var(--red){% endif %}">{{ pct }}%</span>
-            {% else %}â€”{% endif %}
+            {% else %}&mdash;{% endif %}
           </td>
           <td style="color:var(--muted);font-size:12px">{{ a.submitted_at|date:"d M Y H:i" }}</td>
         </tr>

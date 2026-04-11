@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Supply Exam Registration{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Supply Exam Registration{% endblock %}
@@ -51,7 +51,7 @@
     <form method="POST">
       {% csrf_token %}
       <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:14px">
-        Select subjects to register â€” grouped by semester:
+        Select subjects to register &mdash; grouped by semester:
       </div>
 
       {% for sem, marks in failed_grouped %}

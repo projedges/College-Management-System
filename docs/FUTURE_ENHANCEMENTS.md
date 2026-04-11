@@ -146,7 +146,19 @@ DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')
 - Expand assignments into a full lifecycle with comments, rubrics, and multiple file support
 - Add result publishing controls with review checkpoints before students can see results
 - Add course-wise and semester-wise report cards
-- Add timetable conflict detection — `_check_timetable_conflict()` helper already exists in `views.py` but is never called during auto-generation; wire it in
+- Wire new timetable flexibility fields into `_auto_generate_timetable`:
+  - Respect `Subject.slot_type` and `slot_duration_mins` when picking slots
+  - Match `Classroom.room_type` to `Subject.slot_type` (lab subject → lab room)
+  - Respect `Subject.scheduling_constraint` (prefer_morning, no_consecutive, etc.)
+  - Skip `Timetable` entries where `is_locked=True`
+  - Read `SchedulingConstraint` table for hard/soft priority
+  - Populate `StudentGroupConflict` after generation
+- Wire `ElectiveGroup.sync_students()` call after admin confirms elective selections
+- Surface `TimetableVersion` in the planner UI (create version, activate, switch)
+- Wire `PromotionRule` and `StudentSemesterHistory` into the bulk promote view
+- Add `LateralEntryProfile` display in student profile UI
+- Surface `AdmissionCycle` and `Admission` in admin UI
+- Wire `BacklogRegistration` into the supply exam registration flow
 
 ---
 

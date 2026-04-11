@@ -1,4 +1,4 @@
-﻿{% extends 'admin_panel/base_admin.html' %}
+{% extends 'admin_panel/base_admin.html' %}
 {% block title %}Sections{% endblock %}
 {% block breadcrumb %} / Sections{% endblock %}
 {% block page_title %}Section Management{% endblock %}
@@ -10,7 +10,7 @@
   <div>
     <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Department</label>
     <select name="dept" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
-      {% for d in departments %}<option value="{{ d.pk }}" {% if department and d.pk == department.pk %}selected{% endif %}>{{ d.code }} â€” {{ d.name }}</option>{% endfor %}
+      {% for d in departments %}<option value="{{ d.pk }}" {% if department and d.pk == department.pk %}selected{% endif %}>{{ d.code }} &mdash; {{ d.name }}</option>{% endfor %}
     </select>
   </div>
   <div>

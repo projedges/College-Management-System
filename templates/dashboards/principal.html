@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Principal Dashboard - EduTrack{% endblock %}
 {% block role_label %}Principal{% endblock %}
 {% block role_label_foot %}Principal{% endblock %}
@@ -21,6 +21,14 @@
 <style>
   .att-bar-bg{background:#f3f4f6;border-radius:99px;height:7px;overflow:hidden;min-width:80px}
   .att-bar-fill{height:100%;border-radius:99px}
+  @media(max-width:860px){
+    .principal-stat-grid{grid-template-columns:repeat(2,1fr)}
+    .dept-overview-grid{grid-template-columns:1fr}
+    .att-bar-bg{width:100%;margin-top:4px}
+  }
+  @media(max-width:480px){
+    .principal-stat-grid{grid-template-columns:1fr}
+  }
 </style>
 {% endblock %}
 

@@ -1,5 +1,5 @@
-﻿{% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}Semester Planner â€” Admin{% endblock %}
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Semester Planner &mdash; Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Semester Planner{% endblock %}
@@ -105,7 +105,7 @@
       <input type="hidden" name="department" value="{{ department.pk }}"/>
       <input type="hidden" name="semester" value="{{ selected_semester }}"/>
       <div class="planner-grid">
-        <div class="fg"><label>Subject *</label><select name="subject_id" class="fc" required><option value="">Select Subject</option>{% for subject in subjects %}<option value="{{ subject.pk }}">{{ subject.code }} â€” {{ subject.name }}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Subject *</label><select name="subject_id" class="fc" required><option value="">Select Subject</option>{% for subject in subjects %}<option value="{{ subject.pk }}">{{ subject.code }} &mdash; {{ subject.name }}</option>{% endfor %}</select></div>
         <div class="fg"><label>Faculty * <span style="font-size:10px;color:var(--muted);font-weight:400">(any dept)</span></label>
           <select name="faculty_id" class="fc" required>
             <option value="">Select Faculty</option>
@@ -158,7 +158,7 @@
 
 <!-- Faculty assignment map -->
 <div class="planner-card" style="margin-bottom:20px">
-  <div class="planner-label">Faculty Assignment Map â€” Sections</div>
+  <div class="planner-label">Faculty Assignment Map &mdash; Sections</div>
   <div class="section-meta" style="margin-bottom:12px">Each row = one section. Multiple rows for same subject = multiple sections (A, B, C&hellip;). Same faculty can appear across different subjects or departments.</div>
   {% if subject_assignments %}
   <div class="table-scroll">
@@ -207,7 +207,7 @@
     </a>
   </div>
   <div class="hint-box" style="margin-bottom:14px">
-    Columns: <code>department_code</code>, <code>subject_code</code>, <code>faculty_employee_id</code>, <code>day_of_week</code> (MON/TUE/WED/THU/FRI/SAT), <code>start_time</code> (HH:MM), <code>end_time</code>, <code>room_number</code>, <code>section</code> (A/B/C â€” optional, for multiple sections of the same subject). Duplicate slots are skipped automatically.
+    Columns: <code>department_code</code>, <code>subject_code</code>, <code>faculty_employee_id</code>, <code>day_of_week</code> (MON/TUE/WED/THU/FRI/SAT), <code>start_time</code> (HH:MM), <code>end_time</code>, <code>room_number</code>, <code>section</code> (A/B/C &mdash; optional, for multiple sections of the same subject). Duplicate slots are skipped automatically.
   </div>
   {% if department %}
   <form method="POST" action="{% url 'admin_timetable_upload_csv' %}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
@@ -233,7 +233,7 @@
     <div class="table-scroll">
       <table class="dtable">
         <thead><tr><th>Faculty</th><th>Day</th><th>Time</th></tr></thead>
-        <tbody>{% for slot in availability %}<tr><td>{{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }}</td><td>{{ slot.get_day_of_week_display }}</td><td>{{ slot.start_time|time:"g:i A" }} â€“ {{ slot.end_time|time:"g:i A" }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for slot in availability %}<tr><td>{{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }}</td><td>{{ slot.get_day_of_week_display }}</td><td>{{ slot.start_time|time:"g:i A" }} &ndash; {{ slot.end_time|time:"g:i A" }}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
     {% else %}
@@ -275,7 +275,7 @@
               {% elif cell.break_label %}
                 <div style="font-size:12px;font-weight:700;color:var(--muted);text-align:center">{{ cell.break_label }}</div>
               {% else %}
-                <div style="font-size:12px;color:#94a3b8;text-align:center">â€”</div>
+                <div style="font-size:12px;color:#94a3b8;text-align:center">&mdash;</div>
               {% endif %}
             </td>
             {% endfor %}
@@ -291,9 +291,9 @@
         <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Sec</th><th>Faculty</th><th>Dept</th><th>Room</th></tr></thead>
         <tbody>{% for entry in timetable_entries %}<tr>
           <td>{{ entry.get_day_of_week_display }}</td>
-          <td style="white-space:nowrap">{{ entry.start_time|time:"g:i A" }} â€“ {{ entry.end_time|time:"g:i A" }}</td>
+          <td style="white-space:nowrap">{{ entry.start_time|time:"g:i A" }} &ndash; {{ entry.end_time|time:"g:i A" }}</td>
           <td style="font-weight:600;color:var(--teal)">{{ entry.subject.code }}<div style="font-size:10px;color:var(--muted);font-weight:400">{{ entry.subject.name }}</div></td>
-          <td>{% if entry.section %}<span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.1);color:var(--teal);padding:1px 7px;border-radius:5px">{{ entry.section }}</span>{% else %}<span style="color:var(--muted)">â€”</span>{% endif %}</td>
+          <td>{% if entry.section %}<span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.1);color:var(--teal);padding:1px 7px;border-radius:5px">{{ entry.section }}</span>{% else %}<span style="color:var(--muted)">&mdash;</span>{% endif %}</td>
           <td>{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</td>
           <td style="font-size:11px;color:var(--muted)">{{ entry.faculty.department.code }}</td>
           <td>{{ entry.classroom.room_number }}{% if entry.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ entry.classroom.building }}</div>{% endif %}</td>
@@ -357,7 +357,7 @@
           <tr>
             <td style="font-weight:600"><i class="fas fa-coffee" style="color:#92400e;margin-right:5px"></i>{{ brk.label }}</td>
             <td>{{ brk.get_day_of_week_display }}</td>
-            <td style="white-space:nowrap">{{ brk.start_time|time:"g:i A" }} â€“ {{ brk.end_time|time:"g:i A" }}</td>
+            <td style="white-space:nowrap">{{ brk.start_time|time:"g:i A" }} &ndash; {{ brk.end_time|time:"g:i A" }}</td>
             <td><span class="dbadge {% if brk.applies_to_all %}dbadge-active{% else %}dbadge-warning{% endif %}">{% if brk.applies_to_all %}College-wide{% else %}Dept{% endif %}</span></td>
             <td>
               <form method="POST" style="display:inline">
@@ -392,19 +392,31 @@
       <div class="fg"><label>Room Number *</label><input type="text" name="room_number" class="fc" placeholder="e.g. 101, LAB-A" required/></div>
       <div class="fg"><label>Building</label><input type="text" name="building" class="fc" placeholder="e.g. Block A, Main Block"/></div>
       <div class="fg"><label>Capacity</label><input type="number" name="capacity" class="fc" value="60" min="1"/></div>
+      <div class="fg"><label>Room Type</label>
+        <select name="room_type" class="fc">
+          <option value="lecture">Lecture Hall</option>
+          <option value="lab">Lab</option>
+          <option value="seminar">Seminar Hall</option>
+          <option value="tutorial">Tutorial Room</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="fg"><label>Features <span style="font-size:10px;color:var(--muted);font-weight:400">(comma-separated)</span></label><input type="text" name="features" class="fc" placeholder="e.g. projector,computers,ac"/></div>
       <div class="fg" style="display:flex;align-items:flex-end"><button type="submit" class="qa-btn qa-deep"><i class="fas fa-plus"></i> Add Room</button></div>
     </form>
   </div>
   {% if classrooms %}
   <div class="table-scroll" style="margin-top:14px">
     <table class="dtable">
-      <thead><tr><th>Room</th><th>Building</th><th>Capacity</th></tr></thead>
+      <thead><tr><th>Room</th><th>Type</th><th>Building</th><th>Capacity</th><th>Features</th></tr></thead>
       <tbody>
         {% for room in classrooms %}
         <tr>
           <td style="font-weight:600;color:var(--teal)">{{ room.room_number }}</td>
-          <td style="color:var(--muted)">{{ room.building|default:"â€”" }}</td>
+          <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ room.get_room_type_display }}</span></td>
+          <td style="color:var(--muted)">{{ room.building|default:"&mdash;" }}</td>
           <td style="text-align:center">{{ room.capacity }}</td>
+          <td style="font-size:11px;color:var(--muted)">{{ room.features|default:"&mdash;" }}</td>
         </tr>
         {% endfor %}
       </tbody>

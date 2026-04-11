@@ -615,53 +615,54 @@ def _auto_generate_timetable(department, semester):
     """
     Real-college timetable generator — section-aware, L-T-P-C aware, conflict-free.
 
-    Logic:
-    - Each FacultySubject assignment = one section of that subject.
-      If a subject has 2 faculty assigned → Section A and Section B.
-    - Lecture slots (L) are scheduled Mon–Fri, 1 hr each.
-    - Tutorial slots (T) are scheduled separately (usually 1 hr/week).
-    - Practical slots (P) are scheduled as 2-hr lab blocks.
-    - Faculty and room conflicts are checked across the ENTIRE college (not just dept).
-    - Existing timetable for this dept+semester is cleared before regeneration.
+    Returns a dict: {'created': int, 'skipped_subjects': [Subject], 'no_availability': [Faculty]}
     """
     from datetime import time as dt_time
 
     subjects = list(Subject.objects.filter(department=department, semester=semester).order_by('name'))
     if not subjects:
-        return 0
+        return {'created': 0, 'skipped_subjects': [], 'no_availability': []}
 
-    # Group faculty assignments per subject → determines sections
-    # subject_id → list of Faculty (each = one section)
     assignments_qs = (
         FacultySubject.objects
         .filter(subject__in=subjects)
         .select_related('faculty__user', 'subject')
         .order_by('subject__name', 'faculty__user__first_name')
     )
-    subject_faculty_map = {}  # subject_id → [Faculty, ...]
+    subject_faculty_map = {}
     for fa in assignments_qs:
         subject_faculty_map.setdefault(fa.subject_id, []).append(fa.faculty)
 
     if not subject_faculty_map:
-        return 0
+        return {'created': 0, 'skipped_subjects': subjects, 'no_availability': []}
 
-    # Classrooms
-    classrooms = list(Classroom.objects.filter(college=department.college).order_by('room_number'))
-    if not classrooms:
-        classrooms = [Classroom.objects.create(
+    # Separate lecture rooms and lab rooms for room-type matching (Fix 4)
+    all_classrooms = list(Classroom.objects.filter(college=department.college).order_by('room_number'))
+    if not all_classrooms:
+        all_classrooms = [Classroom.objects.create(
             college=department.college, room_number=f"{department.code}-101", capacity=60
         )]
+    lab_rooms = [r for r in all_classrooms if r.room_type == 'lab']
+    lecture_rooms = [r for r in all_classrooms if r.room_type != 'lab'] or all_classrooms
 
-    # Faculty availability (optional — fall back to default grid if not set)
     all_faculty_ids = [f.id for flist in subject_faculty_map.values() for f in flist]
     avail_qs = FacultyAvailability.objects.filter(
         faculty_id__in=all_faculty_ids, is_available=True
     ).order_by('day_of_week', 'start_time')
-    avail_map = {}  # faculty_id → [(day, start, end), ...]
+    avail_map = {}
     for av in avail_qs:
         avail_map.setdefault(av.faculty_id, []).append((av.day_of_week, av.start_time, av.end_time))
 
-    # Standard college time grid (1-hr lecture slots, 2-hr lab slots)
+    # Track faculty with no availability set (Fix 3)
+    no_availability_faculty = []
+    for fac_id in all_faculty_ids:
+        if fac_id not in avail_map:
+            try:
+                fac = Faculty.objects.select_related('user').get(pk=fac_id)
+                no_availability_faculty.append(fac)
+            except Faculty.DoesNotExist:
+                pass
+
     LECTURE_GRID = [
         ('MON', dt_time(9, 0),  dt_time(10, 0)),
         ('MON', dt_time(10, 0), dt_time(11, 0)),
@@ -694,14 +695,11 @@ def _auto_generate_timetable(department, semester):
         _s2 = dt_time(14, 50); _e2 = dt_time(15, 40)
         LAB_PAIRS.append((_day, _s1, _e1, _s2, _e2))
 
-    # Clear existing timetable for this dept+semester
     Timetable.objects.filter(subject__department=department, subject__semester=semester).delete()
 
-    # Conflict tracking — college-wide (faculty can't be in two places, room can't be double-booked)
-    used_faculty: set = set()   # (faculty_id, day, start_time)
-    used_rooms: set   = set()   # (room_id, day, start_time)
+    used_faculty: set = set()
+    used_rooms: set   = set()
 
-    # Pre-load existing conflicts from OTHER dept/semesters in same college
     existing = Timetable.objects.filter(
         subject__department__college=department.college
     ).exclude(
@@ -712,26 +710,30 @@ def _auto_generate_timetable(department, semester):
         used_rooms.add((room_id, day, start))
 
     created_count = 0
+    skipped_subjects = []
     section_labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
     for subj in subjects:
         faculty_list_for_subj = subject_faculty_map.get(subj.id, [])
         if not faculty_list_for_subj:
+            skipped_subjects.append(subj)  # Fix 6 — track skipped
             continue
 
-        # Determine how many lecture, tutorial, practical slots needed
-        L = max(subj.lecture_hours, 1)   # at least 1 lecture/week
-        T = subj.tutorial_hours          # 0 or 1
-        P = subj.practical_hours         # 0, 2, or 3
+        L = max(subj.lecture_hours, 1)
+        T = subj.tutorial_hours
+        P = subj.practical_hours
+
+        # Fix 4 — pick room pool based on subject type
+        is_lab_subject = P > 0 or subj.slot_type == 'lab'
+        preferred_lab_rooms = lab_rooms if (is_lab_subject and lab_rooms) else all_classrooms
+        preferred_lecture_rooms = lecture_rooms
 
         for sec_idx, faculty in enumerate(faculty_list_for_subj):
             section = section_labels[sec_idx] if len(faculty_list_for_subj) > 1 else ''
             fac_avail = avail_map.get(faculty.id)
-
-            # --- Schedule L lecture slots ---
             lecture_candidates = fac_avail if fac_avail else LECTURE_GRID
             lectures_placed = 0
-            room_idx = sec_idx  # stagger sections across rooms
+            room_idx = sec_idx
 
             for day, start, end in lecture_candidates:
                 if lectures_placed >= L:
@@ -739,63 +741,57 @@ def _auto_generate_timetable(department, semester):
                 fkey = (faculty.id, day, start)
                 if fkey in used_faculty:
                     continue
-                # Pick a room not already used at this slot
                 room = None
-                for ri in range(len(classrooms)):
-                    candidate = classrooms[(room_idx + ri) % len(classrooms)]
-                    rkey = (candidate.id, day, start)
-                    if rkey not in used_rooms:
+                for ri in range(len(preferred_lecture_rooms)):
+                    candidate = preferred_lecture_rooms[(room_idx + ri) % len(preferred_lecture_rooms)]
+                    if (candidate.id, day, start) not in used_rooms:
                         room = candidate
                         break
                 if not room:
                     continue
-                rkey = (room.id, day, start)
                 Timetable.objects.create(
                     subject=subj, faculty=faculty,
                     day_of_week=day, start_time=start, end_time=end,
-                    classroom=room, section=section,
+                    classroom=room, section=section, generation_mode='balanced',
                 )
                 used_faculty.add(fkey)
-                used_rooms.add(rkey)
+                used_rooms.add((room.id, day, start))
                 lectures_placed += 1
                 created_count += 1
 
-            # --- Schedule T tutorial slot (1 hr) ---
             if T > 0:
                 for day, start, end in (fac_avail or LECTURE_GRID):
                     fkey = (faculty.id, day, start)
                     if fkey in used_faculty:
                         continue
                     room = None
-                    for ri in range(len(classrooms)):
-                        candidate = classrooms[(room_idx + ri) % len(classrooms)]
-                        rkey = (candidate.id, day, start)
-                        if rkey not in used_rooms:
+                    for ri in range(len(preferred_lecture_rooms)):
+                        candidate = preferred_lecture_rooms[(room_idx + ri) % len(preferred_lecture_rooms)]
+                        if (candidate.id, day, start) not in used_rooms:
                             room = candidate
                             break
                     if not room:
                         continue
-                    rkey = (room.id, day, start)
                     Timetable.objects.create(
                         subject=subj, faculty=faculty,
                         day_of_week=day, start_time=start, end_time=end,
-                        classroom=room, section=section,
+                        classroom=room, section=section, generation_mode='balanced',
                     )
                     used_faculty.add(fkey)
-                    used_rooms.add(rkey)
+                    used_rooms.add((room.id, day, start))
                     created_count += 1
                     break
 
-            # --- Schedule P practical slot (2 consecutive 50-min rows) ---
             if P > 0:
                 for _day, _s1, _e1, _s2, _e2 in LAB_PAIRS:
                     fkey1 = (faculty.id, _day, _s1)
                     fkey2 = (faculty.id, _day, _s2)
                     if fkey1 in used_faculty or fkey2 in used_faculty:
                         continue
+                    # Fix 4 — prefer lab rooms for practical slots
                     room = None
-                    for ri in range(len(classrooms)):
-                        candidate = classrooms[(room_idx + ri) % len(classrooms)]
+                    for ri in range(len(preferred_lab_rooms)):
+                        candidate = preferred_lab_rooms[(room_idx + ri) % len(preferred_lab_rooms)]
                         if (candidate.id, _day, _s1) not in used_rooms and (candidate.id, _day, _s2) not in used_rooms:
                             room = candidate
                             break
@@ -805,14 +801,14 @@ def _auto_generate_timetable(department, semester):
                         Timetable.objects.create(
                             subject=subj, faculty=faculty,
                             day_of_week=_day, start_time=_s, end_time=_e,
-                            classroom=room, section=section,
+                            classroom=room, section=section, generation_mode='balanced',
                         )
                         used_faculty.add((faculty.id, _day, _s))
                         used_rooms.add((room.id, _day, _s))
                         created_count += 1
                     break
 
-    return created_count
+    return {'created': created_count, 'skipped_subjects': skipped_subjects, 'no_availability': no_availability_faculty}
 
 
 def _get_user_role(user):
@@ -992,10 +988,6 @@ def _compute_eligibility(student, semester, college, exam=None):
         total = agg['total']
         pct = round(present / total * 100, 1) if total > 0 else 0
 
-        # ALWAYS add to the overall totals, regardless of skipping
-        overall_present += present
-        overall_total += total
-        
         # Skip subjects with too few sessions
         if total_sessions < rule.min_sessions_for_check:
             subject_breakdown.append({
@@ -3365,28 +3357,14 @@ def student_dashboard(request):
         pct = round(row['present'] / row['total'] * 100, 1) if row['total'] > 0 else 0
         att_by_semester.append({'semester': sem, 'pct': pct, 'present': row['present'], 'total': row['total']})
 
-    # last_semester = None
-    # last_sem_pct = None
-    # if student.current_semester:
-    #     last_semester = student.current_semester - 1
-    #     if last_semester >= 1:
-    #         for row in att_by_semester:
-    #             if row['semester'] == last_semester:
-    #                 last_sem_pct = row['pct']
-    #                 break
-    #     else:
-    #         last_semester = None
-
-    # Create a fast lookup dictionary from the existing data
+    # Past semesters summary — padded list for attendance stat boxes (most recent first)
     db_stats = {row['semester']: row['pct'] for row in att_by_semester}
-    
-    # Generate a padded list of ALL past semesters (Current-1 down to Sem 1)
     past_semesters_summary = []
     if student.current_semester > 1:
         for sem in range(student.current_semester - 1, 0, -1):
             past_semesters_summary.append({
                 'semester': sem,
-                'pct': db_stats.get(sem, None) # Will be None if no data exists
+                'pct': db_stats.get(sem, None),
             })
 
     # Assignment score trend — capped at 50 most recent graded submissions
@@ -3491,8 +3469,7 @@ def student_dashboard(request):
         'all_internal_semesters': all_internal_semesters,
         'all_internal_list': all_internal_list,
         'att_by_semester': att_by_semester,
-        # 'last_semester': last_semester,
-        # 'last_sem_pct': last_sem_pct,
+        'past_semesters_summary': past_semesters_summary,
         'all_att_records': all_att_records,
         'eligibility': eligibility,
         'att_rule': att_rule,
@@ -3505,7 +3482,6 @@ def student_dashboard(request):
         'all_fees': all_fees,
         'total_fees_due': total_fees_due,
         'paid_fee_types': paid_fee_types,
-        'past_semesters_summary': past_semesters_summary,
     }
     return render(request, 'dashboards/student.html', context)
 
@@ -5185,7 +5161,9 @@ def admin_student_add(request):
                     admission_year=adm_year_int,
                     current_semester=_safe_int(semester),
                     section=_determine_student_section(department, adm_year_int),
-                    status=status
+                    status=status,
+                    admission_type=request.POST.get('admission_type', 'regular'),
+                    entry_semester=_safe_int(request.POST.get('entry_semester', semester), default=_safe_int(semester)),
                 )
                 
                 # Transfer registration data to Profile automatically
@@ -5252,6 +5230,8 @@ def admin_student_edit(request, pk):
         student.admission_year   = _safe_int(request.POST.get('admission_year', student.admission_year))
         student.current_semester = _safe_int(request.POST.get('current_semester', student.current_semester))
         student.status           = request.POST.get('status', student.status)
+        student.admission_type   = request.POST.get('admission_type', student.admission_type)
+        student.entry_semester   = _safe_int(request.POST.get('entry_semester', student.entry_semester), default=student.entry_semester)
         student.save()
         UserRole.objects.filter(user=student.user).update(college=student.department.college)
         messages.success(request, 'Student updated.')
@@ -6086,9 +6066,9 @@ def admin_academic_planner(request):
                 messages.warning(request, f'{faculty.user.get_full_name()} is already assigned to {subject.code}.')
             else:
                 FacultySubject.objects.create(subject=subject, faculty=faculty)
-                # Count assignments to show section label
+                # Derive section label A/B/C from position in ordered assignment list
                 count = FacultySubject.objects.filter(subject=subject).count()
-                section_label = chr(64 + count)  # A, B, C...
+                section_label = chr(64 + count)  # 1→A, 2→B, 3→C...
                 messages.success(request, f'{faculty.user.get_full_name()} assigned to {subject.code} — Section {section_label}.')
         elif action == 'remove_assignment':
             assignment_id = request.POST.get('assignment_id')
@@ -6111,11 +6091,22 @@ def admin_academic_planner(request):
                 )
                 messages.success(request, 'Faculty availability slot saved.')
         elif action == 'generate_timetable':
-            created_count = _auto_generate_timetable(department, selected_semester)
+            result = _auto_generate_timetable(department, selected_semester)
+            created_count = result['created']
+            skipped = result['skipped_subjects']
+            no_avail = result['no_availability']
             if created_count:
-                messages.success(request, f'Automatic timetable updated with {created_count} scheduled class slot(s).')
+                messages.success(request, f'Timetable updated with {created_count} scheduled class slot(s).')
             else:
-                messages.warning(request, 'No timetable entries could be generated. Add subjects, faculty assignments, and availability first.')
+                messages.warning(request, 'No timetable entries could be generated. Add subjects, assign faculty, and try again.')
+            # Fix 6 — warn about skipped subjects
+            if skipped:
+                names = ', '.join(s.code for s in skipped)
+                messages.warning(request, f'{len(skipped)} subject(s) skipped — no faculty assigned: {names}')
+            # Fix 3 — warn about faculty with no availability
+            if no_avail:
+                names = ', '.join(f.user.get_full_name() or f.user.username for f in no_avail[:5])
+                messages.info(request, f'{len(no_avail)} faculty member(s) have no availability set (using default grid): {names}')
         elif action == 'add_break':
             label = request.POST.get('break_label', 'Break').strip()
             day = request.POST.get('break_day', '').strip().upper()
@@ -6124,12 +6115,15 @@ def admin_academic_planner(request):
             scope = request.POST.get('break_scope', 'all')
             college = _get_admin_college(request)
             if day and start and end and college:
-                TimetableBreak.objects.create(
-                    college=college, label=label, day_of_week=day,
-                    start_time=start, end_time=end,
+                _, created = TimetableBreak.objects.get_or_create(
+                    college=college, day_of_week=day, start_time=start, end_time=end,
                     applies_to_all=(scope == 'all'),
+                    defaults={'label': label},
                 )
-                messages.success(request, f'Break "{label}" added for {day}.')
+                if created:
+                    messages.success(request, f'Break "{label}" added for {day}.')
+                else:
+                    messages.warning(request, f'A break already exists at {day} {start}–{end} with the same scope. No duplicate added.')
             else:
                 messages.error(request, 'Day, start time, and end time are required.')
         elif action == 'delete_break':
@@ -6139,13 +6133,16 @@ def admin_academic_planner(request):
             messages.success(request, 'Break removed.')
         elif action == 'add_classroom':
             room_number = request.POST.get('room_number', '').strip()
-            building = request.POST.get('building', '').strip()
-            capacity = _safe_int(request.POST.get('capacity', '60'), default=60)
+            building    = request.POST.get('building', '').strip()
+            capacity    = _safe_int(request.POST.get('capacity', '60'), default=60)
+            room_type   = request.POST.get('room_type', 'lecture').strip()
+            features    = request.POST.get('features', '').strip()
             college = _get_admin_college(request)
             if room_number and college:
                 Classroom.objects.get_or_create(
                     college=college, room_number=room_number,
-                    defaults={'building': building, 'capacity': capacity}
+                    defaults={'building': building, 'capacity': capacity,
+                              'room_type': room_type, 'features': features}
                 )
                 messages.success(request, f'Room {room_number} added.')
             else:
@@ -6388,7 +6385,8 @@ def admin_timetable_upload_csv(request):
 
     # Pre-fetch lookups for this dept/semester
     subject_map = {s.code.upper(): s for s in Subject.objects.filter(department=department, semester=semester)}
-    faculty_map = {f.employee_id.upper(): f for f in Faculty.objects.filter(department=department)}
+    # Fix 5 — allow any-dept faculty in CSV (matches UI behaviour where any-college faculty can be assigned)
+    faculty_map = {f.employee_id.upper(): f for f in Faculty.objects.filter(department__college=college)}
     room_map    = {r.room_number.upper(): r for r in Classroom.objects.filter(college=college)}
 
     created = skipped = errors = 0
@@ -6456,12 +6454,15 @@ def admin_timetable_upload_csv(request):
             room_map[room_no] = classroom
 
         # Upsert: update if same subject+day+start exists, else create
+        section_val = (row.get('section') or '').strip().upper()
         _, was_created = Timetable.objects.update_or_create(
             subject=subject, day_of_week=day, start_time=start_time,
             defaults={
                 'faculty': faculty,
                 'end_time': end_time,
                 'classroom': classroom,
+                'section': section_val,
+                'generation_mode': 'manual',
             }
         )
         if was_created:

@@ -64,14 +64,35 @@
 - Admin sends invite links: `/dashboard/admin/student-invites/`
 - Students register via invite or admin bulk-imports via CSV: `/dashboard/admin/bulk-import/`
 - Each student gets: roll number (auto-generated from college ID rule), department, semester
+- `admission_type` set at creation: regular / lateral_entry / transfer
+- `entry_semester` set: 1 for regular, 3 for lateral entry
 
-### 3.2 Section Auto-Assignment
+### 3.2 Lateral Entry
+- Lateral entry students join at Sem 3 directly
+- `LateralEntryProfile` created with `entry_semester`, `previous_qualification`, `bridge_courses`
+- Bridge courses are additional subjects the LE student must complete
+
+### 3.3 Admission Cycle Tracking
+- `AdmissionCycle` tracks year + round (Round 1, Lateral Entry Round, etc.)
+- `Admission` record links student to cycle with type, date, status, category (GEN/OBC/SC/ST)
+
+### 3.4 Section Auto-Assignment
 `/dashboard/admin/sections/`
 - Admin clicks "Auto-Generate Sections" for a department + semester
 - System divides students by `section_capacity` in roll-number order
-- Sections created: A, B, C… (e.g. 240 students ÷ 60 = 4 sections)
-- Students' `section` field updated automatically
-- Manual override: admin can add/delete sections and reassign students
+- Section `criteria` field: auto / manual / merit_based / gender / specialization
+- `Section.auto_create_sections()` handles bulk creation and student assignment
+
+### 3.5 Semester Promotion
+- `PromotionRule` defines: min credits, min attendance %, allow backlogs, max backlogs allowed
+- After semester end, admin runs bulk promote
+- `StudentSemesterHistory` records: status (promoted/detained/backlog/dropped/graduated), credits earned, backlog subjects
+- Detained students stay in same semester; backlog students move up but carry failed subjects
+
+### 3.6 Backlog Registration
+- Students with backlogs register via `BacklogRegistration`
+- Links to a specific `Timetable` slot in a future semester
+- Generator must handle cross-semester scheduling (same student in two semester groups)
 
 ---
 
@@ -118,6 +139,34 @@
 
 `/dashboard/admin/academic-planner/` → "Auto Update Timetable"
 
+### Classroom Setup (New)
+- Each room has a `room_type` (lecture/lab/seminar/tutorial) and `features` (projector, computers, ac)
+- Generator matches subject `slot_type` to room type (lab subject → lab room)
+
+### Faculty Availability (Extended)
+- `availability_type`: available / preferred / blocked
+- `valid_from` / `valid_to`: temporary slots (leave, exam week)
+- `priority_score` (1–10): generator prefers higher scores
+
+### Subject Scheduling Patterns (New)
+- `slot_duration_mins`: 60 for lecture, 120 for lab
+- `frequency_per_week`: how many times per week
+- `scheduling_constraint`: prefer_morning, no_consecutive, continuous_block, alternate_days
+
+### Timetable Versions (New)
+- Multiple versions: regular / exam / backup / draft
+- Only one version per type is active at a time
+- `activate()` auto-deactivates others of the same type
+
+### Locked Slots (New)
+- `is_locked = True` on any Timetable entry → generator skips it
+- Admin manually unlocks to allow changes
+
+### Constraint Priority (New)
+- `SchedulingConstraint` table: hard (must satisfy) vs soft (preference) with weight 1–100
+- Hard: faculty clash, room clash, student group clash
+- Soft: faculty preference, time distribution, room type match
+
 ### Time Structure (50-min periods)
 ```
 09:00 – 09:50   Period 1
@@ -135,20 +184,21 @@
 ```
 
 ### Lab Periods
-- Lab = **2 consecutive 50-min periods** (two separate Timetable rows)
+- Lab = 2 consecutive 50-min periods (two separate Timetable rows)
 - Scheduled at 14:00–14:50 and 14:50–15:40 on the same day
-- No break between the two lab periods
 
 ### Constraints Enforced
-- ❌ Faculty cannot be in two places at the same time (college-wide check)
-- ❌ Room cannot be double-booked at the same slot
-- ✅ Subject weekly hours (L-T-P) are satisfied
-- ✅ Lab subjects get 2 consecutive slots
-- ✅ Section-aware: Section A and B get separate slots
+- Faculty cannot be in two places at the same time (college-wide check)
+- Room cannot be double-booked at the same slot
+- Subject weekly hours (L-T-P) are satisfied
+- Lab subjects get 2 consecutive slots
+- Section-aware: Section A and B get separate slots
+- Elective groups tracked separately via `StudentGroupConflict`
 
 ### Manual Override
 - CSV upload: `/dashboard/admin/academic-planner/timetable/upload/`
 - Download template: `/dashboard/admin/academic-planner/timetable/template/`
+- CSV now supports `section` column; all CSV entries tagged `generation_mode='manual'`
 
 ---
 

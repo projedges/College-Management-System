@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}College Admin Dashboard{% endblock %}
 {% block dashboard_default_section %}overview{% endblock %}
 {% block dashboard_section_aliases %}{"academics":"departments"}{% endblock %}
@@ -46,6 +46,18 @@
   .btn-sm{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .2s;border:none;cursor:pointer}
   .btn-sm-teal{background:var(--teal);color:#fff}.btn-sm-teal:hover{background:var(--teal-dk)}
   .btn-sm-deep{background:var(--deep);color:#fff}.btn-sm-deep:hover{background:var(--deep2)}
+  @media(max-width:860px){
+    .panel-grid{grid-template-columns:1fr}
+    .focus-card{padding:16px}
+    .qa-row{flex-wrap:wrap;gap:8px}
+    .hd-tabs{flex-wrap:wrap}
+    .admin-overview-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:480px){
+    .admin-overview-grid{grid-template-columns:1fr}
+    .qa-btn{width:100%;justify-content:center}
+    .btn-sm{width:100%;justify-content:center}
+  }
 </style>
 {% endblock %}
 
@@ -190,7 +202,7 @@
   </div>
 
   <div class="hint-box" style="margin-top:20px">
-    <strong>Profile settings</strong> â€” contact your platform administrator to update account details.
+    <strong>Profile settings</strong> &mdash; contact your platform administrator to update account details.
     <div style="margin-top:10px">
       <a href="{% url 'admin_contact_support' %}" class="qa-btn qa-teal" style="font-size:12px;padding:8px 16px"><i class="fas fa-headset"></i> Contact Platform Support</a>
     </div>
@@ -342,7 +354,7 @@
             <td>{{ f.department.code }}</td>
             <td style="color:var(--muted)">{{ f.designation }}</td>
             <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
-            <td style="color:var(--muted)">{{ f.phone_number|default:"â€”" }}</td>
+            <td style="color:var(--muted)">{{ f.phone_number|default:"&mdash;" }}</td>
             <td><a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a></td>
           </tr>
           {% endfor %}
@@ -549,7 +561,7 @@
           <tr>
             <td style="font-weight:600;color:var(--deep)">{{ item.first_name }} {{ item.last_name }}</td>
             <td style="color:var(--muted);font-size:12px">{{ item.email }}</td>
-            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}â€”{% endif %}</td>
+            <td>{% if item.desired_department %}{{ item.desired_department.code }}{% else %}&mdash;{% endif %}</td>
             <td>
               <span class="dbadge {% if item.status == 'CONVERTED' %}dbadge-active{% elif item.status == 'REJECTED' %}dbadge-red{% elif item.status == 'NEEDS_CORRECTION' %}dbadge-warning{% else %}dbadge-warning{% endif %}">
                 {{ item.get_status_display }}
@@ -646,8 +658,8 @@
           <tr>
             <td><div style="font-weight:600;color:var(--deep)">{{ fee.student.user.get_full_name|default:fee.student.user.username }}</div><div style="font-size:11px;color:var(--muted)">{{ fee.student.roll_number }}</div></td>
             <td>{{ fee.student.department.code }}</td>
-            <td style="text-align:center">{% if fee.semester %}Sem {{ fee.semester }}{% else %}â€”{% endif %}</td>
-            <td style="color:var(--muted);font-size:12px">{{ fee.academic_year|default:"â€”" }}</td>
+            <td style="text-align:center">{% if fee.semester %}Sem {{ fee.semester }}{% else %}&mdash;{% endif %}</td>
+            <td style="color:var(--muted);font-size:12px">{{ fee.academic_year|default:"&mdash;" }}</td>
             <td>Rs {{ fee.total_amount|floatformat:0 }}</td>
             <td style="color:var(--teal);font-weight:600">Rs {{ fee.paid_amount|floatformat:0 }}</td>
             <td style="color:{% if fee.balance > 0 %}var(--red){% else %}var(--teal){% endif %};font-weight:600">Rs {{ fee.balance|floatformat:0 }}</td>
@@ -778,7 +790,7 @@
 {% endblock %}
 
 {% block extra_js %}
-/* â”€â”€ Generic table search (departments) â”€â”€ */
+/* ---- Generic table search (departments) ---- */
 function filterTable(inputId, tbodyId, countId) {
   var q = document.getElementById(inputId).value.toLowerCase();
   var rows = document.getElementById(tbodyId).querySelectorAll('tr');
@@ -792,7 +804,7 @@ function filterTable(inputId, tbodyId, countId) {
   if (el) el.textContent = q ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
 }
 
-/* â”€â”€ Subject multi-filter (search + dept + semester) â”€â”€ */
+/* ---- Subject multi-filter (search + dept + semester) ---- */
 function filterSubjects() {
   var q    = (document.getElementById('subj-search').value || '').toLowerCase();
   var dept = document.getElementById('subj-dept-filter').value;

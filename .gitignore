@@ -5,3 +5,5 @@ venv/
 test.txt
 *.docx
 *.csv
+students/migrations/
+migrate_to_mysql.py

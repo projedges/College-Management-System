@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Payment Receipt - {{ payment.transaction_id }}{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Payment Receipt{% endblock %}
@@ -29,7 +29,7 @@
     <a href="{% url 'student_dashboard' %}#fees" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back</a>
   </div>
 
-  <!-- â”€â”€ RECEIPT CARD â”€â”€ -->
+  <!-- ---- RECEIPT CARD ---- -->
   <div id="receipt-card" class="card" style="padding:0;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
 
     <!-- Header band -->
@@ -81,49 +81,49 @@
             <tr>
               <td style="padding:5px 0;color:#64748b;width:45%">Full Name</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if student %}{{ student.user.get_full_name }}{% else %}â€”{% endif %}
+                {% if student %}{{ student.user.get_full_name }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Roll Number</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if student %}{{ student.roll_number }}{% else %}â€”{% endif %}
+                {% if student %}{{ student.roll_number }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Department</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if student %}{{ student.department.name }}{% else %}â€”{% endif %}
+                {% if student %}{{ student.department.name }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Branch</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if student %}{{ student.department.code }}{% else %}â€”{% endif %}
+                {% if student %}{{ student.department.code }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Semester</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if fee %}Semester {{ fee.semester }}{% elif student %}Semester {{ student.current_semester }}{% else %}â€”{% endif %}
+                {% if fee %}Semester {{ fee.semester }}{% elif student %}Semester {{ student.current_semester }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Year of Study</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if year_of_study %}Year {{ year_of_study }}{% else %}â€”{% endif %}
+                {% if year_of_study %}Year {{ year_of_study }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Academic Year</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if fee and fee.academic_year %}{{ fee.academic_year }}{% else %}â€”{% endif %}
+                {% if fee and fee.academic_year %}{{ fee.academic_year }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Admission Year</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if student %}{{ student.admission_year }}{% else %}â€”{% endif %}
+                {% if student %}{{ student.admission_year }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             {% if profile and profile.phone_number %}
@@ -135,7 +135,7 @@
             <tr>
               <td style="padding:5px 0;color:#64748b">Email</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b;word-break:break-all">
-                {% if student %}{{ student.user.email }}{% else %}â€”{% endif %}
+                {% if student %}{{ student.user.email }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
           </table>
@@ -154,13 +154,13 @@
             <tr>
               <td style="padding:5px 0;color:#64748b">Payment Date</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if payment.paid_at %}{{ payment.paid_at|date:"d M Y" }}{% else %}â€”{% endif %}
+                {% if payment.paid_at %}{{ payment.paid_at|date:"d M Y" }}{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
               <td style="padding:5px 0;color:#64748b">Payment Time</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">
-                {% if payment.paid_at %}{{ payment.paid_at|date:"h:i A" }} IST{% else %}â€”{% endif %}
+                {% if payment.paid_at %}{{ payment.paid_at|date:"h:i A" }} IST{% else %}&mdash;{% endif %}
               </td>
             </tr>
             <tr>
