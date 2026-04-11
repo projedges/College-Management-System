@@ -132,12 +132,34 @@
   .qh-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6}
   .qh-row:last-child{border-bottom:none}
   .qh-score{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--teal);min-width:48px;text-align:right}
-  @media(max-width:860px){.week-tt-grid{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:860px){
+    .week-tt-grid{grid-template-columns:repeat(3,1fr)}
+    .att-summary-bar{flex-direction:column;gap:14px}
+    .att-donut-wrap{align-self:center}
+    .att-summary-stats{justify-content:center}
+    .att-elig-warn{flex-wrap:wrap}
+    .week-matrix-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .week-matrix{min-width:640px}
+    .sem-stat-box{padding:10px 12px}
+    .result-subject-row{flex-wrap:wrap;gap:6px}
+    .att-table-controls{flex-direction:column;align-items:flex-start;gap:8px}
+    .att-course-table{min-width:480px}
+    .profile-grid{grid-template-columns:1fr}
+    .fee-breakdown-grid{grid-template-columns:1fr}
+  }
   @media(max-width:480px){
     .att-row{flex-wrap:wrap}
     .att-bar-bg{flex:none;width:100%;order:3}
     .att-count{order:4}
     .week-tt-grid{grid-template-columns:repeat(2,1fr)}
+    .att-summary-stats{gap:6px}
+    .att-stat-box{min-width:60px;padding:8px 10px}
+    .att-stat-val{font-size:15px}
+    .att-donut-wrap{width:80px;height:80px}
+    .att-donut-svg{width:80px;height:80px}
+    .att-donut-val{font-size:14px}
+    .sem-tab{padding:6px 10px;font-size:11px}
+    #att-search,#att-cal-search{width:140px}
   }
 </style>
 {% endblock %}
@@ -303,7 +325,9 @@
             {% widthratio overall_attendance 100 314 as arc %}
             <circle cx="60" cy="60" r="50" fill="none"
               stroke="{% if overall_attendance >= att_rule.effective_min_overall %}#0d7377{% else %}#ef4444{% endif %}"
-              stroke-width="12" stroke-dasharray="{{ arc }} 314" stroke-dashoffset="78.5"
+              stroke-width="12"
+              stroke-dasharray="{{ arc }} 314"
+              transform="rotate(-90 60 60)"
               stroke-linecap="round"/>
           {% endif %}
         </svg>
@@ -327,14 +351,39 @@
           <div class="att-stat-lbl">Required</div>
         </div>
         {% endif %}
-        {% if eligibility %}
-        <div class="att-stat-box" style="background:{% if eligibility.eligible %}rgba(16,185,129,.07){% else %}rgba(239,68,68,.06){% endif %};border-color:{% if eligibility.eligible %}rgba(16,185,129,.25){% else %}rgba(239,68,68,.25){% endif %}">
-          <div class="att-stat-val" style="color:{% if eligibility.eligible %}#059669{% else %}#dc2626{% endif %}">
-            {% if eligibility.eligible %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-xmark"></i>{% endif %}
-          </div>
-          <div class="att-stat-lbl">Exam Elig.</div>
+        {% if overall_attendance >= 75 %}
+        <div class="att-stat-box" style="background:rgba(16,185,129,.07);border-color:#10b981">
+          <div class="att-stat-val" style="color:#059669"><i class="fas fa-check-circle"></i></div>
+          <div class="att-stat-lbl">Eligible</div>
+        </div>
+        {% elif overall_attendance >= 65 %}
+        <div class="att-stat-box" style="background:rgba(230,168,23,.1);border-color:#b88510" title="Attendance is low. Please meet HOD.">
+          <div class="att-stat-val" style="color:#b88510"><i class="fas fa-exclamation-triangle"></i></div>
+          <div class="att-stat-lbl" style="font-size:8px;line-height:1">Meet HOD</div>
+        </div>
+        {% else %}
+        <div class="att-stat-box" style="background:rgba(239,68,68,.06);border-color:#dc2626">
+          <div class="att-stat-val" style="color:#dc2626"><i class="fas fa-times-circle"></i></div>
+          <div class="att-stat-lbl">Ineligible</div>
         </div>
         {% endif %}
+        <div class="att-stat-box" style="border:2px solid var(--teal);background:rgba(13,115,119,.05)">
+          <div class="att-stat-val" style="color:var(--teal)">{{ overall_attendance|default:"0" }}%</div>
+          <div class="att-stat-lbl" style="color:var(--teal);font-weight:800">Current</div>
+        </div>
+        {% for row in past_semesters_summary %}
+          {% if forloop.first %}
+          <div class="att-stat-box" style="border:2px solid #f59e0b;background:rgba(245,158,11,.08)">
+            <div class="att-stat-val" style="color:#b45309">{% if row.pct is not None %}{{ row.pct }}%{% else %}--{% endif %}</div>
+            <div class="att-stat-lbl" style="color:#b45309;font-weight:800">Sem {{ row.semester }}</div>
+          </div>
+          {% else %}
+          <div class="att-stat-box" style="border:1px dashed var(--border);opacity:.85">
+            <div class="att-stat-val" style="font-size:15px;color:var(--muted)">{% if row.pct is not None %}{{ row.pct }}%{% else %}--{% endif %}</div>
+            <div class="att-stat-lbl">Sem {{ row.semester }}</div>
+          </div>
+          {% endif %}
+        {% endfor %}
       </div>
       {% if eligibility and not eligibility.eligible %}
       <div class="att-elig-warn">

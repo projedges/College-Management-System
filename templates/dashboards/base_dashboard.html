@@ -1,7 +1,8 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'students/css/mobile_dashboard.css' %}"/>
 {% if branding %}
 <style>
 :root{
@@ -128,7 +129,7 @@ document.querySelectorAll('.auto-dismiss-msg').forEach(function(el) {
 {% endif %}
 
 <style>
-/* â”€â”€ Layout â”€â”€ */
+/* ---- Layout ---- */
 html,body{height:100%;overflow:hidden}
 body{overflow:hidden}
 .db-layout{display:flex;height:100dvh;min-height:100dvh;overflow:hidden;align-items:stretch}
@@ -177,19 +178,19 @@ body{overflow:hidden}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:299;backdrop-filter:blur(2px)}
 .sb-overlay.open{display:block}
 
-/* â”€â”€ Main â”€â”€ */
+/* ---- Main ---- */
 .db-main{flex:1;padding:24px 32px 32px;min-width:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;height:100dvh}
 .db-page-head{margin-bottom:16px}
 .db-page-title{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin:0 0 4px}
 .db-page-sub{font-size:14px;color:var(--muted);margin:0}
 
-/* â”€â”€ Sidebar links â”€â”€ */
+/* ---- Sidebar links ---- */
 .sb-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:500;text-decoration:none;transition:all .2s;margin-bottom:2px}
 .sb-link:hover,.sb-link.active{background:rgba(255,255,255,.08);color:#fff}
 .sb-link.active{background:rgba(255,255,255,.15);color:#fff;border-left:3px solid var(--teal);padding-left:9px}
 .sb-link i{width:16px;text-align:center;font-size:14px;flex-shrink:0}
 
-/* â”€â”€ Shared dashboard components â”€â”€ */
+/* ---- Shared dashboard components ---- */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:16px}
 .stat-card{background:#fff;border-radius:var(--r-lg);padding:20px;border:1px solid var(--border);box-shadow:var(--sh)}
 .stat-card .s-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
@@ -263,7 +264,7 @@ body{overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;margin-bottom:24px}
 .stack{display:flex;flex-direction:column;gap:20px}
 
-/* â”€â”€ Responsive â”€â”€ */
+/* ---- Responsive ---- */
 @media(max-width:860px){
   .mob-topbar{display:flex;position:fixed;top:0;left:0;right:0;z-index:300}
   .db-layout{padding-top:56px;height:100dvh;min-height:100dvh}
@@ -271,24 +272,51 @@ body{overflow:hidden}
   .db-sidebar.open{transform:translateX(0)}
   .db-main{height:calc(100dvh - 56px)}
   .sb-close{display:block}
-  .db-main{padding:8px 16px 20px}
+  .db-main{padding:16px 16px 24px}
   .two-col,.three-col{grid-template-columns:1fr}
   .hero-grid{grid-template-columns:1fr}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
   .content-scroll,.content-scroll.soft{max-height:none}
   .db-page-title{font-size:18px}
+  .db-page-head{margin-bottom:12px}
+  /* Tables — horizontal scroll on mobile */
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .dtable{min-width:520px}
+  /* Cards */
+  .d-card{padding:16px;margin-bottom:16px}
+  /* Quick action buttons */
+  .qa-row{flex-wrap:wrap}
+  /* Topbar session timer hidden on mobile */
+  .topbar-session-timer{display:none}
+  /* Panel grid */
+  .panel-grid{grid-template-columns:1fr}
+  /* Focus cards */
+  .focus-card{padding:16px}
+  /* Stat cards */
+  .stat-card{padding:16px}
+  /* Section meta */
+  .section-meta{font-size:11px}
 }
 @media(max-width:480px){
   .stat-grid{grid-template-columns:1fr}
   .qa-btn{width:100%;justify-content:center}
-  .d-card{padding:16px}
-  .db-main{padding:8px 12px 16px}
+  .d-card{padding:14px;margin-bottom:12px}
+  .db-main{padding:10px 10px 20px}
+  .db-page-title{font-size:16px}
+  .db-page-sub{font-size:12px}
+  /* Badges and pills wrap */
+  .dbadge{font-size:10px;padding:2px 7px}
+  /* Mini buttons full width on very small screens */
+  .mini-btn{font-size:11px;padding:5px 10px}
+  /* Action rows stack */
+  .action-row{flex-direction:column;gap:8px}
+  .action-row .mini-btn,.action-row .qa-btn{width:100%;justify-content:center}
 }
 </style>
 
 <script>
 (function () {
-  /* â”€â”€ Section switching â”€â”€ */
+  /* ---- Section switching ---- */
   var panes = Array.prototype.slice.call(document.querySelectorAll('[data-dashboard-pane]'));
   var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-section-target]'));
   var defaultSection = '{% block dashboard_default_section %}dashboard{% endblock %}';
@@ -334,7 +362,7 @@ body{overflow:hidden}
   var initial = (window.location.hash || '').replace('#', '') || defaultSection;
   activateSection(initial);
 
-  /* â”€â”€ Mobile sidebar â”€â”€ */
+  /* ---- Mobile sidebar ---- */
   var sidebar  = document.getElementById('db-sidebar');
   var overlay  = document.getElementById('sb-overlay');
   var hamBtn   = document.getElementById('mob-ham');
@@ -351,7 +379,7 @@ body{overflow:hidden}
   if (overlay)  overlay.addEventListener('click', closeSidebar);
 })();
 
-/* â”€â”€ Session countdown â”€â”€ */
+/* ---- Session countdown ---- */
 (function() {
   var secs = {{ request.session_seconds_left|default:1800 }};
   var warn = {{ request.session_warning_before|default:120 }};

@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Faculty Dashboard - EduTrack{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block role_label_foot %}Faculty{% endblock %}
@@ -58,7 +58,21 @@
   /* Availability slots */
   .avail-slot{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:12px}
   .avail-day{font-weight:700;color:var(--teal);min-width:36px}
-  @media(max-width:600px){.subj-card{flex-wrap:wrap}.subj-actions{width:100%;margin-left:0}}
+  @media(max-width:860px){
+    .subj-card{flex-wrap:wrap}
+    .subj-actions{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap}
+    .faculty-stat-grid{grid-template-columns:repeat(2,1fr)}
+    .tt-day-grid{grid-template-columns:1fr}
+    .marks-table{min-width:480px}
+    .quiz-card-grid{grid-template-columns:1fr}
+    .lesson-plan-row{flex-wrap:wrap;gap:8px}
+  }
+  @media(max-width:600px){
+    .subj-card{flex-wrap:wrap}
+    .subj-actions{width:100%;margin-left:0}
+    .faculty-stat-grid{grid-template-columns:1fr}
+    .marks-entry-row{flex-wrap:wrap}
+  }
 </style>
 {% endblock %}
 
@@ -219,7 +233,7 @@
 <!-- ATTENDANCE -->
 <section data-dashboard-pane="attendance" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions â€” Per Subject</div>
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance Sessions &mdash; Per Subject</div>
     <div class="section-meta">Sessions marked, class average, and defaulter count per subject.</div>
     {% if subject_cards %}
     <div class="table-scroll">
@@ -461,7 +475,7 @@
 <!-- INTERNAL MARKS -->
 <section data-dashboard-pane="internals" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-table-list"></i> Internal Marks â€” Select Subject</div>
+    <div class="d-title"><i class="fas fa-table-list"></i> Internal Marks &mdash; Select Subject</div>
     <div class="section-meta">IA1, IA2, Assignment, and Attendance components per student.</div>
     {% if subject_cards %}
     {% for item in subject_cards %}
@@ -502,7 +516,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:10px">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ leave.get_leave_type_display }}</div>
-            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} â€“ {{ leave.to_date|date:"d M Y" }} &middot; {{ leave.days }} day{{ leave.days|pluralize }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} &ndash; {{ leave.to_date|date:"d M Y" }} &middot; {{ leave.days }} day{{ leave.days|pluralize }}</div>
             {% if leave.reason %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ leave.reason|truncatechars:60 }}</div>{% endif %}
           </div>
           <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ leave.get_status_display }}</span>

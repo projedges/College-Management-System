@@ -63,7 +63,14 @@
   .rate-mid{background:#fef3c7;color:#92400e}
   .rate-low{background:#fee2e2;color:#991b1b}
   @media(max-width:980px){.subject-grid{grid-template-columns:1fr}}
-  @media(max-width:640px){.fc .fc-daygrid-day-frame{min-height:54px}.calendar-container{padding:14px}}
+  @media(max-width:640px){
+    .fc .fc-daygrid-day-frame{min-height:54px}
+    .calendar-container{padding:14px}
+    .calendar-controls{justify-content:flex-start}
+    .calendar-controls select{font-size:12px;padding:5px 8px}
+    .date-card{padding:14px}
+    .subject-info{padding:14px}
+  }
 </style>
 {% endblock %}
 

@@ -1,7 +1,7 @@
-﻿{% extends 'admin_panel/base_admin.html' %}
-{% block title %}Curriculum â€” {{ regulation.name }}{% endblock %}
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Curriculum &mdash; {{ regulation.name }}{% endblock %}
 {% block breadcrumb %} / <a href="{% url 'admin_regulations' %}">Regulations</a> / {{ regulation.code }} / Curriculum{% endblock %}
-{% block page_title %}Curriculum â€” {{ regulation.name }}{% endblock %}
+{% block page_title %}Curriculum &mdash; {{ regulation.name }}{% endblock %}
 {% block page_sub %}Map subjects to semesters for each department under this regulation.{% endblock %}
 {% block content %}
 
@@ -11,7 +11,7 @@
     <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Department</label>
     <select name="dept" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
       {% for d in departments %}
-      <option value="{{ d.pk }}" {% if department and d.pk == department.pk %}selected{% endif %}>{{ d.code }} â€” {{ d.name }}</option>
+      <option value="{{ d.pk }}" {% if department and d.pk == department.pk %}selected{% endif %}>{{ d.code }} &mdash; {{ d.name }}</option>
       {% endfor %}
     </select>
   </div>
@@ -79,9 +79,9 @@
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Subject</label>
         <select name="subject" class="form-control" required>
-          <option value="">â€” Select subject â€”</option>
+          <option value="">&mdash; Select subject &mdash;</option>
           {% for s in available_subjects %}
-          <option value="{{ s.pk }}">{{ s.code }} â€” {{ s.name }} ({{ s.credits }}cr)</option>
+          <option value="{{ s.pk }}">{{ s.code }} &mdash; {{ s.name }} ({{ s.credits }}cr)</option>
           {% endfor %}
         </select>
       </div>
@@ -97,7 +97,7 @@
         <label class="form-label">Prerequisites (optional)</label>
         <select name="prerequisites" class="form-control" multiple style="height:90px">
           {% for e in entries %}
-          <option value="{{ e.subject.pk }}">{{ e.subject.code }} â€” {{ e.subject.name }}</option>
+          <option value="{{ e.subject.pk }}">{{ e.subject.code }} &mdash; {{ e.subject.name }}</option>
           {% endfor %}
         </select>
         <div class="form-hint">Hold Ctrl/Cmd to select multiple.</div>

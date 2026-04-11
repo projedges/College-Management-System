@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% block title %}Help Desk - EduTrack{% endblock %}
 
@@ -55,18 +55,18 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>College <span style="font-weight:400;color:var(--muted)">(optional â€” select if you know)</span></label>
+          <label>College <span style="font-weight:400;color:var(--muted)">(optional &mdash; select if you know)</span></label>
           {% if user.is_authenticated and initial_college %}
             <input type="text" value="{{ initial_college.name }}" disabled style="background:var(--surface2);color:var(--muted);cursor:not-allowed"/>
             <input type="hidden" name="college" value="{{ initial_college.pk }}"/>
           {% else %}
             <select name="college">
-              <option value="" selected>â€” Not sure / General inquiry â€”</option>
+              <option value="" selected>&mdash; Not sure / General inquiry &mdash;</option>
               {% for college in colleges %}
               <option value="{{ college.pk }}">{{ college.name }}</option>
               {% endfor %}
             </select>
-            <div style="font-size:11px;color:var(--muted);margin-top:5px"><i class="fas fa-info-circle"></i> If you're unsure which college to select, leave this blank â€” the platform team will route your ticket.</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:5px"><i class="fas fa-info-circle"></i> If you're unsure which college to select, leave this blank &mdash; the platform team will route your ticket.</div>
           {% endif %}
         </div>
         <div class="form-group">

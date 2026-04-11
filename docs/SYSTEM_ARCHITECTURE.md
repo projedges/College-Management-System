@@ -102,11 +102,36 @@ Section auto-assigned based on department capacity
 - **Waivers:** `FeeWaiver` — merit/need/sports/management discretion
 
 ### 2.7 Timetable Configuration
-**Model:** `TimetableBreak`
-- Named breaks (Lunch, Tea) per college, college-wide or dept-specific
+**Models:** `TimetableBreak` · `TimetableVersion` · `SchedulingConstraint`
+
+- Named breaks (Lunch, Tea, Exam, Event, Holiday) per college — college-wide, department, or section scope
+- Break date range support (`valid_from`, `valid_to`) for temporary breaks (fests, exams)
 - Working days: Mon–Sat
-- Period structure: 50-min periods, 10-min breaks, 1-hr lunch (13:00–14:00)
-- Lab = 2 consecutive 50-min periods (no break between)
+- **TimetableVersion** — multiple parallel timetables (regular/exam/backup/draft), one active per type, `activate()` auto-deactivates others
+- **SchedulingConstraint** — per-college hard/soft constraint registry with weight (1–100); hard = must satisfy, soft = preference for optimizer
+
+### 2.8 Classroom Configuration
+**Model:** `Classroom`
+
+- `room_type`: lecture / lab / seminar / tutorial / other — used by generator to match subject slot type
+- `features`: comma-separated list (projector, computers, ac, smartboard)
+- `features_list()` helper method for template use
+
+### 2.9 Subject Scheduling Patterns
+**Model:** `Subject` (extended)
+
+- `slot_type`: lecture / lab / tutorial / seminar
+- `slot_duration_mins`: duration per slot (60 for lecture, 120 for lab)
+- `frequency_per_week`: how many times per week
+- `scheduling_constraint`: no_consecutive / prefer_morning / prefer_afternoon / continuous_block / alternate_days
+
+### 2.10 Faculty Availability (Extended)
+**Model:** `FacultyAvailability`
+
+- `availability_type`: available / preferred / blocked
+- `valid_from` / `valid_to`: for temporary slots (leave periods, exam weeks)
+- `priority_score` (1–10): generator prefers higher scores when multiple slots are valid
+- `notes`: free text (e.g. "Can take labs only")
 
 ---
 
@@ -361,19 +386,22 @@ Login/logout events per user.
 `Regulation` · `CurriculumEntry` · `Subject` · `FacultySubject` · `SectionSubjectFacultyMap`
 
 ### Timetable
-`Timetable` · `TimetableBreak` · `Classroom` · `FacultyAvailability` · `Substitution`
+`Timetable` · `TimetableBreak` · `Classroom` · `FacultyAvailability` · `Substitution` · `TimetableVersion` · `SchedulingConstraint`
 
 ### Attendance
 `AttendanceSession` · `Attendance` · `AttendanceRule` · `AttendanceExemption` · `AttendanceCorrection` · `EligibilityOverride`
 
 ### Electives
-`ElectivePool` · `ElectiveSelection`
+`ElectivePool` · `ElectiveSelection` · `ElectiveGroup` · `StudentGroupConflict`
 
 ### Exam & Results
 `Exam` · `ExamType` · `ExamSchedule` · `HallTicket` · `Marks` · `InternalMark` · `Result` · `ExamResult` · `RevaluationRequest` · `SupplyExamRegistration` · `EvaluationScheme` · `GraceMarksRule` · `GraceMarksApplication`
 
 ### Fees
 `Fee` · `FeeStructure` · `FeeBreakdown` · `Payment` · `FeeInstallmentPlan` · `FeeInstallment` · `LateFeeRule` · `FeeWaiver`
+
+### Student Lifecycle
+`PromotionRule` · `StudentSemesterHistory` · `LateralEntryProfile` · `AdmissionCycle` · `Admission` · `BacklogRegistration`
 
 ### Communication
 `Announcement` · `Notification` · `HelpDeskTicket` · `TicketComment`

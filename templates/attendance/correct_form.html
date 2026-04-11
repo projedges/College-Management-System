@@ -1,11 +1,11 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block title %}Correct Attendance{% endblock %}
 {% block body %}
 <div style="max-width:480px;margin:60px auto;padding:0 16px">
   <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px">
     <h2 style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep);margin-bottom:4px">Correct Attendance Record</h2>
     <div style="background:var(--surface2);border-radius:var(--r);padding:12px;margin-bottom:18px;font-size:13px">
-      <div style="font-weight:600;color:var(--deep)">{{ att.student.user.get_full_name }} â€” {{ att.student.roll_number }}</div>
+      <div style="font-weight:600;color:var(--deep)">{{ att.student.user.get_full_name }} &mdash; {{ att.student.roll_number }}</div>
       <div style="color:var(--muted);margin-top:3px">{{ subject.name }} &middot; {{ att.session.date|date:"d M Y" }}</div>
       <div style="margin-top:6px">Current status: <span class="dbadge {% if att.status == 'PRESENT' %}dbadge-active{% elif att.status == 'ABSENT' %}dbadge-red{% else %}dbadge-warning{% endif %}">{{ att.status }}</span></div>
     </div>

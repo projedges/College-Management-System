@@ -1,4 +1,4 @@
-﻿{% extends 'admin_panel/base_admin.html' %}
+{% extends 'admin_panel/base_admin.html' %}
 {% block title %}{% if rule %}Edit{% else %}Add{% endif %} Attendance Rule{% endblock %}
 {% block breadcrumb %} / <a href="{% url 'admin_attendance_rules' %}" style="color:var(--teal);text-decoration:none">Attendance Rules</a> / {% if rule %}Edit{% else %}Add{% endif %}{% endblock %}
 {% block page_title %}{% if rule %}Edit{% else %}Add{% endif %} Attendance Rule{% endblock %}
@@ -12,7 +12,7 @@
         <label>Department</label>
         <select name="department" class="form-control">
           <option value="">All Departments (college-wide default)</option>
-          {% for d in departments %}<option value="{{ d.pk }}" {% if rule and rule.department_id == d.pk %}selected{% endif %}>{{ d.code }} â€” {{ d.name }}</option>{% endfor %}
+          {% for d in departments %}<option value="{{ d.pk }}" {% if rule and rule.department_id == d.pk %}selected{% endif %}>{{ d.code }} &mdash; {{ d.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="form-group">

@@ -1,5 +1,5 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Lesson Plans â€” {{ subject.name }}{% endblock %}
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Lesson Plans &mdash; {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Lesson Plans{% endblock %}
 {% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
@@ -36,7 +36,7 @@
 {% endfor %}
 
 <div class="d-card">
-  <div class="d-card-title"><i class="fas fa-book-open"></i> Lesson Plan â€” {{ plans|length }} entries</div>
+  <div class="d-card-title"><i class="fas fa-book-open"></i> Lesson Plan &mdash; {{ plans|length }} entries</div>
   {% if plans %}
     {% for plan in plans %}
     <div class="plan-row">

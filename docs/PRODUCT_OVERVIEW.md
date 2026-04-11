@@ -38,9 +38,12 @@ Faculty, HODs, and principals are created directly by the college admin.
 
 ### 3. Academic Structure
 - **Subjects** belong to a department and a semester (integer 1–8)
+- Each subject has `slot_type` (lecture/lab/tutorial/seminar), `slot_duration_mins`, `frequency_per_week`, and `scheduling_constraint`
 - **Faculty** are assigned to subjects via Faculty-Subject assignments
-- **Timetable** slots are created per subject, with day, time, and classroom
-- The system can auto-generate a timetable from faculty availability slots
+- **Timetable** slots are created per subject, with day, time, classroom, section, and generation mode
+- Timetable supports multiple versions (regular/exam/backup/draft) — only one active per type
+- Locked slots (`is_locked=True`) are skipped by the auto-generator
+- The system can auto-generate a timetable from faculty availability slots with hard/soft constraint priority
 
 ### 4. Attendance
 Faculty mark attendance per subject per day. The system:
@@ -73,9 +76,12 @@ Faculty mark attendance per subject per day. The system:
 - Admin sees a real-time summary of collected vs pending fees
 
 ### 8. Timetable & Substitutions
-- Timetable slots are visible to students (today's classes), faculty (their schedule), HODs (department view), and lab staff (all rooms)
+- Timetable slots are visible to students (full week view with today highlighted), faculty (their schedule), HODs (department view), and lab staff (all rooms)
 - HODs manage substitutions — when a faculty is absent, a substitute is assigned for a specific date
-- The substitute faculty can then mark attendance for that slot
+- Classrooms have `room_type` (lecture/lab/seminar) and `features` (projector, computers, ac)
+- Faculty availability has `availability_type` (available/preferred/blocked), date range, and priority score
+- Multiple timetable versions (regular/exam/backup/draft) can coexist — admin activates one per type
+- Individual slots can be locked to prevent auto-generator from overwriting them
 
 ### 9. Announcements & Notifications
 - College admin and super admin post announcements

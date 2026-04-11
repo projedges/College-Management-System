@@ -1,4 +1,4 @@
-﻿{% comment %}Shared admin sidebar â€” used by all admin form/standalone pages. Set active_section before including.{% endcomment %}
+{% comment %}Shared admin sidebar &mdash; used by all admin form/standalone pages. Set active_section before including.{% endcomment %}
 <p class="sb-nav-label">Overview</p>
 <a href="{% url 'admin_dashboard' %}#overview" class="sb-link {% if active_section == 'overview' %}active{% endif %}"><i class="fas fa-home"></i> Dashboard</a>
 <a href="{% url 'admin_dashboard' %}#profile" class="sb-link {% if active_section == 'profile' %}active{% endif %}"><i class="fas fa-user-circle"></i> My Profile</a>

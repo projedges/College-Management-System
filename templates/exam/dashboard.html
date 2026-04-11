@@ -1,5 +1,5 @@
-﻿{% extends 'exam/base_exam.html' %}
-{% block title %}Exam Department â€” {{ college.name }}{% endblock %}
+{% extends 'exam/base_exam.html' %}
+{% block title %}Exam Department &mdash; {{ college.name }}{% endblock %}
 {% block nav_dash %}on{% endblock %}
 {% block page_title %}Examination Department{% endblock %}
 {% block page_sub %}{{ college.name }} &middot; {{ ec.designation }}{% endblock %}
@@ -48,7 +48,7 @@
           <tr>
             <td style="font-weight:600;color:var(--deep)">{{ exam.name }}</td>
             <td style="text-align:center">Sem {{ exam.semester }}</td>
-            <td style="font-size:12px;color:var(--muted)">{{ exam.start_date|date:"d M" }} â€“ {{ exam.end_date|date:"d M Y" }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ exam.start_date|date:"d M" }} &ndash; {{ exam.end_date|date:"d M Y" }}</td>
             <td>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <a href="{% url 'exam_schedule' exam.pk %}" class="dbadge dbadge-purple" style="text-decoration:none;cursor:pointer"><i class="fas fa-calendar"></i> Schedule</a>
@@ -103,7 +103,7 @@
   <div class="d-title"><i class="fas fa-building"></i> Departments</div>
   <div style="display:flex;flex-wrap:wrap;gap:8px">
     {% for dept in departments %}
-    <span style="padding:5px 14px;border-radius:99px;background:rgba(124,58,237,.07);color:#7c3aed;font-size:12px;font-weight:600;border:1px solid rgba(124,58,237,.15)">{{ dept.code }} â€” {{ dept.name }}</span>
+    <span style="padding:5px 14px;border-radius:99px;background:rgba(124,58,237,.07);color:#7c3aed;font-size:12px;font-weight:600;border:1px solid rgba(124,58,237,.15)">{{ dept.code }} &mdash; {{ dept.name }}</span>
     {% endfor %}
   </div>
 </div>

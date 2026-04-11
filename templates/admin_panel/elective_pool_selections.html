@@ -1,5 +1,5 @@
-﻿{% extends 'admin_panel/base_admin.html' %}
-{% block title %}Elective Selections â€” {{ pool.slot_name }}{% endblock %}
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Elective Selections &mdash; {{ pool.slot_name }}{% endblock %}
 {% block breadcrumb %} / <a href="{% url 'admin_elective_pools' %}">Elective Pools</a> / {{ pool.slot_name }} / Selections{% endblock %}
 {% block page_title %}{{ pool.department.code }} &middot; Sem {{ pool.semester }} &middot; {{ pool.slot_name }}{% endblock %}
 {% block page_sub %}Review and confirm student elective choices.{% endblock %}

@@ -1,5 +1,5 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Leave Application â€” Faculty{% endblock %}
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Leave Application &mdash; Faculty{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Leave Application{% endblock %}
 {% block page_sub %}Apply for leave and suggest a substitute for your classes{% endblock %}
@@ -67,7 +67,7 @@
         <div class="fg">
           <label>Suggest Substitute <span style="font-weight:400;color:var(--muted)">(optional but recommended)</span></label>
           <select name="suggested_substitute" class="fi">
-            <option value="">â€” No suggestion â€”</option>
+            <option value="">&mdash; No suggestion &mdash;</option>
             {% for f in dept_faculty %}
             <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }} ({{ f.designation }})</option>
             {% endfor %}
@@ -85,7 +85,7 @@
       {% for slot in timetable_slots %}
       <div class="slot-row">
         <div class="slot-day">{{ slot.day_of_week }}</div>
-        <div class="slot-time">{{ slot.start_time|time:"g:i A" }} â€“ {{ slot.end_time|time:"g:i A" }}</div>
+        <div class="slot-time">{{ slot.start_time|time:"g:i A" }} &ndash; {{ slot.end_time|time:"g:i A" }}</div>
         <div style="flex:1">
           <span style="font-weight:600;color:var(--deep)">{{ slot.subject.name }}</span>
           <span style="color:var(--muted);font-size:11px"> &middot; {{ slot.subject.code }}</span>

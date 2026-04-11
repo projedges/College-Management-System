@@ -1,4 +1,4 @@
-﻿{% extends 'admin_panel/base_admin.html' %}
+{% extends 'admin_panel/base_admin.html' %}
 {% block title %}Elective Pools{% endblock %}
 {% block breadcrumb %} / Elective Pools{% endblock %}
 {% block page_title %}Elective Pools{% endblock %}
@@ -29,7 +29,7 @@
         </td>
         <td style="text-align:center;font-size:13px;font-weight:700">{{ pool.quota_per_subject }}/subj</td>
         <td style="font-size:12px;color:var(--muted)">
-          {% if pool.deadline %}{{ pool.deadline|date:"d M Y, H:i" }}{% else %}â€”{% endif %}
+          {% if pool.deadline %}{{ pool.deadline|date:"d M Y, H:i" }}{% else %}&mdash;{% endif %}
         </td>
         <td>
           {% if pool.status == 'OPEN' %}<span class="dbadge dbadge-active">Open</span>

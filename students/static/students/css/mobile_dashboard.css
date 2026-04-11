@@ -1,173 +1,101 @@
-/* EduTrack Universal Mobile Dashboard Utilities */
+/* EduTrack — Mobile & Responsive Dashboard Utilities */
 
-/* Smooth Pane Transitions */
-.dashboard-pane {
-    display: none;
-    opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.dashboard-pane.active {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
+/* ── Pane transitions ── */
+.dashboard-pane{display:none;opacity:0;transform:translateY(10px);transition:opacity .35s ease,transform .35s ease}
+.dashboard-pane.active{display:block;opacity:1;transform:translateY(0)}
+
+/* ── Card hover lift (desktop only) ── */
+@media(min-width:861px){
+  .d-card:hover,.stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(7,30,38,.1)}
+  .d-card,.stat-card{transition:transform .25s ease,box-shadow .25s ease}
 }
 
-/* Interactive Lift for Cards */
-.d-card, .workflow-card, .focus-card, .stat-card, .pv-card {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease !important;
-}
-.d-card:hover, .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 45px rgba(7,30,38,0.1) !important;
+/* ── Sidebar link transitions ── */
+.sb-link{transition:background .15s ease,color .15s ease}
+
+/* ── Table horizontal scroll ── */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dtable{min-width:520px}
+
+/* ── Toast notifications ── */
+.messages-toast-container{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:340px}
+.toast-msg{pointer-events:auto;background:#fff;border-radius:12px;padding:12px 18px;box-shadow:0 8px 24px rgba(0,0,0,.14);border-left:4px solid var(--teal);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;animation:toastIn .4s cubic-bezier(.175,.885,.32,1.275) both}
+@keyframes toastIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── Tooltip ── */
+.has-tooltip{position:relative;display:inline-block}
+.has-tooltip .tooltip-text{visibility:hidden;width:180px;background:var(--deep);color:#fff;text-align:center;border-radius:6px;padding:7px 10px;position:absolute;z-index:100;bottom:130%;left:50%;margin-left:-90px;opacity:0;transition:opacity .25s;font-size:11px;pointer-events:none}
+.has-tooltip:hover .tooltip-text{visibility:visible;opacity:1}
+
+/* ── 860px breakpoint — tablet / small laptop ── */
+@media(max-width:860px){
+  /* Layout */
+  .db-main{padding:16px 14px 24px}
+  /* Grids collapse */
+  .two-col,.three-col,.panel-grid,.hero-grid{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  /* Cards */
+  .d-card{padding:16px;margin-bottom:14px}
+  .stat-card{padding:14px}
+  /* Page head */
+  .db-page-title{font-size:18px}
+  .db-page-head{margin-bottom:10px}
+  /* Session timer hidden */
+  .topbar-session-timer{display:none!important}
+  /* Quick nav chips hidden (sidebar covers navigation) */
+  .quick-nav{display:none}
+  /* Scrollable content areas expand */
+  .content-scroll,.content-scroll.soft{max-height:none}
+  /* Action rows wrap */
+  .qa-row,.action-row{flex-wrap:wrap;gap:8px}
+  /* Focus cards */
+  .focus-card{padding:16px}
+  /* Attendance summary */
+  .att-summary-bar{flex-direction:column;gap:14px}
+  .att-donut-wrap{align-self:center}
+  .att-summary-stats{justify-content:center;flex-wrap:wrap}
+  .att-table-controls{flex-direction:column;align-items:flex-start;gap:8px}
+  /* Week timetable matrix */
+  .week-matrix-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .week-matrix{min-width:640px}
+  /* Subject board */
+  .subject-grid{grid-template-columns:1fr}
+  /* Planner */
+  .planner-grid{grid-template-columns:1fr}
+  /* HOD */
+  .tt-row{flex-wrap:wrap;gap:4px}
+  .tt-room{margin-left:0}
+  /* Approval rows */
+  .approval-row{flex-wrap:wrap;gap:8px}
 }
 
-.sb-link {
-    transition: background 0.2s ease, transform 0.1s active;
-}
-
-/* Sidebar Toggle Logic (Apply to .sidebar and .main-content) */
-@media (max-width: 992px) {
-    .sidebar {
-        width: 100% !important;
-        height: auto !important;
-        position: relative !important;
-        border-right: none !important;
-        border-bottom: 1px solid var(--border);
-    }
-    .main-content {
-        margin-left: 0 !important;
-        padding: 1rem !important;
-    }
-    .sidebar-nav {
-        display: flex;
-        overflow-x: auto;
-        padding: 12px;
-        gap: 8px;
-        -webkit-overflow-scrolling: touch;
-    }
-    .sidebar-nav a {
-        white-space: nowrap;
-        padding: 8px 16px !important;
-    }
-    .sb-link {
-        flex: 0 0 auto;
-        font-size: 13px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-    }
-    .sb-link.active {
-        background: var(--teal) !important;
-        color: #fff !important;
-    }
-}
-
-/* Grid & Card Stacking */
-@media (max-width: 768px) {
-    .stats-grid, .dashboard-grid, .role-grid, .feat-grid {
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-    }
-    .card, .rcard, .fcard {
-        padding: 16px !important;
-    }
-}
-
-/* Responsive Data Tables */
-.table-responsive {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    margin-bottom: 1.5rem;
-}
-
-/* Global Redundancy Suppressor */
-/* Programmatically hides horizontal navigation menus that mirror the sidebar in legacy templates */
-.quick-nav, .quick-chips, .dashboard-nav-chips, .nav-chips, .action-chips, .mobile-quick-nav, .dashboard-nav-bar {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    pointer-events: none !important;
-}
-
-/* Enhanced Stat Cards */
-.stat-card {
-    border-radius: 16px !important;
-    padding: 20px !important;
-}
-
-/* Tooltip Styles */
-.has-tooltip {
-    position: relative;
-    display: inline-block;
-}
-.has-tooltip .tooltip-text {
-    visibility: hidden;
-    width: 200px;
-    background-color: var(--deep);
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 8px;
-    position: absolute;
-    z-index: 100;
-    bottom: 125%;
-    left: 50%;
-    margin-left: -100px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-size: 12px;
-    font-weight: 400;
-    pointer-events: none;
-}
-.has-tooltip:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* Modern Toast Notification System Overlay */
-.messages-toast-container {
-    position: fixed;
-    top: 24px;
-    right: 24px;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none;
-}
-.toast-msg {
-    pointer-events: auto;
-    background: #fff;
-    border-radius: 12px;
-    padding: 14px 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    border-left: 5px solid var(--teal);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    animation: toastSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-}
-@keyframes toastSlideIn {
-    from { opacity: 0; transform: translateX(100%) scale(0.9); }
-    to { opacity: 1; transform: translateX(0) scale(1); }
-}
-
-/* Form & Button Adjustments */
-@media (max-width: 480px) {
-    .form-actions, .hero-btns {
-        flex-direction: column;
-        gap: 10px;
-    }
-    .btn {
-        width: 100%;
-        justify-content: center;
-    }
+/* ── 480px breakpoint — phone ── */
+@media(max-width:480px){
+  .db-main{padding:10px 10px 20px}
+  .stat-grid{grid-template-columns:1fr}
+  .d-card{padding:14px;margin-bottom:10px}
+  .db-page-title{font-size:16px}
+  .db-page-sub{font-size:12px}
+  /* Buttons full width */
+  .qa-btn,.mini-btn,.btn-sm{width:100%;justify-content:center}
+  /* Badges */
+  .dbadge{font-size:10px;padding:2px 7px}
+  /* Attendance donut smaller */
+  .att-donut-wrap{width:80px;height:80px}
+  .att-donut-svg{width:80px;height:80px}
+  .att-donut-val{font-size:14px}
+  .att-stat-box{min-width:58px;padding:8px 10px}
+  .att-stat-val{font-size:15px}
+  /* Search inputs narrower */
+  #att-search,#att-cal-search{width:130px}
+  /* Semester tabs */
+  .sem-tab{padding:6px 10px;font-size:11px}
+  /* Week timetable chips */
+  .week-chip{padding:6px}
+  .week-chip-subj{font-size:11px}
+  .week-chip-meta{font-size:10px}
+  /* Toast position */
+  .messages-toast-container{top:auto;bottom:16px;right:10px;left:10px;max-width:none}
+  /* Form actions */
+  .form-actions,.hero-btns{flex-direction:column;gap:8px}
 }

@@ -1,5 +1,5 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
-{% block title %}{{ student.user.get_full_name }} â€” HOD View{% endblock %}
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{{ student.user.get_full_name }} &mdash; HOD View{% endblock %}
 {% block role_label %}Head of Department{% endblock %}
 {% block role_label_foot %}Head of Department{% endblock %}
 {% block page_title %}{{ student.user.get_full_name|default:student.user.username }}{% endblock %}
@@ -64,12 +64,12 @@
 <div class="stat-grid" style="margin-bottom:20px">
   <div class="stat-card">
     <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-calendar-check"></i></div>
-    <div class="s-val">{% if overall_pct is not None %}{{ overall_pct }}%{% else %}â€”{% endif %}</div>
+    <div class="s-val">{% if overall_pct is not None %}{{ overall_pct }}%{% else %}&mdash;{% endif %}</div>
     <div class="s-lbl">Overall Attendance</div>
   </div>
   <div class="stat-card">
     <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-star"></i></div>
-    <div class="s-val">{% if cgpa %}{{ cgpa }}{% else %}â€”{% endif %}</div>
+    <div class="s-val">{% if cgpa %}{{ cgpa }}{% else %}&mdash;{% endif %}</div>
     <div class="s-lbl">CGPA</div>
   </div>
   <div class="stat-card">
@@ -79,7 +79,7 @@
   </div>
   <div class="stat-card">
     <div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-indian-rupee-sign"></i></div>
-    <div class="s-val">{% if fee %}{{ fee.status }}{% else %}â€”{% endif %}</div>
+    <div class="s-val">{% if fee %}{{ fee.status }}{% else %}&mdash;{% endif %}</div>
     <div class="s-lbl">Fee Status</div>
   </div>
 </div>
@@ -87,7 +87,7 @@
 <div class="two-col">
   <!-- Attendance -->
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance â€” Semester {{ student.current_semester }}</div>
+    <div class="d-title"><i class="fas fa-calendar-check"></i> Attendance &mdash; Semester {{ student.current_semester }}</div>
     {% if attendance_data %}
     {% for a in attendance_data %}
     <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
