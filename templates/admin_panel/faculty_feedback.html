@@ -1,0 +1,77 @@
+{% extends 'admin_panel/base_admin_form.html' %}
+{% block title %}Faculty Feedback - Admin{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
+{% block page_title %}Faculty Feedback{% endblock %}
+{% block page_sub %}Create feedback windows for students and review response counts{% endblock %}
+{% block sidebar_links %}{% with active_section='feedback' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+
+{% block form_content %}
+<div class="two-col">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-comments"></i> New Feedback Cycle</div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group"><label>Title <span>*</span></label><input type="text" name="title" class="form-control" placeholder="e.g. Mid Semester Faculty Feedback" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>Department</label><select name="department" class="form-control"><option value="">All Departments</option>{% for d in departments %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Semester</label><select name="semester" class="form-control"><option value="">All Semesters</option>{% for i in "12345678" %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Faculty</label><select name="faculty" class="form-control"><option value="">All Assigned Faculty</option>{% for f in faculty %}<option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }} ({{ f.department.code }})</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Subject</label><select name="subject" class="form-control"><option value="">All Current Subjects</option>{% for s in subjects %}<option value="{{ s.pk }}">{{ s.code }} - {{ s.name }} (Sem {{ s.semester }})</option>{% endfor %}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date <span>*</span></label><input type="date" name="start_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required></div>
+        <div class="form-group"><label>End Date <span>*</span></label><input type="date" name="end_date" class="form-control" required></div>
+      </div>
+      <div class="form-group">
+        <label>Questions <span>*</span></label>
+        <textarea name="questions" rows="6" class="form-control" required>Clarity of teaching
+Subject knowledge
+Punctuality and preparation
+Student engagement
+Doubt clarification</textarea>
+        <div class="form-hint">One question per line. Students rate each question from 1 to 5.</div>
+      </div>
+      <button type="submit" class="btn-submit"><i class="fas fa-plus"></i> Create Feedback</button>
+    </form>
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-chart-simple"></i> Feedback Cycles</div>
+    {% if cycle_rows %}
+    <div class="summary-list">
+      {% for row in cycle_rows %}
+      <div class="summary-item" style="align-items:flex-start">
+        <div>
+          <div style="font-weight:700;color:var(--deep)">{{ row.cycle.title }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">
+            {{ row.cycle.start_date|date:"d M Y" }} to {{ row.cycle.end_date|date:"d M Y" }}
+            {% if row.cycle.department %} &middot; {{ row.cycle.department.code }}{% endif %}
+            {% if row.cycle.semester %} &middot; Sem {{ row.cycle.semester }}{% endif %}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">
+            {% if row.cycle.faculty %}{{ row.cycle.faculty.user.get_full_name|default:row.cycle.faculty.user.username }}{% else %}All faculty{% endif %}
+            {% if row.cycle.subject %} &middot; {{ row.cycle.subject.code }}{% endif %}
+          </div>
+        </div>
+        <div style="text-align:right;min-width:110px">
+          <div style="font-size:12px;color:var(--muted)">{{ row.responses }} response{{ row.responses|pluralize }}</div>
+          <div style="font-weight:800;color:var(--teal);margin-top:3px">{{ row.avg|default:"0" }}/5</div>
+          <form method="POST" action="{% url 'admin_faculty_feedback_toggle' row.cycle.pk %}" style="margin-top:7px">
+            {% csrf_token %}
+            <button type="submit" class="{% if row.cycle.is_active %}btn-del{% else %}btn-edit{% endif %}" style="border:none">
+              {% if row.cycle.is_active %}Close{% else %}Open{% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-comments"></i>No feedback cycles created yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -68,6 +68,9 @@
       <a href="{% url 'admin_fees' %}" class="sb-link {% block nav_fees %}{% endblock %}"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>
       <a href="{% url 'admin_announcements' %}" class="sb-link {% block nav_ann %}{% endblock %}"><i class="fas fa-bell"></i> Announcements</a>
       <a href="{% url 'admin_helpdesk' %}" class="sb-link {% block nav_helpdesk %}{% endblock %}"><i class="fas fa-headset"></i> Help Desk</a>
+
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Results</div>
+      <a href="{% url 'admin_semester_results' %}" class="sb-link {% block nav_semester_results %}{% endblock %}"><i class="fas fa-square-poll-horizontal"></i> Semester Results</a>
       {% endblock %}{# base_nav_links #}
     </div>
 
@@ -81,13 +84,6 @@
           <div style="font-size:10px;color:rgba(255,255,255,.4)">{% block sidebar_role_label %}College Admin{% endblock %}</div>
         </div>
       </div>
-      <!-- Session timer &mdash; only shown for non-admin roles -->
-      {% if not request.is_college_admin %}
-      <div id="adm-session-timer" style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;padding:4px 8px;border-radius:6px;transition:all .3s">
-        <i class="fas fa-clock" style="font-size:10px"></i>
-        <span id="adm-timer-display">--:--</span>
-      </div>
-      {% endif %}
       <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;background:rgba(239,68,68,.12);color:#f87171;font-size:12px;font-weight:600;text-decoration:none"
          onmouseover="this.style.background='rgba(239,68,68,.2)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">
         <i class="fas fa-sign-out-alt"></i> Sign Out
@@ -108,7 +104,16 @@
           <h1 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin-bottom:3px">{% block page_title %}{% endblock %}</h1>
           <p style="font-size:13px;color:var(--muted)">{% block page_sub %}{% endblock %}</p>
         </div>
-        {% block page_action %}{% endblock %}
+        <div class="adm-page-actions">
+          {% if not request.is_college_admin %}
+          <div id="adm-session-timer" class="adm-topbar-session-timer" title="Session time remaining">
+            <i class="fas fa-clock"></i>
+            <span class="timer-label">Session</span>
+            <span id="adm-timer-display">--:--</span>
+          </div>
+          {% endif %}
+          {% block page_action %}{% endblock %}
+        </div>
       </div>
     </div>
 
@@ -131,12 +136,16 @@
   .adm-close:hover{color:#fff}
   .adm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:299;backdrop-filter:blur(2px)}
   .adm-overlay.open{display:block}
-  .adm-sidebar{width:250px;background:var(--deep);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;transition:transform .3s ease}
+  .adm-sidebar{width:250px;max-width:86vw;background:var(--deep);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;transition:transform .3s ease}
+  .adm-page-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+  .adm-topbar-session-timer{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);padding:7px 14px;border-radius:99px;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);transition:all .3s;white-space:nowrap;flex-shrink:0}
+  .adm-topbar-session-timer i{font-size:13px;color:var(--teal)}
+  .adm-topbar-session-timer .timer-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
   .sb-link{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:8px;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;text-decoration:none;transition:all .2s;margin-bottom:2px}
   .sb-link:hover{background:rgba(255,255,255,.07);color:#fff}
   .sb-link.on,.sb-link.active{background:rgba(255,255,255,.15);color:#fff;border-left:3px solid var(--teal);padding-left:9px}
   .sb-link i{width:15px;text-align:center;font-size:13px;flex-shrink:0}
-  .ap-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px}
+  .ap-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px;min-width:0}
   .ap-table{width:100%;border-collapse:collapse;font-size:13px}
   .ap-table th{text-align:left;padding:9px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border);background:#fafbfc}
   .ap-table td{padding:11px 14px;border-bottom:1px solid #f3f4f6;color:var(--text);vertical-align:middle}
@@ -217,6 +226,7 @@
   .content-scroll::-webkit-scrollbar{width:6px}
   .content-scroll::-webkit-scrollbar-thumb{background:#d7dee4;border-radius:999px}
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll .ap-table,.table-scroll .dtable{min-width:560px}
   .dtable{width:100%;border-collapse:collapse;font-size:13px}
   .dtable th{text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--border)}
   .dtable td{padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#374151}
@@ -238,15 +248,34 @@
     .adm-sidebar{position:fixed;top:0;left:0;height:100%;z-index:300;transform:translateX(-100%)}
     .adm-sidebar.open{transform:translateX(0)}
     .adm-close{display:block}
-    main{padding:10px 16px 16px !important}
+    main{padding:10px 16px 16px !important;width:100%;max-width:100vw;overflow-x:hidden}
+    .adm-topbar-session-timer{display:none}
+    .adm-page-actions{width:100%;justify-content:flex-start}
+    .two-col,.three-col,.hero-grid,.panel-grid,.form-row{grid-template-columns:1fr}
+    .ap-card [style*="grid-template-columns"],.d-card [style*="grid-template-columns"]{grid-template-columns:1fr!important}
+    .ap-card [style*="display:grid"],.d-card [style*="display:grid"]{min-width:0}
+    .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+    .stat-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+    .d-card,.ap-card{padding:16px;margin-bottom:16px}
+    .content-scroll{max-height:none}
+    .summary-item{gap:10px}
     .form-card{max-width:100%}
-    .form-row{grid-template-columns:1fr}
+    .filter-bar{align-items:stretch}
+    .filter-select{max-width:100%}
+    .table-scroll{margin-left:-4px;margin-right:-4px;padding:0 4px}
+    .dtable,.ap-table,.table-scroll .dtable,.table-scroll .ap-table{min-width:520px}
     .ap-table{font-size:12px}
     .ap-table th,.ap-table td{padding:8px 10px}
   }
   @media(max-width:480px){
-    .stat-row{grid-template-columns:1fr 1fr}
-    .btn-add{font-size:12px;padding:8px 12px}
+    main{padding:10px 10px 16px !important}
+    .stat-grid,.stat-row{grid-template-columns:1fr}
+    .d-card,.ap-card,.form-card{padding:14px;margin-bottom:12px}
+    .summary-item{display:block}
+    .summary-item > * + *{margin-top:6px}
+    .btn-add,.btn-submit,.btn-cancel,.btn-edit,.btn-del,.qa-btn{width:100%;justify-content:center}
+    .filter-bar{flex-direction:column}
+    .filter-select,.form-control{width:100%}
   }
 </style>
 
@@ -263,7 +292,7 @@
   if(overlay) overlay.addEventListener('click',closeSb);
 })();
 
-/* ---- Session countdown in sidebar &mdash; only for non-admin roles ---- */
+/* ---- Session countdown in the page header, only for non-admin roles ---- */
 {% if not request.is_college_admin %}
 (function(){
   var el = document.getElementById('adm-timer-display');
@@ -278,8 +307,8 @@
   setInterval(function(){
     if(secs<=0) return; secs--;
     el.textContent = fmt(secs);
-    if(secs<=60){ wrap.style.color='#f87171'; wrap.style.background='rgba(239,68,68,.12)'; }
-    else if(secs<=warn){ wrap.style.color='#fbbf24'; wrap.style.background='rgba(251,191,36,.1)'; }
+    if(secs<=60){ wrap.style.color='#991b1b'; wrap.style.background='#fee2e2'; wrap.style.borderColor='#fca5a5'; }
+    else if(secs<=warn){ wrap.style.color='#92400e'; wrap.style.background='#fef3c7'; wrap.style.borderColor='#fcd34d'; }
   }, 1000);
 })();
 {% endif %}

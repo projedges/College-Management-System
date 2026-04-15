@@ -1,0 +1,209 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block title %}Semester Results{% endblock %}
+{% block breadcrumb %} / Semester Results{% endblock %}
+{% block page_title %}Semester Results{% endblock %}
+{% block page_sub %}Upload cohort marks, generate transcript previews, and approve student semester transcripts{% endblock %}
+{% block extra_css %}
+<style>
+  .adm-shell{margin-top:-20px;min-height:calc(100vh + 20px)}
+  .adm-sidebar{height:calc(100vh + 20px)}
+  main{padding-top:0 !important}
+  .sr-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;align-items:end}
+  .sr-main-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:20px;margin-bottom:24px;align-items:start}
+  .sr-student-card{display:flex;flex-direction:column;min-height:0}
+  .sr-student-scroll{max-height:460px;overflow:auto;padding-right:4px;border:1px solid #eef2f7;border-radius:14px}
+  .sr-student-scroll::-webkit-scrollbar{width:8px}
+  .sr-student-scroll::-webkit-scrollbar-thumb{background:#cfd8df;border-radius:999px}
+  .sr-student-scroll .dtable th{position:sticky;top:0;background:#fff;z-index:1;box-shadow:0 1px 0 var(--border)}
+  .sr-side-stack{display:flex;flex-direction:column;gap:20px}
+  .sr-subject-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .sr-chip{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:#f3f4f6;color:var(--deep);font-size:11px;font-weight:700}
+  .sr-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .sr-action-form{margin:0}
+  .sr-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:108px;padding:9px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease}
+  .sr-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(15,23,42,.08)}
+  .sr-btn-generate{background:var(--deep);color:#fff}
+  .sr-btn-view{background:rgba(13,115,119,.1);color:var(--teal);border:1px solid rgba(13,115,119,.14)}
+  .sr-btn-approve{background:#16a34a;color:#fff}
+  .sr-btn-disabled{background:#e5e7eb;color:#94a3b8;cursor:not-allowed;pointer-events:none;box-shadow:none}
+  .sr-batch-id{font-weight:800;color:var(--deep);line-height:1.45}
+  .sr-mini-note{font-size:11px;color:var(--muted);margin-top:8px}
+  @media(max-width:980px){
+    .adm-shell{margin-top:0;min-height:100vh}
+    .adm-sidebar{height:100%}
+    .sr-main-grid{grid-template-columns:1fr}
+    .sr-student-scroll{max-height:380px}
+  }
+  @media(max-width:640px){
+    .sr-filter-grid{grid-template-columns:1fr}
+    .sr-actions{flex-direction:column;align-items:stretch}
+    .sr-btn,.sr-action-form button{width:100%}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-filter"></i> Select Cohort</div>
+  <form method="GET" class="sr-filter-grid">
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">Academic Year</label>
+      <select name="academic_year" class="form-control">
+        <option value="">Select academic year</option>
+        {% for year in academic_year_options %}
+        <option value="{{ year }}" {% if academic_year == year %}selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">Department</label>
+      <select name="department" class="form-control">
+        <option value="">Select department</option>
+        {% for dept in departments %}
+        <option value="{{ dept.pk }}" {% if selected_department and selected_department.pk == dept.pk %}selected{% endif %}>{{ dept.code }} - {{ dept.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">Semester</label>
+      <input type="number" min="1" max="12" name="semester" value="{{ semester|default:'' }}" class="form-control">
+    </div>
+    <div>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-magnifying-glass"></i> Load Students</button>
+    </div>
+  </form>
+</div>
+
+{% if academic_year and selected_department and semester %}
+<div class="sr-main-grid">
+  <div class="d-card sr-student-card">
+    <div class="d-title"><i class="fas fa-users"></i> Matching Students</div>
+    <div class="section-meta">{{ selected_students|length }} students found for {{ academic_year }} / {{ selected_department.code }} / Semester {{ semester }}</div>
+    {% if selected_students %}
+    <div class="table-scroll sr-student-scroll">
+      <table class="dtable">
+        <thead><tr><th>Roll No.</th><th>Name</th><th>Username</th><th>Department</th><th>Semester</th></tr></thead>
+        <tbody>
+          {% for student in selected_students %}
+          <tr>
+            <td style="font-weight:700;color:var(--teal)">{{ student.roll_number }}</td>
+            <td>{{ student.user.get_full_name|default:student.user.username }}</td>
+            <td>{{ student.user.username }}</td>
+            <td>{{ student.department.code }}</td>
+            <td>Sem {{ student.current_semester }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-inbox"></i>No students found for this filter.</div>
+    {% endif %}
+  </div>
+
+  <div class="sr-side-stack">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-download"></i> Download Template</div>
+      <div class="section-meta">The template is CSV so it opens in Excel without extra libraries on the server.</div>
+      <a href="{% url 'admin_semester_result_template' %}?academic_year={{ academic_year }}&department={{ selected_department.pk }}&semester={{ semester }}" class="qa-btn qa-deep">
+        <i class="fas fa-file-arrow-down"></i> Download Cohort Template
+      </a>
+      <div class="sr-mini-note">Subjects included</div>
+      <div class="sr-subject-chips">
+        {% for subject in selected_subjects %}
+        <span class="sr-chip">{{ subject.code }}</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-upload"></i> Upload Filled File</div>
+      <form method="POST" action="{% url 'admin_semester_result_upload' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="academic_year" value="{{ academic_year }}">
+        <input type="hidden" name="department" value="{{ selected_department.pk }}">
+        <input type="hidden" name="semester" value="{{ semester }}">
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">Result File</label>
+          <input type="file" name="result_file" accept=".csv,text/csv" class="form-control" required>
+        </div>
+        <button type="submit" class="qa-btn qa-indigo"><i class="fas fa-cloud-arrow-up"></i> Upload Result File</button>
+        <div class="sr-mini-note">Use the exact downloaded template for the same academic year, department, and semester.</div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-file-lines"></i> Uploaded Batches For This Cohort</div>
+  {% if selected_batches %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Batch</th><th>Students</th><th>Status</th><th>Uploaded</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for batch in selected_batches %}
+        <tr>
+          <td><div class="sr-batch-id">{{ batch.academic_year }} - {{ batch.department.code }} - Sem {{ batch.semester }} - #{{ batch.pk }}</div></td>
+          <td>{{ batch.student_count }}</td>
+          <td>
+            {% if batch.status == 'APPROVED' %}
+            <span class="dbadge dbadge-active">Approved</span>
+            {% elif batch.status == 'GENERATED' %}
+            <span class="dbadge dbadge-warning">Generated</span>
+            {% else %}
+            <span class="dbadge" style="background:#e2e8f0;color:#475569">Uploaded</span>
+            {% endif %}
+          </td>
+          <td>{{ batch.uploaded_at|date:"d M Y H:i" }}</td>
+          <td>
+            <div class="sr-actions">
+              <a href="{% url 'admin_semester_result_generate' batch.pk %}" class="sr-btn sr-btn-generate"><i class="fas fa-gears"></i> Generate</a>
+              {% if batch.generated_pdf %}
+              <a href="{% url 'admin_semester_result_view' batch.pk %}" class="sr-btn sr-btn-view"><i class="fas fa-eye"></i> View</a>
+              {% else %}
+              <span class="sr-btn sr-btn-disabled"><i class="fas fa-eye"></i> View</span>
+              {% endif %}
+              {% if batch.status != 'APPROVED' %}
+              <form method="POST" action="{% url 'admin_semester_result_approve' batch.pk %}" class="sr-action-form">
+                {% csrf_token %}
+                <button type="submit" class="sr-btn sr-btn-approve"><i class="fas fa-circle-check"></i> Approve</button>
+              </form>
+              {% else %}
+              <span class="sr-btn sr-btn-disabled"><i class="fas fa-circle-check"></i> Approved</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-file-circle-plus"></i>No uploads yet for this cohort.</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-clock-rotate-left"></i> Recent Result Uploads</div>
+  {% if recent_batches %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Batch</th><th>Status</th><th>Uploaded By</th><th>Uploaded</th></tr></thead>
+      <tbody>
+        {% for batch in recent_batches %}
+        <tr>
+          <td>{{ batch.academic_year }} - {{ batch.department.code }} - Sem {{ batch.semester }} - #{{ batch.pk }}</td>
+          <td>{{ batch.get_status_display }}</td>
+          <td>{{ batch.uploaded_by.get_full_name|default:batch.uploaded_by.username }}</td>
+          <td>{{ batch.uploaded_at|date:"d M Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-folder-open"></i>No semester result uploads yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

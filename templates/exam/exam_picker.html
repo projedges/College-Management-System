@@ -1,0 +1,51 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_sub %}{{ page_sub }}{% endblock %}
+{% block nav_grace %}{% if mode == 'grace' %}active{% endif %}{% endblock %}
+{% block nav_versions %}{% if mode == 'versions' %}active{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-card">
+  <div class="d-title">
+    <i class="{% if mode == 'grace' %}fas fa-star-half-stroke{% else %}fas fa-clock-rotate-left{% endif %}"></i>
+    Select Exam
+  </div>
+  {% if rows %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Exam</th>
+          <th>Semester</th>
+          <th>Dates</th>
+          <th>Marks</th>
+          <th>{% if mode == 'grace' %}Grace Applied{% else %}Versions{% endif %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td style="font-weight:700;color:var(--deep)">{{ row.exam.name }}</td>
+          <td>Sem {{ row.exam.semester }}</td>
+          <td style="color:var(--muted)">{{ row.exam.start_date|date:"d M Y" }} to {{ row.exam.end_date|date:"d M Y" }}</td>
+          <td>{{ row.marks_count }}</td>
+          <td>{% if mode == 'grace' %}{{ row.grace_count }}{% else %}{{ row.version_count }}{% endif %}</td>
+          <td style="text-align:right">
+            {% if mode == 'grace' %}
+            <a href="{% url 'exam_grace_marks' row.exam.pk %}" class="btn-purple" style="font-size:12px;padding:7px 14px"><i class="fas fa-star-half-stroke"></i> Open</a>
+            {% else %}
+            <a href="{% url 'exam_result_versions' row.exam.pk %}" class="btn-purple" style="font-size:12px;padding:7px 14px"><i class="fas fa-clock-rotate-left"></i> Open</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-file-pen"></i>{{ empty_text }}</div>
+  {% endif %}
+</div>
+{% endblock %}

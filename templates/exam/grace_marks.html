@@ -1,0 +1,123 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Grace Marks — {{ exam.name }}{% endblock %}
+{% block nav_grace %}on{% endblock %}
+{% block breadcrumb %} / {{ exam.name }} / Grace Marks{% endblock %}
+{% block page_title %}Grace Marks — {{ exam.name }}{% endblock %}
+{% block page_sub %}Apply grace marks to borderline failing students. All changes are fully audited.{% endblock %}
+
+{% block content %}
+
+{% if grace_rule %}
+<div style="padding:12px 18px;background:rgba(124,58,237,.07);border:1.5px solid rgba(124,58,237,.2);border-radius:10px;margin-bottom:18px;display:flex;gap:18px;flex-wrap:wrap">
+  <div><span style="font-size:11px;font-weight:700;color:rgba(124,58,237,.7);text-transform:uppercase">Max per subject</span><div style="font-size:18px;font-weight:800;color:#7c3aed">{{ grace_rule.max_grace_per_subject }}</div></div>
+  <div><span style="font-size:11px;font-weight:700;color:rgba(124,58,237,.7);text-transform:uppercase">Max total</span><div style="font-size:18px;font-weight:800;color:#7c3aed">{{ grace_rule.max_grace_total }}</div></div>
+  <div><span style="font-size:11px;font-weight:700;color:rgba(124,58,237,.7);text-transform:uppercase">Failing only</span><div style="font-size:18px;font-weight:800;color:#7c3aed">{% if grace_rule.apply_only_if_failing %}Yes{% else %}No{% endif %}</div></div>
+  <div><span style="font-size:11px;font-weight:700;color:rgba(124,58,237,.7);text-transform:uppercase">Passing min</span><div style="font-size:18px;font-weight:800;color:#7c3aed">{{ passing_min }}%</div></div>
+</div>
+{% else %}
+<div style="padding:12px 18px;background:#fef9c3;border:1.5px solid #fde047;border-radius:10px;margin-bottom:18px;font-size:13px;color:#854d0e">
+  <i class="fas fa-triangle-exclamation"></i> No grace marks rule configured for this college's evaluation scheme. Grace marks can still be applied manually below.
+</div>
+{% endif %}
+
+<!-- Filters -->
+<form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:flex-end">
+  <div>
+    <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">Department</label>
+    <select name="dept" class="form-control" style="width:auto" onchange="this.form.submit()">
+      <option value="">All Departments</option>
+      {% for d in departments %}<option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }} — {{ d.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">Subject</label>
+    <select name="subject" class="form-control" style="width:auto" onchange="this.form.submit()">
+      <option value="">All Subjects</option>
+      {% for s in subjects %}<option value="{{ s.pk }}" {% if subject_filter == s.pk|stringformat:'s' %}selected{% endif %}>{{ s.code }} — {{ s.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-outline" style="font-size:12px">Filter</button>
+  <a href="?failing=1{% if dept_filter %}&dept={{ dept_filter }}{% endif %}" class="btn btn-outline" style="font-size:12px;color:#ef4444;border-color:#ef4444">Show Failing Only</a>
+</form>
+
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-star-half-stroke"></i> Student Marks — Grace Application</div>
+  {% if borderline %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Subject</th>
+          <th>Marks</th>
+          <th>%</th>
+          <th>Gap to Pass</th>
+          <th>Status</th>
+          <th>Apply Grace</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in borderline %}
+        <tr style="{% if row.grace_applied %}opacity:.6{% endif %}">
+          <td>
+            <div style="font-weight:600;color:var(--deep)">{{ row.marks.student.user.get_full_name|default:row.marks.student.roll_number }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ row.marks.student.roll_number }}</div>
+          </td>
+          <td>
+            <div style="font-weight:600">{{ row.marks.subject.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ row.marks.subject.code }}</div>
+          </td>
+          <td style="text-align:center;font-weight:700;color:{% if row.is_failing %}#ef4444{% else %}var(--teal){% endif %}">
+            {{ row.marks.marks_obtained|floatformat:0 }}/{{ row.marks.max_marks|floatformat:0 }}
+          </td>
+          <td style="text-align:center;font-weight:600">{{ row.pct }}%</td>
+          <td style="text-align:center">
+            {% if row.is_failing %}
+            <span style="font-size:12px;font-weight:700;color:#ef4444">-{{ row.gap }}%</span>
+            {% else %}
+            <span style="font-size:12px;color:var(--muted)">Passing</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.grace_applied %}
+            <span class="dbadge dbadge-active"><i class="fas fa-check"></i> Applied</span>
+            {% elif row.is_failing %}
+            <span class="dbadge dbadge-red">Failing</span>
+            {% else %}
+            <span class="dbadge" style="background:rgba(13,115,119,.08);color:var(--teal)">Passing</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not row.grace_applied %}
+            <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="apply">
+              <input type="hidden" name="marks_id" value="{{ row.marks.pk }}">
+              <input type="number" name="grace_amount" placeholder="Marks" step="0.5" min="0.5" max="{{ row.max_grace }}"
+                style="width:70px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px" required>
+              <input type="text" name="reason" placeholder="Reason"
+                style="width:130px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px" required>
+              <button type="submit" class="btn-purple" style="padding:5px 10px;font-size:11px"
+                onclick="return confirm('Apply grace marks to {{ row.marks.student.roll_number }}?')">
+                <i class="fas fa-plus"></i> Apply
+              </button>
+            </form>
+            {% else %}
+            <span style="font-size:12px;color:var(--muted)">Done</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-star"></i> No marks found for the selected filters.</div>
+  {% endif %}
+</div>
+
+<div class="hint-box">
+  Grace marks are applied immediately and the SGPA is recalculated. Every application is recorded in the audit log.
+  After applying grace marks, re-compute results on the <a href="{% url 'exam_results' exam.pk %}" style="color:#7c3aed">Results page</a>.
+</div>
+{% endblock %}

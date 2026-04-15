@@ -11,8 +11,7 @@
 <a href="#whats-new" data-section-target="whats-new" class="sb-link"><i class="fas fa-bolt"></i> What's New{% if new_assignments or new_quizzes %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">!</span>{% endif %}</a>
 <a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
 <a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
-<a href="#results" data-section-target="results" class="sb-link"><i class="fas fa-chart-bar"></i> Results</a>
-<a href="#academic-track" data-section-target="academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academic Track</a>
+<a href="#academic-track" data-section-target="academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academics &amp; Results</a>
 <a href="#course-structure" data-section-target="course-structure" class="sb-link"><i class="fas fa-list-ol"></i> Course Structure</a>
 <a href="#internals" data-section-target="internals" class="sb-link"><i class="fas fa-table-list"></i> Internal Marks</a>
 <a href="#quizzes" data-section-target="quizzes" class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
@@ -512,12 +511,12 @@
 
 </section>
 
-<section data-dashboard-pane="results" class="dashboard-pane">
+<section data-dashboard-pane="academic-track" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-chart-bar"></i> Semester Results &mdash; All Years</div>
-    <div class="section-meta">Every semester, every subject, every grade &mdash; in one place.</div>
+    <div class="d-title"><i class="fas fa-chart-line"></i> Academics &amp; Results</div>
+    <div class="section-meta">Official semester results, credit progress, academic standing, and feedback in one place.</div>
     <div class="action-row">
-      <a href="{% url 'student_result_report_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-file-pdf"></i> Download PDF Report</a>
+      <a href="{% url 'student_transcript_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-scroll"></i> Download Transcript</a>
     </div>
     {% if result_breakdown %}
     <!-- Semester tabs &mdash; oldest to newest -->
@@ -653,6 +652,91 @@
     {% endfor %}
     {% else %}
     <div class="empty"><i class="fas fa-chart-bar"></i>No results published yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-chart-line"></i> SGPA Trend</div>
+      {% if semester_results %}
+      <div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:10px 0;margin-bottom:8px">
+        {% for r in semester_results %}
+        {% widthratio r.gpa 10 100 as bar_h %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--teal)">{{ r.gpa }}</div>
+          <div style="width:100%;background:{% if r.gpa >= 8 %}var(--teal){% elif r.gpa >= 6 %}var(--gold){% else %}var(--red){% endif %};border-radius:4px 4px 0 0;height:{{ bar_h }}px;min-height:8px"></div>
+          <div style="font-size:10px;color:var(--muted)">S{{ r.semester }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="font-size:12px;color:var(--muted);text-align:center">CGPA: <strong style="color:var(--teal)">{{ cgpa }}</strong></div>
+      {% else %}
+      <div class="empty"><i class="fas fa-chart-line"></i>No SGPA trend yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-scroll"></i> Credit Progress</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ academic_credit_summary.earned_credits }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Credits Earned</div></div>
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">{{ academic_credit_summary.current_semester_credits }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Semester Credits</div></div>
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ academic_credit_summary.passed_subjects }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Subjects Cleared</div></div>
+        <div style="padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">{{ academic_credit_summary.current_subjects }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Current Courses</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-graduation-cap"></i> Academic Standing</div>
+    {% if on_probation %}
+    <div style="padding:10px 14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:12px;color:#991b1b;font-weight:600;margin-bottom:14px">
+      <i class="fas fa-triangle-exclamation"></i> Academic Concern &mdash; active backlogs or low CGPA detected.
+    </div>
+    {% endif %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px">
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ cgpa|default:"&mdash;" }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">CGPA</div></div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">Sem {{ student.current_semester }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Year {{ year_of_study }} of Study</div></div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if backlog_count == 0 %}var(--teal){% elif backlog_count <= 2 %}var(--gold){% else %}var(--red){% endif %}">{{ backlog_count }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Active Backlogs</div></div>
+      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)"><div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;color:{% if academic_standing == 'Distinction' or academic_standing == 'First Class' %}var(--teal){% elif academic_standing == 'At Risk' %}var(--red){% else %}var(--deep){% endif %}">{{ academic_standing|default:"&mdash;" }}</div><div style="font-size:11px;color:var(--muted);margin-top:4px">Academic Class</div></div>
+    </div>
+  </div>
+
+  {% if assignment_score_trend %}
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-file-pen"></i> Assignment Score Trend</div>
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Assignment</th><th>Subject</th><th>Score</th><th>Date</th><th>Feedback</th></tr></thead>
+        <tbody>
+          {% for a in assignment_score_trend %}
+          <tr><td style="font-weight:600;color:var(--deep)">{{ a.title }}</td><td style="font-size:12px;color:var(--muted)">{{ a.subject }}</td><td><span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--teal)">{{ a.marks|floatformat:1 }}</span></td><td style="font-size:12px;color:var(--muted)">{{ a.date|date:"d M Y" }}</td><td style="font-size:12px;color:var(--muted)">{{ a.feedback|default:"&mdash;"|truncatechars:50 }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="d-card">
+    <div class="d-card-title"><i class="fas fa-comments"></i> Faculty Feedback</div>
+    <div class="section-meta">Feedback windows opened by the college admin.</div>
+    {% if pending_feedback %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Feedback</th><th>Faculty / Subject</th><th>Due</th><th></th></tr></thead>
+        <tbody>
+          {% for cycle in pending_feedback %}
+          <tr><td style="font-weight:600;color:var(--deep)">{{ cycle.title }}</td><td style="font-size:12px;color:var(--muted)">{% if cycle.faculty %}{{ cycle.faculty.user.get_full_name|default:cycle.faculty.user.username }}{% else %}All faculty{% endif %}{% if cycle.subject %} &middot; {{ cycle.subject.code }}{% endif %}</td><td style="font-size:12px;color:var(--muted)">{{ cycle.end_date|date:"d M Y" }}</td><td style="text-align:right"><a href="{% url 'student_faculty_feedback_submit' cycle.pk %}" class="btn-sm btn-sm-teal"><i class="fas fa-paper-plane"></i> Give Feedback</a></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif submitted_feedback %}
+    {% for response in submitted_feedback %}
+    <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6"><div><div style="font-size:13px;font-weight:700;color:var(--deep)">{{ response.cycle.title }}</div><div style="font-size:11px;color:var(--muted)">{{ response.submitted_at|date:"d M Y" }}</div></div><span class="dbadge dbadge-active">{{ response.average_rating }}/5 submitted</span></div>
+    {% endfor %}
+    {% else %}
+    <div class="empty"><i class="fas fa-comments"></i>No open feedback forms right now.</div>
     {% endif %}
   </div>
 </section>
@@ -974,117 +1058,6 @@
     {% if not new_assignments and not new_quizzes and not new_announcements %}
     <div class="empty"><i class="fas fa-check-circle"></i>All caught up &mdash; nothing new in the last 7 days.</div>
     {% endif %}
-  </div>
-</section>
-
-<!-- ACADEMIC TRACK -->
-<section data-dashboard-pane="academic-track" class="dashboard-pane">
-  <div class="two-col">
-    <div class="d-card">
-      <div class="d-card-title"><i class="fas fa-chart-line"></i> SGPA Trend &mdash; All Semesters</div>
-      {% if semester_results %}
-      <div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:10px 0;margin-bottom:8px">
-        {% for r in semester_results %}
-        {% widthratio r.gpa 10 100 as bar_h %}
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div style="font-size:11px;font-weight:700;color:var(--teal)">{{ r.gpa }}</div>
-          <div style="width:100%;background:{% if r.gpa >= 8 %}var(--teal){% elif r.gpa >= 6 %}var(--gold){% else %}var(--red){% endif %};border-radius:4px 4px 0 0;height:{{ bar_h }}px;min-height:8px;transition:height .5s"></div>
-          <div style="font-size:10px;color:var(--muted)">S{{ r.semester }}</div>
-        </div>
-        {% endfor %}
-      </div>
-      <div style="font-size:12px;color:var(--muted);text-align:center">CGPA (weighted): <strong style="color:var(--teal)">{{ cgpa }}</strong></div>
-      {% with best=semester_results|dictsort:"gpa"|last %}
-      {% if best %}
-      <div style="margin-top:12px;padding:10px 14px;background:rgba(13,115,119,.06);border-radius:10px;border:1px solid rgba(13,115,119,.15);font-size:12px;color:var(--deep)">
-        <i class="fas fa-trophy" style="color:var(--gold);margin-right:6px"></i>
-        Best semester: <strong>Sem {{ best.semester }}</strong> with <strong style="color:var(--teal)">{{ best.gpa }} SGPA</strong>
-        ({{ best.percentage|floatformat:1 }}%)
-      </div>
-      {% endif %}
-      {% endwith %}
-      {% else %}
-      <div class="empty"><i class="fas fa-chart-line"></i>No results published yet.</div>
-      {% endif %}
-    </div>
-
-    <div class="d-card">
-      <div class="d-card-title"><i class="fas fa-calendar-check"></i> Attendance by Semester</div>
-      {% if att_by_semester %}
-      <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding:8px 0;margin-bottom:8px">
-        {% for row in att_by_semester %}
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div style="font-size:10px;font-weight:700;color:{% if row.pct >= 75 %}var(--teal){% elif row.pct >= 60 %}var(--gold){% else %}var(--red){% endif %}">{{ row.pct }}%</div>
-          {% widthratio row.pct 100 100 as ah %}
-          <div style="width:100%;background:{% if row.pct >= 75 %}var(--teal){% elif row.pct >= 60 %}var(--gold){% else %}var(--red){% endif %};border-radius:4px 4px 0 0;height:{{ ah }}px;min-height:6px;opacity:.8"></div>
-          <div style="font-size:10px;color:var(--muted)">S{{ row.semester }}</div>
-        </div>
-        {% endfor %}
-      </div>
-      <div style="font-size:11px;color:var(--muted);text-align:center">75% threshold required per subject</div>
-      {% else %}
-      <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Assignment score trend -->
-  {% if assignment_score_trend %}
-  <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-file-pen"></i> Assignment Score Trend</div>
-    <div class="section-meta">All graded assignments over time.</div>
-    <div class="table-scroll">
-      <table class="dtable">
-        <thead><tr><th>Assignment</th><th>Subject</th><th>Score</th><th>Date</th><th>Feedback</th></tr></thead>
-        <tbody>
-          {% for a in assignment_score_trend %}
-          <tr>
-            <td style="font-weight:600;color:var(--deep)">{{ a.title }}</td>
-            <td style="font-size:12px;color:var(--muted)">{{ a.subject }}</td>
-            <td><span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--teal)">{{ a.marks|floatformat:1 }}</span></td>
-            <td style="font-size:12px;color:var(--muted)">{{ a.date|date:"d M Y" }}</td>
-            <td style="font-size:12px;color:var(--muted)">{{ a.feedback|default:"&mdash;"|truncatechars:50 }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
-  <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-graduation-cap"></i> Academic Standing</div>
-    {% if on_probation %}
-    <div style="padding:10px 14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;font-size:12px;color:#991b1b;font-weight:600;margin-bottom:14px">
-      <i class="fas fa-triangle-exclamation"></i> Academic Probation &mdash; attendance below 75% or active backlogs detected.
-    </div>
-    {% endif %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px">
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--teal)">{{ cgpa|default:"&mdash;" }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">CGPA</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:{% if overall_attendance and overall_attendance >= att_rule.effective_min_overall %}var(--teal){% else %}var(--red){% endif %}">{{ overall_attendance|default:"&mdash;" }}{% if overall_attendance %}%{% endif %}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Current Attendance</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep)">Sem {{ student.current_semester }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Year {{ year_of_study }} of Study</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if backlog_count == 0 %}var(--teal){% elif backlog_count <= 2 %}var(--gold){% else %}var(--red){% endif %}">{{ backlog_count }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Active Backlogs</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;color:{% if academic_standing == 'Distinction' or academic_standing == 'First Class' %}var(--teal){% elif academic_standing == 'At Risk' %}var(--red){% else %}var(--deep){% endif %}">{{ academic_standing|default:"&mdash;" }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Academic Class</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--r)">
-        <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:{% if fee and fee.status == 'PAID' %}var(--teal){% elif fee and fee.status == 'PARTIAL' %}var(--gold){% else %}var(--red){% endif %}">{{ fee.get_status_display|default:"&mdash;" }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Fee Status (Sem {{ fee.semester|default:"&mdash;" }})</div>
-      </div>
-    </div>
   </div>
 </section>
 

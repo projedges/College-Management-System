@@ -55,6 +55,8 @@
                 <a href="{% url 'exam_hall_tickets' exam.pk %}" class="dbadge" style="background:rgba(13,115,119,.08);color:var(--teal);text-decoration:none"><i class="fas fa-id-card"></i> Hall Tickets</a>
                 <a href="{% url 'exam_marks_overview' exam.pk %}" class="dbadge dbadge-warning" style="text-decoration:none"><i class="fas fa-table-list"></i> Marks</a>
                 <a href="{% url 'exam_results' exam.pk %}" class="dbadge dbadge-active" style="text-decoration:none"><i class="fas fa-chart-bar"></i> Results</a>
+                <a href="{% url 'exam_grace_marks' exam.pk %}" class="dbadge dbadge-purple" style="text-decoration:none"><i class="fas fa-star-half-stroke"></i> Grace</a>
+                <a href="{% url 'exam_result_versions' exam.pk %}" class="dbadge" style="background:rgba(100,116,139,.08);color:var(--muted);text-decoration:none"><i class="fas fa-clock-rotate-left"></i> History</a>
               </div>
             </td>
           </tr>
