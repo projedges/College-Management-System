@@ -65,6 +65,8 @@ urlpatterns = [
     path('dashboard/admin/faculty/add/', views.admin_faculty_add, name='admin_faculty_add'),
     path('dashboard/admin/faculty/<int:pk>/edit/', views.admin_faculty_edit, name='admin_faculty_edit'),
     path('dashboard/admin/faculty/<int:pk>/delete/', views.admin_faculty_delete, name='admin_faculty_delete'),
+    path('dashboard/admin/faculty-feedback/', views.admin_faculty_feedback, name='admin_faculty_feedback'),
+    path('dashboard/admin/faculty-feedback/<int:pk>/toggle/', views.admin_faculty_feedback_toggle, name='admin_faculty_feedback_toggle'),
     path('dashboard/admin/hods/', views.admin_hods, name='admin_hods'),
     path('dashboard/admin/hods/add/', views.admin_hod_add, name='admin_hod_add'),
     path('dashboard/admin/hods/<int:pk>/delete/', views.admin_hod_delete, name='admin_hod_delete'),
@@ -112,6 +114,15 @@ urlpatterns = [
     path('dashboard/admin/save-colors/', views.admin_save_colors, name='admin_save_colors'),
     path('dashboard/admin/contact-support/', views.admin_contact_support, name='admin_contact_support'),
 
+    # Semester Results
+    path('dashboard/admin/semester-results/', views.admin_semester_results, name='admin_semester_results'),
+    path('dashboard/admin/semester-results/template/', views.admin_semester_result_template, name='admin_semester_result_template'),
+    path('dashboard/admin/semester-results/upload/', views.admin_semester_result_upload, name='admin_semester_result_upload'),
+    path('dashboard/admin/semester-results/<int:batch_id>/generate/', views.admin_semester_result_generate, name='admin_semester_result_generate'),
+    path('dashboard/admin/semester-results/<int:batch_id>/view/', views.admin_semester_result_view, name='admin_semester_result_view'),
+    path('dashboard/admin/semester-results/<int:batch_id>/approve/', views.admin_semester_result_approve, name='admin_semester_result_approve'),
+    path('dashboard/student/transcripts/<int:transcript_id>/download/', views.student_semester_transcript_download, name='student_semester_transcript_download'),
+
     path('dashboard/hod/', views.hod_dashboard, name='hod_dashboard'),
     path('dashboard/hod/approve/<int:pk>/', views.hod_approve, name='hod_approve'),
     path('dashboard/hod/leave/<int:pk>/review/', views.hod_leave_review, name='hod_leave_review'),
@@ -139,6 +150,7 @@ urlpatterns = [
     path('dashboard/lab/', views.lab_staff_dashboard, name='lab_staff_dashboard'),
     path('dashboard/student/', views.student_dashboard, name='student_dashboard'),
     path('dashboard/student/profile/edit/', views.student_profile_edit, name='student_profile_edit'),
+    path('dashboard/student/faculty-feedback/<int:cycle_id>/', views.student_faculty_feedback_submit, name='student_faculty_feedback_submit'),
     path('dashboard/student/assignments/<int:pk>/submit/', views.student_submit_assignment, name='student_submit_assignment'),
     path('dashboard/student/fees/pay/', views.student_fee_payment, name='student_fee_payment'),
     path('dashboard/student/fees/razorpay/create-order/', views.razorpay_create_order, name='razorpay_create_order'),
@@ -187,6 +199,7 @@ urlpatterns = [
     path('dashboard/student/exam/<int:exam_id>/override/', views.student_request_override, name='student_request_override'),
 
     # Exam staff management
+    path('dashboard/exam/profile/', views.exam_profile, name='exam_profile'),
     path('dashboard/exam/staff/', views.exam_staff_list, name='exam_staff_list'),
     path('dashboard/exam/staff/add/', views.exam_staff_add, name='exam_staff_add'),
     path('dashboard/exam/staff/<int:pk>/toggle/', views.exam_staff_toggle, name='exam_staff_toggle'),
@@ -196,5 +209,13 @@ urlpatterns = [
     path('dashboard/exam/schemes/<int:pk>/delete/', views.exam_scheme_delete, name='exam_scheme_delete'),
     # Valuation assignments
     path('dashboard/exam/<int:exam_id>/valuation/', views.exam_valuation, name='exam_valuation'),
+    # Grace marks
+    path('dashboard/exam/grace-marks/', views.exam_grace_marks_overview, name='exam_grace_marks_overview'),
+    path('dashboard/exam/<int:exam_id>/grace-marks/', views.exam_grace_marks, name='exam_grace_marks'),
+    # Result version history
+    path('dashboard/exam/result-versions/', views.exam_result_versions_overview, name='exam_result_versions_overview'),
+    path('dashboard/exam/<int:exam_id>/result-versions/', views.exam_result_versions, name='exam_result_versions'),
+    # Formal transcript PDF
+    path('dashboard/student/transcript/pdf/', views.student_transcript_pdf, name='student_transcript_pdf'),
     path('subject/<int:subject_id>/', views.subject_detail_view, name='subject_detail'),
 ]

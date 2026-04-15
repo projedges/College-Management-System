@@ -1221,6 +1221,57 @@ class FacultyPerformance(models.Model):
     
 
 
+class FacultyFeedbackCycle(models.Model):
+    """College admin creates feedback windows for students to review faculty."""
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='faculty_feedback_cycles')
+    title = models.CharField(max_length=150)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='faculty_feedback_cycles')
+    semester = models.IntegerField(null=True, blank=True)
+    subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True, related_name='feedback_cycles')
+    faculty = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedback_cycles')
+    questions = models.TextField(default="Clarity of teaching\nSubject knowledge\nPunctuality and preparation\nStudent engagement\nDoubt clarification")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_feedback_cycles')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-start_date', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def question_list(self):
+        return [q.strip() for q in self.questions.splitlines() if q.strip()]
+
+
+class FacultyFeedbackResponse(models.Model):
+    cycle = models.ForeignKey(FacultyFeedbackCycle, on_delete=models.CASCADE, related_name='responses')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='faculty_feedback_responses')
+    ratings = models.JSONField(default=dict)
+    comments = models.TextField(blank=True, default='')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('cycle', 'student')
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"{self.student.roll_number} - {self.cycle.title}"
+
+    @property
+    def average_rating(self):
+        values = []
+        for value in self.ratings.values():
+            try:
+                values.append(float(value))
+            except (TypeError, ValueError):
+                continue
+        return round(sum(values) / len(values), 2) if values else 0
+
+
 class CourseSubject(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -1869,6 +1920,10 @@ class ExamStaff(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name()} [{self.get_exam_role_display()}] — {self.college.code}"
+
+    @property
+    def designation(self):
+        return self.get_exam_role_display()
 
     @property
     def can_publish(self):
@@ -2813,3 +2868,88 @@ class CollegeFeatureConfig(models.Model):
 
     def __str__(self):
         return f"Feature config — {self.college.code}"
+
+
+# ── SEMESTER RESULT BATCH ─────────────────────────────────────────────────────
+
+class SemesterResultBatch(models.Model):
+    STATUS_CHOICES = (
+        ('UPLOADED',  'Uploaded'),
+        ('GENERATED', 'Generated'),
+        ('APPROVED',  'Approved'),
+    )
+    college       = models.ForeignKey(College, on_delete=models.CASCADE, related_name='semester_result_batches')
+    department    = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='semester_result_batches')
+    academic_year = models.CharField(max_length=20)
+    semester      = models.PositiveIntegerField()
+    uploaded_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='semester_result_uploads')
+    source_file   = models.FileField(upload_to='semester_results/uploads/')
+    generated_pdf = models.FileField(upload_to='semester_results/generated/', null=True, blank=True)
+    status        = models.CharField(max_length=12, choices=STATUS_CHOICES, default='UPLOADED')
+    student_count = models.PositiveIntegerField(default=0)
+    subject_count = models.PositiveIntegerField(default=0)
+    uploaded_at   = models.DateTimeField(auto_now_add=True)
+    generated_at  = models.DateTimeField(null=True, blank=True)
+    approved_at   = models.DateTimeField(null=True, blank=True)
+    approved_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name='approved_semester_result_batches')
+
+    class Meta:
+        ordering = ['-uploaded_at', '-id']
+
+    def __str__(self):
+        return f"{self.academic_year} - {self.department.code} - Sem {self.semester} - Batch {self.pk}"
+
+
+class SemesterResultStudent(models.Model):
+    STATUS_CHOICES = (
+        ('GENERATED', 'Generated'),
+        ('APPROVED',  'Approved'),
+    )
+    batch                 = models.ForeignKey(SemesterResultBatch, on_delete=models.CASCADE, related_name='student_results')
+    student               = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semester_result_transcripts')
+    roll_number_snapshot  = models.CharField(max_length=50)
+    username_snapshot     = models.CharField(max_length=150)
+    full_name_snapshot    = models.CharField(max_length=255, blank=True, default='')
+    total_marks_obtained  = models.FloatField(default=0)
+    total_max_marks       = models.FloatField(default=0)
+    percentage            = models.FloatField(default=0)
+    sgpa                  = models.FloatField(default=0)
+    cgpa                  = models.FloatField(default=0)
+    semester_credits      = models.PositiveIntegerField(default=0)
+    overall_credits       = models.PositiveIntegerField(default=0)
+    result_status         = models.CharField(max_length=10, default='PASS')
+    pdf_file              = models.FileField(upload_to='semester_results/students/', null=True, blank=True)
+    status                = models.CharField(max_length=12, choices=STATUS_CHOICES, default='GENERATED')
+    generated_at          = models.DateTimeField(auto_now_add=True)
+    approved_at           = models.DateTimeField(null=True, blank=True)
+    approved_by           = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                              related_name='approved_semester_result_students')
+
+    class Meta:
+        unique_together = ('batch', 'student')
+        ordering = ['student__roll_number', 'id']
+
+    def __str__(self):
+        return f"{self.roll_number_snapshot} - {self.batch.academic_year} Sem {self.batch.semester}"
+
+
+class SemesterResultSubject(models.Model):
+    student_result        = models.ForeignKey(SemesterResultStudent, on_delete=models.CASCADE, related_name='subjects')
+    subject               = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='semester_result_subjects')
+    subject_code_snapshot = models.CharField(max_length=50)
+    subject_name_snapshot = models.CharField(max_length=255)
+    marks_obtained        = models.FloatField(default=0)
+    max_marks             = models.FloatField(default=100)
+    grade                 = models.CharField(max_length=5, blank=True, default='')
+    grade_point           = models.FloatField(default=0.0)
+    status                = models.CharField(max_length=10, default='PASS')
+    credits               = models.PositiveIntegerField(default=0)
+    display_order         = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('student_result', 'subject')
+        ordering = ['display_order', 'subject_code_snapshot', 'id']
+
+    def __str__(self):
+        return f"{self.student_result.roll_number_snapshot} - {self.subject_code_snapshot}"

@@ -1,0 +1,100 @@
+{% extends 'exam/base_exam.html' %}
+{% block title %}Result History — {{ exam.name }}{% endblock %}
+{% block nav_versions %}on{% endblock %}
+{% block breadcrumb %} / {{ exam.name }} / Result History{% endblock %}
+{% block page_title %}Result Version History — {{ exam.name }}{% endblock %}
+{% block page_sub %}Full snapshot trail for every result change — revaluations, moderations, and publications.{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:flex-end">
+  <div>
+    <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">Department</label>
+    <select name="dept" class="form-control" style="width:auto" onchange="this.form.submit()">
+      <option value="">All Departments</option>
+      {% for d in departments %}<option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">Roll Number</label>
+    <input type="text" name="roll" value="{{ roll_filter }}" placeholder="Search roll…"
+      class="form-control" style="width:160px">
+  </div>
+  <button type="submit" class="btn btn-outline" style="font-size:12px"><i class="fas fa-search"></i> Search</button>
+</form>
+
+{% if rows %}
+{% for row in rows %}
+<div class="d-card" style="margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    <div>
+      <div style="font-size:14px;font-weight:800;color:var(--deep)">
+        {{ row.result.student.user.get_full_name|default:row.result.student.roll_number }}
+        <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px">{{ row.result.student.roll_number }}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">{{ row.result.student.department.name }} &middot; Semester {{ row.result.semester }}</div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--teal)">{{ row.result.sgpa }}</div>
+        <div style="font-size:10px;color:var(--muted)">Current SGPA</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--deep)">{{ row.result.percentage|floatformat:1 }}%</div>
+        <div style="font-size:10px;color:var(--muted)">Current %</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#7c3aed">{{ row.versions|length }}</div>
+        <div style="font-size:10px;color:var(--muted)">Snapshots</div>
+      </div>
+    </div>
+  </div>
+
+  {% if row.versions %}
+  <div class="table-scroll">
+    <table class="dtable" style="font-size:12px">
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>SGPA</th>
+          <th>Total Marks</th>
+          <th>Percentage</th>
+          <th>Reason</th>
+          <th>Snapshotted By</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in row.versions %}
+        <tr>
+          <td style="text-align:center">
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(124,58,237,.1);color:#7c3aed">v{{ v.version_no }}</span>
+          </td>
+          <td style="text-align:center;font-weight:700;color:var(--teal)">{{ v.sgpa }}</td>
+          <td style="text-align:center">{{ v.total_marks|floatformat:0 }}</td>
+          <td style="text-align:center">{{ v.percentage|floatformat:1 }}%</td>
+          <td style="color:var(--muted)">{{ v.snapshot_reason|default:"—" }}</td>
+          <td>{{ v.created_by.get_full_name|default:v.created_by.username|default:"System" }}</td>
+          <td style="color:var(--muted)">{{ v.created_at|date:"d M Y, g:i A" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="font-size:12px;color:var(--muted);padding:8px 0"><i class="fas fa-info-circle"></i> No snapshots yet. Snapshots are created before publish, moderation, and revaluation.</div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="d-card">
+  <div class="empty"><i class="fas fa-clock-rotate-left"></i> No results found for the selected filters.</div>
+</div>
+{% endif %}
+
+<div class="hint-box">
+  Snapshots are automatically created before every publish, moderation, and revaluation. They cannot be deleted — they form the permanent audit trail.
+</div>
+{% endblock %}

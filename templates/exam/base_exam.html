@@ -5,24 +5,13 @@
   Exam Department base template.
   Extends base_admin.html so the session timer, sidebar scaffold, and all
   shared CSS classes are inherited without duplication.
-  Purple overrides are scoped to body.exam-layout so they NEVER bleed into
-  the standard admin dashboard.
 {% endcomment %}
 
 {% block extra_css %}
 <style>
-  /* ---- Scope all exam-dept overrides to html.exam-layout ---- */
-  html.exam-layout .adm-sidebar            { background:#1e1b4b !important; }
-  html.exam-layout .sb-link.on,
-  html.exam-layout .sb-link.active         { background:#7c3aed !important; color:#fff !important; }
-  html.exam-layout .sb-link:hover          { background:rgba(255,255,255,.07) !important; }
-  html.exam-layout .form-control:focus     { border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.1); }
-  html.exam-layout .d-title i,
-  html.exam-layout .d-card-title i         { color:#7c3aed; }
-  html.exam-layout .hint-box               { border-color:#c4b5fd; }
-  .dbadge-purple { background:rgba(124,58,237,.1); color:#7c3aed; }
-  .btn-purple    { display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;background:#7c3aed;color:#fff;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;border:none;cursor:pointer; }
-  .btn-purple:hover { background:#6d28d9; transform:translateY(-1px); }
+  .dbadge-purple { background:rgba(13,115,119,.1); color:var(--teal); }
+  .btn-purple    { display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;border:none;cursor:pointer; }
+  .btn-purple:hover { background:var(--teal-dk); transform:translateY(-1px); }
 </style>
 <script>document.documentElement.classList.add('exam-layout');</script>
 {% endblock %}
@@ -31,9 +20,9 @@
 
 {% comment %} Override the sidebar role label to show "Exam Dept" {% endcomment %}
 {% block extra_sidebar %}
-<div style="padding:8px 10px;background:rgba(124,58,237,.15);border-bottom:1px solid rgba(255,255,255,.06);margin:-10px -10px 10px">
+<div style="padding:8px 10px;background:rgba(13,115,119,.12);border-bottom:1px solid rgba(255,255,255,.06);margin:-10px -10px 10px">
   <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px">Examination Department</div>
-  <div style="font-size:12px;font-weight:600;color:#c4b5fd;margin-top:2px">{% if ec %}{{ ec.get_exam_role_display|default:ec.designation }}{% endif %}</div>
+  <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.72);margin-top:2px">{% if ec %}{{ ec.get_exam_role_display|default:ec.designation }}{% endif %}</div>
 </div>
 {% endblock %}
 
@@ -48,7 +37,10 @@
 
 <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 5px">Operations</div>
 <a href="{% url 'exam_revaluations' %}" class="sb-link {% block nav_reval %}{% endblock %}"><i class="fas fa-rotate-left"></i> Revaluations</a>
+<a href="{% url 'exam_grace_marks_overview' %}" class="sb-link {% block nav_grace %}{% endblock %}"><i class="fas fa-star-half-stroke"></i> Grace Marks</a>
+<a href="{% url 'exam_result_versions_overview' %}" class="sb-link {% block nav_versions %}{% endblock %}"><i class="fas fa-clock-rotate-left"></i> Result History</a>
 
 <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 5px">Staff</div>
+<a href="{% url 'exam_profile' %}" class="sb-link {% block nav_profile %}{% endblock %}"><i class="fas fa-id-badge"></i> My Profile</a>
 <a href="{% url 'exam_staff_list' %}" class="sb-link {% block nav_staff %}{% endblock %}"><i class="fas fa-users"></i> Exam Staff</a>
 {% endblock %}

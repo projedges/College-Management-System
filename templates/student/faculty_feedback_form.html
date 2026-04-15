@@ -1,0 +1,39 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Faculty Feedback{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}Faculty Feedback{% endblock %}
+{% block page_sub %}{{ cycle.title }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}#academic-track" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Academic Track</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<form method="POST" class="d-card" style="max-width:760px">
+  {% csrf_token %}
+  <div class="d-title"><i class="fas fa-comments"></i> {{ cycle.title }}</div>
+  <div class="section-meta">
+    {% if cycle.faculty %}{{ cycle.faculty.user.get_full_name|default:cycle.faculty.user.username }}{% else %}Faculty feedback{% endif %}
+    {% if cycle.subject %} &middot; {{ cycle.subject.code }} - {{ cycle.subject.name }}{% endif %}
+    &middot; Open until {{ cycle.end_date|date:"d M Y" }}
+  </div>
+  {% for question in questions %}
+  <div class="form-group">
+    <label>{{ question }}</label>
+    <select name="question_{{ forloop.counter }}" class="form-control" required>
+      <option value="">Select rating</option>
+      <option value="5">5 - Excellent</option>
+      <option value="4">4 - Good</option>
+      <option value="3">3 - Satisfactory</option>
+      <option value="2">2 - Needs Improvement</option>
+      <option value="1">1 - Poor</option>
+    </select>
+  </div>
+  {% endfor %}
+  <div class="form-group">
+    <label>Comments</label>
+    <textarea name="comments" rows="4" class="form-control" placeholder="Optional comments for the department"></textarea>
+  </div>
+  <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i> Submit Feedback</button>
+</form>
+{% endblock %}

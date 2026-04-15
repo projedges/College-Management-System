@@ -13,7 +13,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.db.models import Sum, Q, Count, F, ExpressionWrapper, FloatField
+from django.db.models import Sum, Q, Count, F, ExpressionWrapper, FloatField, Avg
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -31,6 +31,7 @@ from ..models import (
     LessonPlan, LeaveApplication, CollegeBranding,
     ExamController, ExamType, ExamSchedule, HallTicket, ExamResult, RevaluationRequest,
     ExamStaff, EvaluationScheme, ValuationAssignment, ExamStaffLog,
+    FacultyFeedbackCycle, FacultyFeedbackResponse,
     AttendanceRule, AttendanceExemption, AttendanceCorrection, EligibilityOverride,
     FeeBreakdown, SupplyExamRegistration, TimetableBreak,
     Regulation, CurriculumEntry, ElectivePool, ElectiveSelection,
@@ -41,6 +42,7 @@ from ..models import (
     ResultVersion, ResultFreeze, MarksModeration,
     ExamEligibilityConfig, StudentLifecycleEvent, DisciplinaryRecord,
     ElectiveWaitlist, CollegeFeatureConfig,
+    SemesterResultBatch, SemesterResultStudent, SemesterResultSubject,
 )
 
 # --- Helpers for Performance and Validation ---
@@ -1783,11 +1785,14 @@ def principal_dashboard(request):
         faculty_count=Count('faculty', distinct=True),
         subject_count=Count('subject', distinct=True),
     ).order_by("name")
-    faculty_list = Faculty.objects.filter(department__college=college).select_related("user", "department")[:100]
-    students_list = Student.objects.filter(department__college=college).select_related("user", "department")[:100]
-    hod_list = HOD.objects.filter(department__college=college).select_related("user", "department")[:50]
-    total_faculty_count = Faculty.objects.filter(department__college=college).count()
-    total_students_count = Student.objects.filter(department__college=college).count()
+    faculty_qs = Faculty.objects.filter(department__college=college).select_related("user", "department")
+    students_qs = Student.objects.filter(department__college=college).select_related("user", "department")
+    hod_qs = HOD.objects.filter(department__college=college).select_related("user", "department")
+    faculty_list = faculty_qs[:100]
+    students_list = students_qs[:100]
+    hod_list = hod_qs[:50]
+    total_faculty_count = faculty_qs.count()
+    total_students_count = students_qs.count()
     announcements = _scope_announcements_for_college(college).order_by("-created_at")[:8]
     recent_students = Student.objects.filter(department__college=college).select_related("user", "department").order_by("-created_at")[:8]
 
@@ -1831,7 +1836,7 @@ def principal_dashboard(request):
         dept_attendance.append({'dept': dept, 'pct': pct, 'total': agg['total'], 'defaulters': defaulters_by_dept.get(dept.id, 0)})
 
     # Students by semester across college
-    sem_distribution = students_list.values('current_semester').annotate(
+    sem_distribution = students_qs.values('current_semester').annotate(
         count=Count('id')
     ).order_by('current_semester')
 
@@ -2692,6 +2697,180 @@ def _get_evaluation_scheme(college, department=None):
     return qs.filter(department__isnull=True).first()
 
 
+# ── SEMESTER RESULT HELPERS ──────────────────────────────────────────────────
+
+def _format_academic_year(value):
+    year = _safe_int(value, default=0)
+    if year <= 0:
+        return ''
+    return f"{year}-{str(year + 1)[-2:]}"
+
+
+def _parse_academic_year_start(value):
+    if not value:
+        return None
+    raw = str(value).strip()
+    head = raw.split('-', 1)[0].strip()
+    return _safe_int(head, default=None)
+
+
+def _get_semester_result_academic_year_options(college):
+    years = set()
+    for year in Student.objects.filter(department__college=college, is_deleted=False).values_list('admission_year', flat=True).distinct():
+        formatted = _format_academic_year(year)
+        if formatted:
+            years.add(formatted)
+    for year in SemesterResultBatch.objects.filter(college=college).values_list('academic_year', flat=True).distinct():
+        formatted = str(year or '').strip()
+        if formatted:
+            years.add(formatted)
+    return sorted(years, reverse=True)
+
+
+def _get_semester_result_students(college, department, semester, academic_year):
+    start_year = _parse_academic_year_start(academic_year)
+    qs = Student.objects.select_related('user', 'department').filter(
+        department=department,
+        department__college=college,
+        current_semester=semester,
+        status='ACTIVE',
+    ).order_by('roll_number')
+    if start_year:
+        qs = qs.filter(admission_year=start_year)
+    return qs
+
+
+def _get_semester_result_subjects(department, semester, academic_year):
+    base_qs = Subject.objects.filter(department=department, semester=semester).order_by('code', 'name', 'id')
+    subject_field_names = {field.name for field in Subject._meta.get_fields()}
+    if 'academic_year' in subject_field_names:
+        scoped_qs = base_qs.filter(Q(academic_year=academic_year) | Q(academic_year=''))
+        return scoped_qs if scoped_qs.exists() else base_qs
+    return base_qs
+
+
+def _semester_result_fixed_headers():
+    return ['roll_number', 'username', 'first_name', 'last_name', 'academic_year', 'department_code', 'semester']
+
+
+def _semester_result_subject_headers(subjects):
+    return [f"{subject.code} - {subject.name}" for subject in subjects]
+
+
+def _build_semester_result_preview_pdf(batch):
+    from io import BytesIO
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+
+    styles, PRIMARY, DARK, MUTED = _get_pdf_styles()
+    batch = SemesterResultBatch.objects.select_related('college', 'department').prefetch_related(
+        'student_results__student__user',
+        'student_results__student__department',
+        'student_results__subjects__subject',
+    ).get(pk=batch.pk)
+
+    student_results = list(batch.student_results.all().order_by('student__roll_number'))
+    combined_buf = BytesIO()
+    combined_doc = SimpleDocTemplate(combined_buf, pagesize=A4,
+                                     leftMargin=12*mm, rightMargin=12*mm,
+                                     topMargin=10*mm, bottomMargin=10*mm)
+    combined_elements = []
+    pdf_map = {}
+
+    for index, transcript in enumerate(student_results):
+        student = transcript.student
+        subjects = list(transcript.subjects.all().order_by('display_order', 'subject_code_snapshot'))
+        student_name = student.user.get_full_name() or transcript.full_name_snapshot or transcript.username_snapshot
+
+        elements = []
+        _build_pdf_header(elements, batch.college, 'SEMESTER TRANSCRIPT',
+                          f'{batch.academic_year} | {batch.department.code} | Semester {batch.semester}',
+                          styles=styles, PRIMARY=PRIMARY)
+        elements.append(Spacer(1, 8))
+
+        info_table = Table([
+            [Paragraph('Name', styles['FieldLabel']), Paragraph(student_name, styles['FieldValue']),
+             Paragraph('Roll No.', styles['FieldLabel']), Paragraph(transcript.roll_number_snapshot, styles['FieldValue'])],
+            [Paragraph('Department', styles['FieldLabel']), Paragraph(student.department.name, styles['FieldValue']),
+             Paragraph('Branch', styles['FieldLabel']), Paragraph(batch.department.code, styles['FieldValue'])],
+            [Paragraph('Semester', styles['FieldLabel']), Paragraph(str(batch.semester), styles['FieldValue']),
+             Paragraph('Academic Year', styles['FieldLabel']), Paragraph(batch.academic_year, styles['FieldValue'])],
+        ], colWidths=['20%', '30%', '20%', '30%'])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+            ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#dbe4ea')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#dbe4ea')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 10))
+
+        subject_rows = [[
+            Paragraph('<b>Subject</b>', styles['TableHeader']),
+            Paragraph('<b>Marks</b>', styles['TableHeader']),
+            Paragraph('<b>Grade</b>', styles['TableHeader']),
+            Paragraph('<b>Status</b>', styles['TableHeader']),
+            Paragraph('<b>Credits</b>', styles['TableHeader']),
+        ]]
+        for sr in subjects:
+            subject_rows.append([
+                Paragraph(f"{sr.subject_code_snapshot} - {sr.subject_name_snapshot}", styles['TableCell']),
+                Paragraph(f"{sr.marks_obtained:.0f}/{sr.max_marks:.0f}", styles['TableCell']),
+                Paragraph(sr.grade or 'NA', styles['TableCell']),
+                Paragraph(sr.status, styles['TableCell']),
+                Paragraph(str(sr.credits), styles['TableCell']),
+            ])
+        subject_table = Table(subject_rows, colWidths=['44%', '14%', '12%', '16%', '14%'])
+        subject_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d7377')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#dbe4ea')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#e5edf2')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 7), ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(subject_table)
+        elements.append(Spacer(1, 10))
+
+        summary_table = Table([
+            [Paragraph('Semester SGPA', styles['FieldLabel']), Paragraph(f"{transcript.sgpa:.2f}", styles['FieldValue']),
+             Paragraph('Overall CGPA', styles['FieldLabel']), Paragraph(f"{transcript.cgpa:.2f}", styles['FieldValue'])],
+            [Paragraph('Semester Credits', styles['FieldLabel']), Paragraph(str(transcript.semester_credits), styles['FieldValue']),
+             Paragraph('Overall Credits', styles['FieldLabel']), Paragraph(str(transcript.overall_credits), styles['FieldValue'])],
+            [Paragraph('Status', styles['FieldLabel']), Paragraph(transcript.result_status, styles['FieldValue']),
+             Paragraph('Percentage', styles['FieldLabel']), Paragraph(f"{transcript.percentage:.2f}%", styles['FieldValue'])],
+        ], colWidths=['22%', '28%', '22%', '28%'])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+            ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#dbe4ea')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#dbe4ea')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(summary_table)
+
+        student_buf = BytesIO()
+        student_doc = SimpleDocTemplate(student_buf, pagesize=A4,
+                                        leftMargin=12*mm, rightMargin=12*mm,
+                                        topMargin=10*mm, bottomMargin=10*mm)
+        student_doc.build(list(elements))
+        pdf_map[transcript.pk] = student_buf.getvalue()
+
+        combined_elements.extend(elements)
+        if index != len(student_results) - 1:
+            combined_elements.append(PageBreak())
+
+    combined_doc.build(combined_elements)
+    return combined_buf.getvalue(), pdf_map
+
+
 def _calculate_grade(obtained, max_marks, scheme=None):
     """
     Calculate letter grade. Uses EvaluationScheme cutoffs if available,
@@ -3197,8 +3376,8 @@ def student_dashboard(request):
     else:
         academic_standing = 'At Risk'
 
-    # Academic probation if attendance < 75% or backlog > 2
-    on_probation = (overall_attendance is not None and overall_attendance < 75) or backlog_count > 2
+    # Academic concern here is based on academic records only. Attendance has its own tab.
+    on_probation = backlog_count > 2 or (cgpa is not None and cgpa < 5.0)
 
     profile = StudentProfile.objects.filter(user=user).first()
     address = Address.objects.filter(user=user).order_by('id').first()
@@ -3382,6 +3561,39 @@ def student_dashboard(request):
         for s in all_graded
     ]
 
+    current_semester_credits = sum(s.credits or 0 for s in course_subjects)
+    passed_marks = Marks.objects.filter(student=student).exclude(grade='F').select_related('subject')
+    earned_subject_ids = set()
+    earned_credits = 0
+    for mark in passed_marks:
+        if mark.subject_id not in earned_subject_ids:
+            earned_subject_ids.add(mark.subject_id)
+            earned_credits += mark.subject.credits or 0
+    academic_credit_summary = {
+        'current_semester_credits': current_semester_credits,
+        'earned_credits': earned_credits,
+        'passed_subjects': len(earned_subject_ids),
+        'current_subjects': course_subjects.count(),
+    }
+
+    current_subject_ids = list(course_subjects.values_list('id', flat=True))
+    current_faculty_ids = list(FacultySubject.objects.filter(subject_id__in=current_subject_ids).values_list('faculty_id', flat=True))
+    submitted_feedback_ids = set(FacultyFeedbackResponse.objects.filter(student=student).values_list('cycle_id', flat=True))
+    pending_feedback = FacultyFeedbackCycle.objects.filter(
+        college=college,
+        is_active=True,
+        start_date__lte=today,
+        end_date__gte=today,
+    ).filter(
+        Q(department__isnull=True) | Q(department=student.department),
+        Q(semester__isnull=True) | Q(semester=student.current_semester),
+        Q(subject__isnull=True) | Q(subject_id__in=current_subject_ids),
+        Q(faculty__isnull=True) | Q(faculty_id__in=current_faculty_ids),
+    ).exclude(id__in=submitted_feedback_ids).select_related('subject', 'faculty__user').order_by('end_date')
+    submitted_feedback = FacultyFeedbackResponse.objects.filter(student=student).select_related(
+        'cycle__subject', 'cycle__faculty__user'
+    ).order_by('-submitted_at')[:5]
+
     # All payments for fee timeline
     all_payments = Payment.objects.filter(fee=fee).order_by('paid_at', 'created_at') if fee else []
     fee_timeline = []
@@ -3474,6 +3686,9 @@ def student_dashboard(request):
         'eligibility': eligibility,
         'att_rule': att_rule,
         'assignment_score_trend': assignment_score_trend,
+        'academic_credit_summary': academic_credit_summary,
+        'pending_feedback': pending_feedback,
+        'submitted_feedback': submitted_feedback,
         'fee_timeline': fee_timeline,
         'backlog_count': backlog_count,
         'year_of_study': year_of_study,
@@ -3588,6 +3803,65 @@ def student_profile_edit(request):
         'emergency_contact': emergency_contact,
     }
     return render(request, 'student/profile_form.html', context)
+
+
+@login_required
+def student_faculty_feedback_submit(request, cycle_id):
+    try:
+        student = Student.objects.select_related('department__college').get(user=request.user)
+    except Student.DoesNotExist:
+        messages.error(request, 'Student profile not found. Contact admin.')
+        return redirect('home')
+
+    today = timezone.localdate()
+    course_subject_ids = list(Subject.objects.filter(
+        department=student.department,
+        semester=student.current_semester,
+    ).values_list('id', flat=True))
+    faculty_ids = list(FacultySubject.objects.filter(subject_id__in=course_subject_ids).values_list('faculty_id', flat=True))
+    cycle = get_object_or_404(
+        FacultyFeedbackCycle.objects.filter(
+            college=student.department.college,
+            is_active=True,
+            start_date__lte=today,
+            end_date__gte=today,
+        ).filter(
+            Q(department__isnull=True) | Q(department=student.department),
+            Q(semester__isnull=True) | Q(semester=student.current_semester),
+            Q(subject__isnull=True) | Q(subject_id__in=course_subject_ids),
+            Q(faculty__isnull=True) | Q(faculty_id__in=faculty_ids),
+        ),
+        pk=cycle_id,
+    )
+
+    if FacultyFeedbackResponse.objects.filter(cycle=cycle, student=student).exists():
+        messages.info(request, 'You have already submitted this feedback.')
+        return redirect(f"{reverse('student_dashboard')}#academic-track")
+
+    if request.method == 'POST':
+        ratings = {}
+        for idx, question in enumerate(cycle.question_list, start=1):
+            value = _safe_int(request.POST.get(f'question_{idx}'), default=0)
+            if value < 1 or value > 5:
+                messages.error(request, 'Please rate every question from 1 to 5.')
+                return redirect('student_faculty_feedback_submit', cycle_id=cycle.pk)
+            ratings[question] = value
+        FacultyFeedbackResponse.objects.create(
+            cycle=cycle,
+            student=student,
+            ratings=ratings,
+            comments=request.POST.get('comments', '').strip(),
+        )
+        messages.success(request, 'Faculty feedback submitted. Thank you.')
+        return redirect(f"{reverse('student_dashboard')}#academic-track")
+
+    return render(request, 'student/faculty_feedback_form.html', {
+        'student': student,
+        'cycle': cycle,
+        'questions': cycle.question_list,
+        'college': student.department.college,
+        'branding': _get_college_branding(student.department.college),
+    })
 
 
 @login_required
@@ -4246,6 +4520,12 @@ def student_reval_fee_pay(request, marks_id):
         Marks.objects.select_related('subject', 'exam'),
         pk=marks_id, student=student
     )
+
+    # Guard: result must be published before revaluation is allowed
+    er = ExamResult.objects.filter(student=student, exam=marks.exam, status='PUBLISHED').first()
+    if not er:
+        messages.error(request, 'Results are not published yet. Revaluation is only available after results are published.')
+        return redirect(f"{reverse('student_dashboard')}#results")
 
     college = student.department.college
     fee_per_subject = _get_reval_fee_per_subject(college, student.department, student.current_semester)
@@ -5551,6 +5831,77 @@ def admin_faculty_delete(request, pk):
         faculty.user.delete()
         messages.success(request, 'Faculty deleted.')
     return redirect('/dashboard/admin/#faculty')
+
+
+@login_required
+def admin_faculty_feedback(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    departments = _scope_departments(request).order_by('name')
+    faculty = Faculty.objects.filter(department__college=college, is_deleted=False).select_related('user', 'department').order_by('department__code', 'user__first_name')
+    subjects = Subject.objects.filter(department__college=college).select_related('department').order_by('department__code', 'semester', 'code')
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        dept_id = request.POST.get('department') or None
+        semester = _safe_int(request.POST.get('semester'), default=0) or None
+        subject_id = request.POST.get('subject') or None
+        faculty_id = request.POST.get('faculty') or None
+        questions = request.POST.get('questions', '').strip()
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+
+        if not title or not start_date or not end_date or not questions:
+            messages.error(request, 'Title, dates, and questions are required.')
+        elif end_date < start_date:
+            messages.error(request, 'End date must be on or after start date.')
+        else:
+            FacultyFeedbackCycle.objects.create(
+                college=college,
+                title=title,
+                department_id=dept_id,
+                semester=semester,
+                subject_id=subject_id,
+                faculty_id=faculty_id,
+                questions=questions,
+                start_date=start_date,
+                end_date=end_date,
+                created_by=request.user,
+            )
+            messages.success(request, 'Faculty feedback cycle created.')
+            return redirect('admin_faculty_feedback')
+
+    cycles = FacultyFeedbackCycle.objects.filter(college=college).select_related(
+        'department', 'subject', 'faculty__user'
+    ).prefetch_related('responses')
+    cycle_rows = []
+    for cycle in cycles:
+        responses = list(cycle.responses.all())
+        avg = round(sum(r.average_rating for r in responses) / len(responses), 2) if responses else 0
+        cycle_rows.append({'cycle': cycle, 'responses': len(responses), 'avg': avg})
+
+    return render(request, 'admin_panel/faculty_feedback.html', {
+        'departments': departments,
+        'faculty': faculty,
+        'subjects': subjects,
+        'cycle_rows': cycle_rows,
+        'today': timezone.localdate(),
+        'branding': _get_college_branding(college),
+    })
+
+
+@login_required
+def admin_faculty_feedback_toggle(request, pk):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    cycle = get_object_or_404(FacultyFeedbackCycle, pk=pk, college=college)
+    if request.method == 'POST':
+        cycle.is_active = not cycle.is_active
+        cycle.save(update_fields=['is_active'])
+        messages.success(request, f'Feedback cycle {"opened" if cycle.is_active else "closed"}.')
+    return redirect('admin_faculty_feedback')
 
 
 # ── HODs ────────────────────────────────────────────────
@@ -7469,7 +7820,7 @@ def exam_marks_moderation(request, exam_id):
             with transaction.atomic():
                 marks_qs = Marks.objects.filter(exam=exam, subject=mod.subject)
                 # Snapshot results before moderation
-                affected_students = marks_qs.values_list('student_id', flat=True).distinct()
+                affected_students = list(marks_qs.values_list('student_id', flat=True).distinct())
                 for sid in affected_students:
                     result_obj = Result.objects.filter(student_id=sid, semester=exam.semester).first()
                     if result_obj:
@@ -7482,6 +7833,7 @@ def exam_marks_moderation(request, exam_id):
                             created_by=request.user,
                         )
                 # Apply moderation
+                applied_count = 0
                 for mark in marks_qs:
                     if mod.moderation_type == 'ADD':
                         mark.marks_obtained = min(mark.marks_obtained + mod.value, mark.max_marks)
@@ -7492,6 +7844,15 @@ def exam_marks_moderation(request, exam_id):
                     mark.grade = _calculate_grade(mark.marks_obtained, mark.max_marks)
                     mark.grade_point = _grade_to_point(mark.grade)
                     mark.save(update_fields=['marks_obtained', 'grade', 'grade_point'])
+                    applied_count += 1
+                # Recalculate SGPA for all affected students after moderation
+                for sid in affected_students:
+                    student_obj = Student.objects.filter(pk=sid).first()
+                    if student_obj:
+                        sgpa, total_credits = _compute_sgpa(student_obj, exam.semester, exam)
+                        Result.objects.filter(student_id=sid, semester=exam.semester).update(
+                            gpa=sgpa, sgpa=sgpa, total_credits=total_credits
+                        )
                 mod.applied = True
                 mod.applied_by = request.user
                 mod.applied_at = timezone.now()
@@ -7499,7 +7860,7 @@ def exam_marks_moderation(request, exam_id):
                 _audit('MARKS_UPDATED', request.user,
                        f"Moderation applied: {mod.subject.code} {mod.get_moderation_type_display()} {mod.value}. Reason: {mod.reason}",
                        college=ec.college, request=request)
-                messages.success(request, f'Moderation applied to {marks_qs.count()} marks records.')
+                messages.success(request, f'Moderation applied to {applied_count} marks records. SGPA recalculated.')
         return redirect('exam_marks_moderation', exam_id=exam.pk)
 
     return render(request, 'exam/moderation.html', {
@@ -7622,12 +7983,22 @@ def exam_results(request, exam_id):
                 return redirect('exam_results', exam_id=exam.pk)
 
             elif action == 'compute':
+                # Pre-fetch student→department map for per-dept scheme lookup
+                student_dept_map = {
+                    s.id: s.department
+                    for s in students_qs
+                }
+                student_obj_map = {s.id: s for s in students_qs}
+                scheme_cache = {}
                 for sid in student_ids:
                     m = marks_map.get(sid, {'total_obtained': 0, 'total_max': 0})
                     obtained = m['total_obtained'] or 0
                     max_m = m['total_max'] or 0
                     pct = round(obtained / max_m * 100, 1) if max_m > 0 else 0
-                    _scheme = _get_evaluation_scheme(ec.college)
+                    dept = student_dept_map.get(sid)
+                    if dept and dept.id not in scheme_cache:
+                        scheme_cache[dept.id] = _get_evaluation_scheme(ec.college, dept)
+                    _scheme = scheme_cache.get(dept.id if dept else None) or _get_evaluation_scheme(ec.college)
                     grade = _calculate_grade(obtained, max_m, scheme=_scheme) if max_m > 0 else 'NA'
                     is_pass = pct >= (_scheme.overall_passing_min if _scheme else 40.0)
                     ExamResult.objects.update_or_create(
@@ -7642,7 +8013,7 @@ def exam_results(request, exam_id):
                         }
                     )
                     # Compute and store SGPA in Result model
-                    student_obj = Student.objects.get(pk=sid)
+                    student_obj = student_obj_map.get(sid) or Student.objects.get(pk=sid)
                     sgpa, total_credits = _compute_sgpa(student_obj, exam.semester, exam)
                     Result.objects.update_or_create(
                         student_id=sid, semester=exam.semester,
@@ -7797,14 +8168,47 @@ def _exam_controller_redirect(request):
     return redirect('exam_dashboard')
 
 
+@login_required
+def exam_profile(request):
+    """Signed-in examination officer profile."""
+    ec = _exam_controller_guard(request)
+    if not ec:
+        messages.error(request, 'Exam Department access not found. Contact admin.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        request.user.first_name = request.POST.get('first_name', '').strip()
+        request.user.last_name = request.POST.get('last_name', '').strip()
+        request.user.email = request.POST.get('email', '').strip()
+        request.user.save(update_fields=['first_name', 'last_name', 'email'])
+
+        ec.phone_number = request.POST.get('phone_number', '').strip()
+        ec.save(update_fields=['phone_number'])
+        messages.success(request, 'Profile updated.')
+        return redirect('exam_profile')
+
+    scoped_departments = []
+    if isinstance(ec, ExamStaff):
+        scoped_departments = list(ec.departments.all().order_by('name'))
+
+    recent_log = ExamStaffLog.objects.filter(staff=ec).select_related('exam')[:10] if isinstance(ec, ExamStaff) else []
+
+    return render(request, 'exam/profile.html', {
+        'ec': ec,
+        'college': ec.college,
+        'scoped_departments': scoped_departments,
+        'recent_log': recent_log,
+        'branding': _get_college_branding(ec.college),
+    })
+
+
 # ── EXAM STAFF MANAGEMENT ─────────────────────────────────────────────────────
 
 @login_required
 def exam_staff_list(request):
     ec = _exam_controller_guard(request)
-    if not ec or not ec.can_publish:  # only CoE / Deputy can manage staff
-        messages.error(request, 'Only the Controller of Examinations can manage exam staff.')
-        return redirect('exam_dashboard')
+    if not ec:
+        return redirect('dashboard')
     staff = ExamStaff.objects.filter(college=ec.college).select_related('user').prefetch_related('departments').order_by('exam_role', 'user__first_name')
     return render(request, 'exam/staff_list.html', {
         'ec': ec, 'staff': staff, 'branding': _get_college_branding(ec.college),
@@ -7818,49 +8222,76 @@ def exam_staff_add(request):
         return redirect('exam_dashboard')
     college = ec.college
     departments = Department.objects.filter(college=college, is_deleted=False).order_by('name')
-    role_choices = ExamStaff.EXAM_ROLE_CHOICES
+    roles = ExamStaff.EXAM_ROLE_CHOICES
 
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
         exam_role = request.POST.get('exam_role', 'COORDINATOR')
         employee_id = request.POST.get('employee_id', '').strip()
         phone = request.POST.get('phone_number', '').strip()
         dept_ids = request.POST.getlist('departments')
 
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            messages.error(request, f'No user with username "{username}" found.')
-            return render(request, 'exam/staff_form.html', {'ec': ec, 'departments': departments, 'role_choices': role_choices, 'branding': _get_college_branding(college)})
+        form_context = {'ec': ec, 'departments': departments, 'roles': roles, 'branding': _get_college_branding(college)}
 
-        if ExamStaff.objects.filter(user=user).exists():
+        if not username or not first_name or not last_name or not employee_id:
+            messages.error(request, 'First name, last name, username, and employee ID are required.')
+            return render(request, 'exam/staff_form.html', form_context)
+
+        user = User.objects.filter(username=username).first()
+        if user and ExamStaff.objects.filter(user=user).exists():
             messages.error(request, f'{username} is already an exam staff member.')
-            return render(request, 'exam/staff_form.html', {'ec': ec, 'departments': departments, 'role_choices': role_choices, 'branding': _get_college_branding(college)})
+            return render(request, 'exam/staff_form.html', form_context)
 
         if ExamStaff.objects.filter(employee_id=employee_id).exists():
             messages.error(request, f'Employee ID "{employee_id}" already exists.')
-            return render(request, 'exam/staff_form.html', {'ec': ec, 'departments': departments, 'role_choices': role_choices, 'branding': _get_college_branding(college)})
+            return render(request, 'exam/staff_form.html', form_context)
 
-        staff = ExamStaff.objects.create(
-            user=user, college=college, exam_role=exam_role,
-            employee_id=employee_id, phone_number=phone,
-        )
-        if dept_ids:
-            staff.departments.set(Department.objects.filter(pk__in=dept_ids, college=college))
+        generated_password = ''
+        with transaction.atomic():
+            if user:
+                user.first_name = first_name
+                user.last_name = last_name
+                user.email = email
+                if password:
+                    user.set_password(password)
+                user.save()
+            else:
+                generated_password = password or get_random_string(10)
+                user = User.objects.create_user(
+                    username=username,
+                    password=generated_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                )
 
-        # Set UserRole to 7 (Exam Controller) if not already set
-        UserRole.objects.update_or_create(user=user, defaults={'role': 7, 'college': college})
+            staff = ExamStaff.objects.create(
+                user=user, college=college, exam_role=exam_role,
+                employee_id=employee_id, phone_number=phone,
+            )
+            if dept_ids:
+                staff.departments.set(Department.objects.filter(pk__in=dept_ids, college=college))
 
-        ExamStaffLog.objects.create(
-            staff=ec if isinstance(ec, ExamStaff) else None,
-            action='STAFF_ADDED',
-            description=f'Added {user.get_full_name()} as {staff.get_exam_role_display()}',
-        )
-        messages.success(request, f'{user.get_full_name()} added as {staff.get_exam_role_display()}.')
+            UserRole.objects.update_or_create(user=user, defaults={'role': 7, 'college': college})
+
+            ExamStaffLog.objects.create(
+                staff=ec if isinstance(ec, ExamStaff) else None,
+                action='STAFF_ADDED',
+                description=f'Added {user.get_full_name()} as {staff.get_exam_role_display()}',
+            )
+
+        if generated_password:
+            messages.success(request, f'{user.get_full_name()} added as {staff.get_exam_role_display()}. Temporary password: {generated_password}')
+        else:
+            messages.success(request, f'{user.get_full_name()} added as {staff.get_exam_role_display()}.')
         return redirect('exam_staff_list')
 
     return render(request, 'exam/staff_form.html', {
-        'ec': ec, 'departments': departments, 'role_choices': role_choices,
+        'ec': ec, 'departments': departments, 'roles': roles,
         'branding': _get_college_branding(college),
     })
 
@@ -8452,3 +8883,922 @@ def subject_detail_view(request, subject_id):
         'branding': _get_college_branding(student.department.college),
     }
     return render(request, 'dashboards/subject_board.html', context)
+
+
+# ── GRACE MARKS ───────────────────────────────────────────────────────────────
+
+@login_required
+def exam_grace_marks_overview(request):
+    ec = _exam_controller_guard(request)
+    if not ec or not ec.can_verify:
+        return redirect('exam_dashboard')
+
+    exams = Exam.objects.filter(college=ec.college).order_by('-start_date')
+    rows = []
+    for exam in exams:
+        rows.append({
+            'exam': exam,
+            'marks_count': Marks.objects.filter(exam=exam).count(),
+            'grace_count': GraceMarksApplication.objects.filter(marks__exam=exam, status='APPLIED').count(),
+        })
+
+    return render(request, 'exam/exam_picker.html', {
+        'ec': ec,
+        'rows': rows,
+        'mode': 'grace',
+        'page_title': 'Grace Marks',
+        'page_sub': 'Choose an exam to review and apply grace marks',
+        'empty_text': 'No exams available for grace marks yet.',
+        'branding': _get_college_branding(ec.college),
+    })
+
+
+@login_required
+def exam_grace_marks(request, exam_id):
+    """COE applies grace marks to borderline failing students per subject."""
+    ec = _exam_controller_guard(request)
+    if not ec or not ec.can_verify:
+        return redirect('exam_dashboard')
+    exam = get_object_or_404(Exam, pk=exam_id, college=ec.college)
+
+    # Only allow if results are computed (DRAFT or VERIFIED), not yet published
+    freeze_rec = ResultFreeze.objects.filter(college=ec.college, exam=exam).first()
+    if freeze_rec and freeze_rec.is_frozen:
+        messages.error(request, 'Results are frozen. Unfreeze before applying grace marks.')
+        return redirect('exam_results', exam_id=exam.pk)
+
+    # Get grace rule for this college's default scheme
+    scheme = EvaluationScheme.objects.filter(college=ec.college, is_active=True).first()
+    grace_rule = GraceMarksRule.objects.filter(scheme=scheme).first() if scheme else None
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'apply':
+            marks_id = request.POST.get('marks_id')
+            grace_amount = request.POST.get('grace_amount', '').strip()
+            reason = request.POST.get('reason', '').strip()
+
+            try:
+                grace_val = float(grace_amount)
+                if grace_val <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messages.error(request, 'Enter a valid positive grace amount.')
+                return redirect('exam_grace_marks', exam_id=exam.pk)
+
+            marks_obj = get_object_or_404(Marks, pk=marks_id, exam=exam)
+
+            # Validate against rule limits
+            if grace_rule:
+                if grace_val > grace_rule.max_grace_per_subject:
+                    messages.error(request, f'Grace cannot exceed {grace_rule.max_grace_per_subject} per subject.')
+                    return redirect('exam_grace_marks', exam_id=exam.pk)
+                if grace_rule.apply_only_if_failing:
+                    pct = (marks_obj.marks_obtained / marks_obj.max_marks * 100) if marks_obj.max_marks else 0
+                    passing_min = scheme.overall_passing_min if scheme else 40.0
+                    if pct >= passing_min:
+                        messages.error(request, 'Grace marks can only be applied to failing students.')
+                        return redirect('exam_grace_marks', exam_id=exam.pk)
+
+            with transaction.atomic():
+                # Check if already applied
+                existing = GraceMarksApplication.objects.filter(
+                    marks=marks_obj, status='APPLIED'
+                ).first()
+                if existing:
+                    messages.warning(request, 'Grace marks already applied for this student/subject.')
+                    return redirect('exam_grace_marks', exam_id=exam.pk)
+
+                app = GraceMarksApplication.objects.create(
+                    marks=marks_obj,
+                    rule=grace_rule,
+                    grace_amount=grace_val,
+                    reason=reason,
+                    status='APPLIED',
+                    requested_by=request.user,
+                    approved_by=request.user,
+                    applied_at=timezone.now(),
+                )
+
+                # Apply to marks
+                old_marks = marks_obj.marks_obtained
+                marks_obj.marks_obtained = min(marks_obj.marks_obtained + grace_val, marks_obj.max_marks)
+                marks_obj.grade = _calculate_grade(marks_obj.marks_obtained, marks_obj.max_marks)
+                marks_obj.grade_point = _grade_to_point(marks_obj.grade)
+                marks_obj.save(update_fields=['marks_obtained', 'grade', 'grade_point'])
+
+                # Recalculate SGPA
+                sgpa, total_credits = _compute_sgpa(marks_obj.student, marks_obj.subject.semester, exam)
+                Result.objects.filter(
+                    student=marks_obj.student, semester=marks_obj.subject.semester
+                ).update(gpa=sgpa, sgpa=sgpa, total_credits=total_credits)
+
+                _audit('MARKS_UPDATED', request.user,
+                       f"Grace marks applied: {marks_obj.student.roll_number} {marks_obj.subject.code} +{grace_val} ({old_marks} → {marks_obj.marks_obtained})",
+                       student=marks_obj.student, college=ec.college, request=request,
+                       old_value=str(old_marks), new_value=str(marks_obj.marks_obtained))
+
+            messages.success(request, f'Grace marks of {grace_val} applied to {marks_obj.student.roll_number} — {marks_obj.subject.code}.')
+            return redirect('exam_grace_marks', exam_id=exam.pk)
+
+    # Build list of borderline students (failing but close to passing)
+    passing_min = scheme.overall_passing_min if scheme else 40.0
+    dept_filter = request.GET.get('dept')
+    subject_filter = request.GET.get('subject')
+
+    marks_qs = Marks.objects.filter(exam=exam).select_related(
+        'student__user', 'student__department', 'subject'
+    ).order_by('student__roll_number', 'subject__name')
+
+    if dept_filter:
+        marks_qs = marks_qs.filter(student__department_id=dept_filter)
+    if subject_filter:
+        marks_qs = marks_qs.filter(subject_id=subject_filter)
+
+    # Annotate with grace application status
+    applied_ids = set(
+        GraceMarksApplication.objects.filter(
+            marks__exam=exam, status='APPLIED'
+        ).values_list('marks_id', flat=True)
+    )
+
+    borderline = []
+    for m in marks_qs:
+        pct = (m.marks_obtained / m.max_marks * 100) if m.max_marks else 0
+        gap = passing_min - pct
+        borderline.append({
+            'marks': m,
+            'pct': round(pct, 1),
+            'gap': round(gap, 1),
+            'is_failing': pct < passing_min,
+            'grace_applied': m.pk in applied_ids,
+            'max_grace': grace_rule.max_grace_per_subject if grace_rule else 5,
+        })
+
+    # Sort: failing first, then by gap ascending
+    borderline.sort(key=lambda x: (not x['is_failing'], x['gap']))
+
+    departments = Department.objects.filter(college=ec.college, is_deleted=False).order_by('name')
+    subjects = Subject.objects.filter(
+        department__college=ec.college, semester=exam.semester
+    ).order_by('name')
+
+    return render(request, 'exam/grace_marks.html', {
+        'ec': ec, 'exam': exam,
+        'borderline': borderline,
+        'grace_rule': grace_rule,
+        'scheme': scheme,
+        'passing_min': passing_min,
+        'departments': departments,
+        'subjects': subjects,
+        'dept_filter': dept_filter,
+        'subject_filter': subject_filter,
+        'branding': _get_college_branding(ec.college),
+    })
+
+
+# ── RESULT VERSION HISTORY ────────────────────────────────────────────────────
+
+@login_required
+def exam_result_versions_overview(request):
+    ec = _exam_controller_guard(request)
+    if not ec:
+        return redirect('dashboard')
+
+    exams = Exam.objects.filter(college=ec.college).order_by('-start_date')
+    rows = []
+    for exam in exams:
+        result_ids = Result.objects.filter(
+            semester=exam.semester,
+            student__department__college=ec.college,
+        ).values_list('id', flat=True)
+        rows.append({
+            'exam': exam,
+            'marks_count': Marks.objects.filter(exam=exam).count(),
+            'version_count': ResultVersion.objects.filter(result_id__in=result_ids).count(),
+        })
+
+    return render(request, 'exam/exam_picker.html', {
+        'ec': ec,
+        'rows': rows,
+        'mode': 'versions',
+        'page_title': 'Result History',
+        'page_sub': 'Choose an exam to view result version history',
+        'empty_text': 'No exams available for result history yet.',
+        'branding': _get_college_branding(ec.college),
+    })
+
+
+@login_required
+def exam_result_versions(request, exam_id):
+    """COE views the full version history of results for an exam."""
+    ec = _exam_controller_guard(request)
+    if not ec:
+        return redirect('dashboard')
+    exam = get_object_or_404(Exam, pk=exam_id, college=ec.college)
+
+    dept_filter = request.GET.get('dept')
+    roll_filter = request.GET.get('roll', '').strip()
+
+    results_qs = Result.objects.filter(
+        semester=exam.semester,
+        student__department__college=ec.college,
+    ).select_related('student__user', 'student__department').order_by('student__roll_number')
+
+    if dept_filter:
+        results_qs = results_qs.filter(student__department_id=dept_filter)
+    if roll_filter:
+        results_qs = results_qs.filter(student__roll_number__icontains=roll_filter)
+
+    # Prefetch versions
+    result_ids = list(results_qs.values_list('id', flat=True))
+    versions_map = {}
+    for v in ResultVersion.objects.filter(result_id__in=result_ids).select_related('created_by').order_by('result_id', '-version_no'):
+        versions_map.setdefault(v.result_id, []).append(v)
+
+    rows = []
+    for r in results_qs:
+        rows.append({
+            'result': r,
+            'versions': versions_map.get(r.pk, []),
+        })
+
+    departments = Department.objects.filter(college=ec.college, is_deleted=False).order_by('name')
+
+    return render(request, 'exam/result_versions.html', {
+        'ec': ec, 'exam': exam, 'rows': rows,
+        'departments': departments,
+        'dept_filter': dept_filter,
+        'roll_filter': roll_filter,
+        'branding': _get_college_branding(ec.college),
+    })
+
+
+# ── FORMAL TRANSCRIPT PDF ─────────────────────────────────────────────────────
+
+@login_required
+def student_transcript_pdf(request):
+    """Generate a formal academic transcript PDF for the student."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable, KeepTogether
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+    try:
+        student = Student.objects.select_related('department__college', 'user').get(user=request.user)
+    except Student.DoesNotExist:
+        messages.error(request, 'Student profile not found.')
+        return redirect('student_dashboard')
+
+    college = student.department.college
+    branding = _get_college_branding(college)
+    PRIMARY_HEX = branding.primary_color if branding else '#0d7377'
+
+    try:
+        profile = student.user.studentprofile
+    except Exception:
+        profile = None
+
+    # ── Data gathering ────────────────────────────────────────────────────────
+    results = Result.objects.filter(student=student).order_by('semester')
+    all_marks = (
+        Marks.objects.filter(student=student)
+        .select_related('subject')
+        .order_by('subject__semester', 'subject__name')
+    )
+    marks_by_sem = {}
+    for m in all_marks:
+        marks_by_sem.setdefault(m.subject.semester, []).append(m)
+
+    # Credit-weighted CGPA
+    cgpa = None
+    total_cp, total_cr = 0.0, 0
+    for r in results:
+        for m in marks_by_sem.get(r.semester, []):
+            cr = m.subject.credits or 0
+            total_cp += cr * _grade_to_point(m.grade or 'F')
+            total_cr += cr
+    if total_cr > 0:
+        cgpa = round(total_cp / total_cr, 2)
+
+    # ── Page setup ────────────────────────────────────────────────────────────
+    # A4 usable width = 210 - 15*2 = 180 mm
+    PAGE_W = 180 * mm
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=15*mm, rightMargin=15*mm,
+        topMargin=12*mm, bottomMargin=14*mm,
+    )
+
+    TEAL  = colors.HexColor(PRIMARY_HEX)
+    DEEP  = colors.HexColor('#071e26')
+    MUTED = colors.HexColor('#64748b')
+    LIGHT = colors.HexColor('#f0fdfa')
+    BORDER = colors.HexColor('#cbd5e1')
+    WHITE = colors.white
+
+    LABEL_STYLE = ParagraphStyle('lbl', fontName='Helvetica-Bold', fontSize=8,
+                                  textColor=DEEP, leading=11)
+    VALUE_STYLE = ParagraphStyle('val', fontName='Helvetica', fontSize=8,
+                                  textColor=DEEP, leading=11)
+    HDR_STYLE   = ParagraphStyle('hdr', fontName='Helvetica-Bold', fontSize=8,
+                                  textColor=WHITE, leading=11)
+    CELL_STYLE  = ParagraphStyle('cel', fontName='Helvetica', fontSize=8,
+                                  textColor=DEEP, leading=11)
+
+    def P(text, style=None, **kw):
+        """Shorthand Paragraph factory. Pass a ParagraphStyle or keyword overrides."""
+        if style is not None and not kw:
+            return Paragraph(text, style)
+        # Build a one-off style from keyword args
+        s = ParagraphStyle('_p', **kw)
+        return Paragraph(text, s)
+
+    elems = []
+
+    # ── 1. Header band ────────────────────────────────────────────────────────
+    header_tbl = Table([[
+        P(f'<b>{college.name}</b>',
+          fontName='Helvetica-Bold', fontSize=14, textColor=WHITE, leading=18),
+        P('<b>OFFICIAL TRANSCRIPT</b>',
+          fontName='Helvetica-Bold', fontSize=11, textColor=WHITE,
+          leading=14, alignment=TA_RIGHT),
+    ]], colWidths=[PAGE_W * 0.62, PAGE_W * 0.38])
+    header_tbl.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), TEAL),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING',    (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('LEFTPADDING',   (0, 0), (0,  -1), 14),
+        ('RIGHTPADDING',  (1, 0), (1,  -1), 14),
+        ('LEFTPADDING',   (1, 0), (1,  -1), 6),
+    ]))
+    elems.append(header_tbl)
+    elems.append(Spacer(1, 5*mm))
+
+    # ── 2. Student info table ─────────────────────────────────────────────────
+    # 4 columns: label | value | label | value
+    # widths: 32 + 56 + 36 + 56 = 180 mm
+    dob_str = (profile.date_of_birth.strftime('%d %b %Y')
+               if profile and profile.date_of_birth else '—')
+    full_name = student.user.get_full_name() or student.user.username
+
+    info_rows = [
+        [P('Student Name',    style=LABEL_STYLE),
+         P(full_name,         style=VALUE_STYLE),
+         P('Roll Number',     style=LABEL_STYLE),
+         P(student.roll_number, style=VALUE_STYLE)],
+        [P('Department',      style=LABEL_STYLE),
+         P(student.department.name, style=VALUE_STYLE),
+         P('Admission Year',  style=LABEL_STYLE),
+         P(str(student.admission_year), style=VALUE_STYLE)],
+        [P('Date of Birth',   style=LABEL_STYLE),
+         P(dob_str,           style=VALUE_STYLE),
+         P('Current Semester',style=LABEL_STYLE),
+         P(str(student.current_semester), style=VALUE_STYLE)],
+        [P('College',         style=LABEL_STYLE),
+         P(college.name,      style=VALUE_STYLE),
+         P('Status',          style=LABEL_STYLE),
+         P(student.get_status_display(), style=VALUE_STYLE)],
+    ]
+    info_tbl = Table(info_rows, colWidths=[32*mm, 58*mm, 34*mm, 56*mm])
+    info_tbl.setStyle(TableStyle([
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [WHITE, LIGHT]),
+        ('GRID',           (0, 0), (-1, -1), 0.3, BORDER),
+        ('TOPPADDING',     (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING',  (0, 0), (-1, -1), 5),
+        ('LEFTPADDING',    (0, 0), (-1, -1), 7),
+        ('RIGHTPADDING',   (0, 0), (-1, -1), 7),
+        ('VALIGN',         (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elems.append(info_tbl)
+    elems.append(Spacer(1, 4*mm))
+    elems.append(HRFlowable(width='100%', thickness=1, color=TEAL, spaceAfter=4*mm))
+
+    # ── 3. Semester-wise marks ────────────────────────────────────────────────
+    # col widths: Subject(60) Code(18) Credits(15) Marks(15) Max(13) %(14) Grade(14) GP(11) = 160mm
+    # + 20mm left/right padding absorbed → fits 180mm
+    COL_W = [60*mm, 18*mm, 15*mm, 15*mm, 13*mm, 14*mm, 14*mm, 11*mm]
+
+    for r in results:
+        sem_marks = marks_by_sem.get(r.semester, [])
+
+        # Semester header row — teal band
+        sem_label = (
+            f'Semester {r.semester}'
+            f'   SGPA: {r.sgpa:.2f}'
+            f'   Percentage: {r.percentage:.1f}%'
+            f'   Credits: {r.total_credits}'
+        )
+        sem_hdr = Table([[
+            P(f'<b>{sem_label}</b>',
+              fontName='Helvetica-Bold', fontSize=8.5, textColor=WHITE, leading=12),
+        ]], colWidths=[PAGE_W])
+        sem_hdr.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), TEAL),
+            ('TOPPADDING',    (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+        ]))
+
+        block = [sem_hdr]
+
+        if sem_marks:
+            # Column headers
+            hdr_row = [
+                P('<b>Subject</b>',  style=HDR_STYLE),
+                P('<b>Code</b>',     style=HDR_STYLE),
+                P('<b>Credits</b>',  style=HDR_STYLE),
+                P('<b>Marks</b>',    style=HDR_STYLE),
+                P('<b>Max</b>',      style=HDR_STYLE),
+                P('<b>%</b>',        style=HDR_STYLE),
+                P('<b>Grade</b>',    style=HDR_STYLE),
+                P('<b>GP</b>',       style=HDR_STYLE),
+            ]
+            tbl_rows = [hdr_row]
+            for m in sem_marks:
+                pct = round(m.marks_obtained / m.max_marks * 100, 1) if m.max_marks else 0
+                tbl_rows.append([
+                    P(m.subject.name,                style=CELL_STYLE),
+                    P(m.subject.code,                style=CELL_STYLE),
+                    P(str(m.subject.credits or '—'), style=CELL_STYLE),
+                    P(f'{m.marks_obtained:.0f}',     style=CELL_STYLE),
+                    P(f'{m.max_marks:.0f}',          style=CELL_STYLE),
+                    P(f'{pct:.1f}',                  style=CELL_STYLE),
+                    P(m.grade or '—',                style=CELL_STYLE),
+                    P(f'{m.grade_point:.1f}',        style=CELL_STYLE),
+                ])
+
+            marks_tbl = Table(tbl_rows, colWidths=COL_W)
+            marks_tbl.setStyle(TableStyle([
+                # Header row
+                ('BACKGROUND',    (0, 0), (-1, 0),  TEAL),
+                ('TEXTCOLOR',     (0, 0), (-1, 0),  WHITE),
+                # Data rows
+                ('ROWBACKGROUNDS',(0, 1), (-1, -1), [WHITE, LIGHT]),
+                ('GRID',          (0, 0), (-1, -1), 0.3, BORDER),
+                # Alignment — left for subject, center for all numeric cols
+                ('ALIGN',         (0, 0), (0,  -1), 'LEFT'),
+                ('ALIGN',         (1, 0), (-1, -1), 'CENTER'),
+                ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+                # Padding
+                ('TOPPADDING',    (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING',   (0, 0), (0,  -1), 6),
+                ('LEFTPADDING',   (1, 0), (-1, -1), 4),
+                ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+            ]))
+            block.append(marks_tbl)
+        else:
+            block.append(
+                P('No marks recorded for this semester.',
+                  fontName='Helvetica', fontSize=8, textColor=MUTED,
+                  leading=12, leftIndent=6)
+            )
+
+        block.append(Spacer(1, 3*mm))
+        elems.append(KeepTogether(block))
+
+    # ── 4. CGPA summary ───────────────────────────────────────────────────────
+    elems.append(HRFlowable(width='100%', thickness=1, color=TEAL, spaceBefore=2*mm, spaceAfter=3*mm))
+
+    if cgpa is not None:
+        standing = ('Distinction' if cgpa >= 8.5 else
+                    'First Class' if cgpa >= 7.0 else
+                    'Second Class' if cgpa >= 6.0 else
+                    'Pass' if cgpa >= 5.0 else 'Below Pass')
+        # 3 rows × 2 cols — much cleaner than 6 cols in one row
+        summary_rows = [
+            [P('<b>Semesters Completed</b>', style=LABEL_STYLE),
+             P(str(results.count()),         style=VALUE_STYLE)],
+            [P('<b>CGPA</b>',                style=LABEL_STYLE),
+             P(f'<b><font color="{PRIMARY_HEX}">{cgpa}</font></b>',
+               fontName='Helvetica-Bold', fontSize=11, textColor=TEAL, leading=14)],
+            [P('<b>Academic Standing</b>',   style=LABEL_STYLE),
+             P(standing,                     style=VALUE_STYLE)],
+        ]
+        sum_tbl = Table(summary_rows, colWidths=[50*mm, 130*mm])
+        sum_tbl.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), LIGHT),
+            ('GRID',          (0, 0), (-1, -1), 0.3, BORDER),
+            ('TOPPADDING',    (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+            ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elems.append(sum_tbl)
+
+    # ── 5. Footer ─────────────────────────────────────────────────────────────
+    elems.append(Spacer(1, 5*mm))
+    elems.append(P(
+        f'Generated on {timezone.localdate().strftime("%d %B %Y")}  |  {college.name}',
+        fontName='Helvetica', fontSize=7, textColor=MUTED,
+        leading=10, alignment=TA_CENTER,
+    ))
+    elems.append(P(
+        'This is a computer-generated transcript. For official use, obtain a stamped copy from the Examination Department.',
+        fontName='Helvetica', fontSize=6.5, textColor=MUTED,
+        leading=9, alignment=TA_CENTER, spaceBefore=2,
+    ))
+
+    doc.build(elems)
+    buf.seek(0)
+    roll = student.roll_number.replace('/', '-')
+    response = HttpResponse(buf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="transcript_{roll}.pdf"'
+    return response
+
+
+# ── SEMESTER RESULT VIEWS ─────────────────────────────────────────────────────
+
+@login_required
+def admin_semester_results(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+
+    college = _get_admin_college(request)
+    departments = _scope_departments(request).filter(is_deleted=False).order_by('name')
+    academic_year_options = _get_semester_result_academic_year_options(college)
+    selected_department = None
+    selected_students = Student.objects.none()
+    selected_subjects = Subject.objects.none()
+    selected_batches = SemesterResultBatch.objects.none()
+
+    academic_year = (request.GET.get('academic_year') or '').strip()
+    department_id = (request.GET.get('department') or '').strip()
+    semester = _safe_int(request.GET.get('semester'), default=None)
+
+    if academic_year and department_id and semester:
+        selected_department = departments.filter(pk=department_id).first()
+        if selected_department:
+            selected_students = _get_semester_result_students(college, selected_department, semester, academic_year)
+            selected_subjects = _get_semester_result_subjects(selected_department, semester, academic_year)
+            selected_batches = SemesterResultBatch.objects.filter(
+                college=college,
+                department=selected_department,
+                academic_year=academic_year,
+                semester=semester,
+            ).select_related('uploaded_by', 'approved_by').prefetch_related('student_results').order_by('-uploaded_at')
+
+    recent_batches = SemesterResultBatch.objects.filter(college=college).select_related(
+        'department', 'uploaded_by', 'approved_by'
+    ).order_by('-uploaded_at')[:20]
+
+    return render(request, 'admin_panel/semester_results.html', {
+        'college': college,
+        'branding': _get_college_branding(college),
+        'departments': departments,
+        'academic_year_options': academic_year_options,
+        'selected_department': selected_department,
+        'academic_year': academic_year,
+        'semester': semester,
+        'selected_students': selected_students,
+        'selected_subjects': selected_subjects,
+        'selected_batches': selected_batches,
+        'recent_batches': recent_batches,
+    })
+
+
+@login_required
+def admin_semester_result_template(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+
+    college = _get_admin_college(request)
+    academic_year = (request.GET.get('academic_year') or '').strip()
+    department_id = (request.GET.get('department') or '').strip()
+    semester = _safe_int(request.GET.get('semester'), default=None)
+    department = _scope_departments(request).filter(pk=department_id, is_deleted=False).first()
+
+    if not (academic_year and department and semester):
+        messages.error(request, 'Select academic year, department, and semester first.')
+        return redirect('admin_semester_results')
+
+    students = list(_get_semester_result_students(college, department, semester, academic_year))
+    subjects = list(_get_semester_result_subjects(department, semester, academic_year))
+
+    if not students:
+        messages.error(request, 'No matching students found for the selected filters.')
+        return redirect(
+            reverse('admin_semester_results') +
+            f'?academic_year={academic_year}&department={department.pk}&semester={semester}'
+        )
+    if not subjects:
+        messages.error(request, 'No matching subjects found for the selected filters.')
+        return redirect(
+            reverse('admin_semester_results') +
+            f'?academic_year={academic_year}&department={department.pk}&semester={semester}'
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = (
+        f'attachment; filename="semester-result-template-{department.code}-sem-{semester}-{academic_year}.csv"'
+    )
+    writer = csv.writer(response)
+    writer.writerow(_semester_result_fixed_headers() + _semester_result_subject_headers(subjects))
+    for student in students:
+        writer.writerow([
+            student.roll_number,
+            student.user.username,
+            student.user.first_name,
+            student.user.last_name,
+            academic_year,
+            department.code,
+            semester,
+            *([''] * len(subjects)),
+        ])
+    return response
+
+
+@login_required
+def admin_semester_result_upload(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    if request.method != 'POST':
+        return redirect('admin_semester_results')
+
+    college = _get_admin_college(request)
+    academic_year = (request.POST.get('academic_year') or '').strip()
+    department_id = (request.POST.get('department') or '').strip()
+    semester = _safe_int(request.POST.get('semester'), default=None)
+    upload_file = request.FILES.get('result_file')
+    department = _scope_departments(request).filter(pk=department_id, is_deleted=False).first()
+
+    if not (academic_year and department and semester and upload_file):
+        messages.error(request, 'Academic year, department, semester, and result file are required.')
+        return redirect('admin_semester_results')
+
+    students = list(_get_semester_result_students(college, department, semester, academic_year))
+    subjects = list(_get_semester_result_subjects(department, semester, academic_year))
+
+    base_redirect = (
+        reverse('admin_semester_results') +
+        f'?academic_year={academic_year}&department={department.pk}&semester={semester}'
+    )
+
+    if not students or not subjects:
+        messages.error(request, 'The selected filters do not have matching students or subjects.')
+        return redirect(base_redirect)
+
+    try:
+        decoded_rows = upload_file.read().decode('utf-8-sig').splitlines()
+        reader = csv.DictReader(decoded_rows)
+    except Exception:
+        messages.error(request, 'Could not read the uploaded file. Please upload the latest CSV template.')
+        return redirect(base_redirect)
+
+    expected_headers = _semester_result_fixed_headers() + _semester_result_subject_headers(subjects)
+    if reader.fieldnames != expected_headers:
+        messages.error(request, 'The uploaded file does not match the current template for the selected filters.')
+        return redirect(base_redirect)
+
+    student_map = {s.roll_number.strip().upper(): s for s in students}
+    rows = list(reader)
+    if not rows:
+        messages.error(request, 'The uploaded file is empty.')
+        return redirect(base_redirect)
+
+    upload_file.seek(0)
+    batch = SemesterResultBatch.objects.create(
+        college=college, department=department, academic_year=academic_year,
+        semester=semester, uploaded_by=request.user, source_file=upload_file,
+        student_count=len(students), subject_count=len(subjects),
+    )
+
+    processed_students = set()
+    try:
+        with transaction.atomic():
+            for line_number, row in enumerate(rows, start=2):
+                roll_number = (row.get('roll_number') or '').strip().upper()
+                username = (row.get('username') or '').strip()
+                first_name = (row.get('first_name') or '').strip()
+                last_name = (row.get('last_name') or '').strip()
+                row_year = (row.get('academic_year') or '').strip()
+                row_dept = (row.get('department_code') or '').strip().upper()
+                row_sem = _safe_int(row.get('semester'), default=None)
+
+                if row_year != academic_year or row_dept != department.code.upper() or row_sem != semester:
+                    raise ValueError(
+                        f'Row {line_number}: file filters do not match selected academic year, department, and semester.'
+                    )
+
+                student = student_map.get(roll_number)
+                if not student:
+                    raise ValueError(f'Row {line_number}: roll number {roll_number} is not part of the selected cohort.')
+                if student.user.username != username:
+                    raise ValueError(f'Row {line_number}: username mismatch for {roll_number}.')
+
+                transcript = SemesterResultStudent.objects.create(
+                    batch=batch, student=student,
+                    roll_number_snapshot=student.roll_number,
+                    username_snapshot=username,
+                    full_name_snapshot=(
+                        f'{first_name} {last_name}'.strip() or student.user.get_full_name() or username
+                    ),
+                )
+
+                total_marks = 0.0
+                total_max = 0.0
+                total_credits = 0
+                total_credit_points = 0.0
+                overall_pass = True
+
+                for order, subject in enumerate(subjects, start=1):
+                    header = f'{subject.code} - {subject.name}'
+                    raw_mark = (row.get(header) or '').strip()
+                    if raw_mark == '':
+                        raise ValueError(f'Row {line_number}: missing mark for {subject.code}.')
+                    try:
+                        mark_value = float(raw_mark)
+                    except ValueError:
+                        raise ValueError(f'Row {line_number}: invalid mark for {subject.code}.')
+                    if not (0 <= mark_value <= 100):
+                        raise ValueError(f'Row {line_number}: {subject.code} mark must be between 0 and 100.')
+
+                    grade = _calculate_grade(mark_value, 100)
+                    grade_point = _grade_to_point(grade)
+                    row_status = 'PASS' if grade != 'F' else 'FAIL'
+                    credits = subject.credits or 0
+
+                    SemesterResultSubject.objects.create(
+                        student_result=transcript, subject=subject,
+                        subject_code_snapshot=subject.code,
+                        subject_name_snapshot=subject.name,
+                        marks_obtained=mark_value, max_marks=100,
+                        grade=grade, grade_point=grade_point,
+                        status=row_status, credits=credits, display_order=order,
+                    )
+
+                    total_marks += mark_value
+                    total_max += 100
+                    total_credits += credits
+                    total_credit_points += credits * grade_point
+                    overall_pass = overall_pass and row_status == 'PASS'
+
+                transcript.total_marks_obtained = round(total_marks, 2)
+                transcript.total_max_marks = round(total_max, 2)
+                transcript.percentage = round((total_marks / total_max) * 100, 2) if total_max else 0
+                transcript.semester_credits = total_credits
+                transcript.sgpa = round(total_credit_points / total_credits, 2) if total_credits else 0
+                previous_results = list(Result.objects.filter(student=student).exclude(semester=semester))
+                semester_count = len(previous_results) + 1
+                transcript.cgpa = round(
+                    (sum(r.sgpa for r in previous_results) + transcript.sgpa) / semester_count, 2
+                ) if semester_count else transcript.sgpa
+                transcript.overall_credits = sum(r.total_credits for r in previous_results) + total_credits
+                transcript.result_status = 'PASS' if overall_pass else 'FAIL'
+                transcript.save(update_fields=[
+                    'total_marks_obtained', 'total_max_marks', 'percentage',
+                    'semester_credits', 'sgpa', 'cgpa', 'overall_credits', 'result_status',
+                ])
+                processed_students.add(student.id)
+
+            if len(processed_students) != len(student_map):
+                missing = [s.roll_number for s in students if s.id not in processed_students]
+                raise ValueError(
+                    'File must contain every student in the cohort. Missing: ' + ', '.join(missing[:5])
+                )
+
+    except Exception as exc:
+        batch.delete()
+        messages.error(request, str(exc))
+        return redirect(base_redirect)
+
+    messages.success(request, f'Semester result data uploaded for {len(processed_students)} students.')
+    return redirect(base_redirect)
+
+
+@login_required
+def admin_semester_result_generate(request, batch_id):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+
+    batch = get_object_or_404(
+        SemesterResultBatch.objects.select_related('college', 'department'),
+        pk=batch_id, college=_get_admin_college(request),
+    )
+    combined_pdf, pdf_map = _build_semester_result_preview_pdf(batch)
+    timestamp = timezone.localtime(timezone.now()).strftime('%Y%m%d%H%M%S')
+    batch.generated_pdf.save(
+        f'semester-results-{batch.department.code}-sem-{batch.semester}-{batch.academic_year}-{timestamp}.pdf',
+        ContentFile(combined_pdf), save=False,
+    )
+    batch.status = 'GENERATED'
+    batch.generated_at = timezone.now()
+    batch.save(update_fields=['generated_pdf', 'status', 'generated_at'])
+
+    for transcript in batch.student_results.all():
+        pdf_bytes = pdf_map.get(transcript.pk)
+        if not pdf_bytes:
+            continue
+        transcript.pdf_file.save(
+            f'{transcript.roll_number_snapshot}-sem-{batch.semester}-{batch.academic_year}.pdf',
+            ContentFile(pdf_bytes), save=False,
+        )
+        transcript.status = 'GENERATED'
+        transcript.save(update_fields=['pdf_file', 'status'])
+
+    messages.success(request, 'Transcript preview generated successfully.')
+    return redirect(
+        reverse('admin_semester_results') +
+        f'?academic_year={batch.academic_year}&department={batch.department_id}&semester={batch.semester}'
+    )
+
+
+@login_required
+def admin_semester_result_view(request, batch_id):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+
+    batch = get_object_or_404(
+        SemesterResultBatch.objects.select_related('college'),
+        pk=batch_id, college=_get_admin_college(request),
+    )
+    if not batch.generated_pdf:
+        messages.error(request, 'Generate the transcript preview first.')
+        return redirect('admin_semester_results')
+
+    response = HttpResponse(batch.generated_pdf.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{batch.generated_pdf.name.rsplit("/", 1)[-1]}"'
+    return response
+
+
+@login_required
+def admin_semester_result_approve(request, batch_id):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    if request.method != 'POST':
+        return redirect('admin_semester_results')
+
+    batch = get_object_or_404(
+        SemesterResultBatch.objects.select_related('college', 'department'),
+        pk=batch_id, college=_get_admin_college(request),
+    )
+    if not batch.generated_pdf:
+        messages.error(request, 'Generate the transcript preview before approval.')
+        return redirect('admin_semester_results')
+
+    approval_time = timezone.now()
+    with transaction.atomic():
+        batch.status = 'APPROVED'
+        batch.approved_at = approval_time
+        batch.approved_by = request.user
+        batch.save(update_fields=['status', 'approved_at', 'approved_by'])
+
+        for transcript in batch.student_results.select_related('student'):
+            previous_results = list(Result.objects.filter(student=transcript.student).exclude(semester=batch.semester))
+            semester_count = len(previous_results) + 1
+            transcript.cgpa = round(
+                (sum(r.sgpa for r in previous_results) + transcript.sgpa) / semester_count, 2
+            ) if semester_count else transcript.sgpa
+            transcript.overall_credits = sum(r.total_credits for r in previous_results) + transcript.semester_credits
+            transcript.status = 'APPROVED'
+            transcript.approved_at = approval_time
+            transcript.approved_by = request.user
+            transcript.save(update_fields=['cgpa', 'overall_credits', 'status', 'approved_at', 'approved_by'])
+
+            Result.objects.update_or_create(
+                student=transcript.student,
+                semester=batch.semester,
+                defaults={
+                    'gpa': transcript.sgpa,
+                    'sgpa': transcript.sgpa,
+                    'total_marks': transcript.total_marks_obtained,
+                    'percentage': transcript.percentage,
+                    'total_credits': transcript.semester_credits,
+                },
+            )
+
+    messages.success(request, 'Semester transcripts approved and published to students.')
+    return redirect(
+        reverse('admin_semester_results') +
+        f'?academic_year={batch.academic_year}&department={batch.department_id}&semester={batch.semester}'
+    )
+
+
+@login_required
+def student_semester_transcript_download(request, transcript_id):
+    transcript = get_object_or_404(
+        SemesterResultStudent.objects.select_related('student__user', 'batch'),
+        pk=transcript_id, status='APPROVED', batch__status='APPROVED',
+    )
+    if (request.user != transcript.student.user
+            and not _admin_guard(request)
+            and not request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    if not transcript.pdf_file:
+        messages.error(request, 'Transcript file is not available yet.')
+        return redirect('student_dashboard')
+
+    response = HttpResponse(transcript.pdf_file.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{transcript.pdf_file.name.rsplit("/", 1)[-1]}"'
+    return response

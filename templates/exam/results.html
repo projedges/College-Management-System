@@ -59,6 +59,8 @@
         <button type="submit" style="background:var(--teal);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" onclick="return confirm('Publish results? Students will be able to see them.')"><i class="fas fa-bullhorn"></i> Publish</button>
       </form>
       <a href="{% url 'exam_marks_moderation' exam.pk %}" style="background:rgba(230,168,23,.12);color:#b88510;border:1px solid rgba(230,168,23,.3);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none"><i class="fas fa-sliders"></i> Moderation</a>
+      <a href="{% url 'exam_grace_marks' exam.pk %}" style="background:rgba(124,58,237,.1);color:#7c3aed;border:1px solid rgba(124,58,237,.25);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none"><i class="fas fa-star-half-stroke"></i> Grace Marks</a>
+      <a href="{% url 'exam_result_versions' exam.pk %}" style="background:rgba(100,116,139,.08);color:var(--muted);border:1px solid var(--border);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none"><i class="fas fa-clock-rotate-left"></i> History</a>
       {% endif %}
 
       {% if summary.published > 0 and not is_frozen %}

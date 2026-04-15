@@ -10,6 +10,7 @@
 <a href="{% url 'admin_dashboard' %}#students" class="sb-link {% if active_section == 'students' %}active{% endif %}"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="{% url 'admin_dashboard' %}#bulk" class="sb-link {% if active_section == 'bulk' %}active{% endif %}"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
 <a href="{% url 'admin_dashboard' %}#faculty" class="sb-link {% if active_section == 'faculty' %}active{% endif %}"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
+<a href="{% url 'admin_faculty_feedback' %}" class="sb-link {% if active_section == 'feedback' %}active{% endif %}"><i class="fas fa-comments"></i> Faculty Feedback</a>
 <a href="{% url 'admin_dashboard' %}#academics" class="sb-link {% if active_section == 'academics' %}active{% endif %}"><i class="fas fa-book"></i> Academics</a>
 <a href="{% url 'admin_dashboard' %}#planner" class="sb-link {% if active_section == 'planner' %}active{% endif %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
 <a href="{% url 'admin_regulations' %}" class="sb-link {% if active_section == 'regulations' %}active{% endif %}"><i class="fas fa-scroll"></i> Regulations</a>
@@ -24,6 +25,7 @@
 <a href="{% url 'admin_dashboard' %}#helpdesk" class="sb-link {% if active_section == 'helpdesk' %}active{% endif %}"><i class="fas fa-headset"></i> Help Desk</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Reports</p>
+<a href="{% url 'admin_semester_results' %}" class="sb-link {% if active_section == 'semester_results' %}active{% endif %}"><i class="fas fa-square-poll-horizontal"></i> Semester Results</a>
 <a href="{% url 'admin_dashboard' %}#reports" class="sb-link {% if active_section == 'reports' %}active{% endif %}"><i class="fas fa-download"></i> Export Reports</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Platform</p>
