@@ -1,5 +1,6 @@
 {% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Mark Attendance &mdash; {{ subject.name }}{% endblock %}
+{% load att_extras %}
+{% block title %}Mark Attendance — {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block page_title %}Mark Attendance{% endblock %}
 {% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
@@ -10,90 +11,335 @@
 
 {% block extra_css %}
 <style>
-  .att-form{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:700px}
-  .att-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+  .att-wrap{max-width:740px}
+  .att-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:24px;margin-bottom:16px}
+
+  /* Header row */
+  .att-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .att-subj-name{font-size:17px;font-weight:800;color:var(--deep)}
+  .att-subj-meta{font-size:12px;color:var(--muted);margin-top:3px}
   .date-input{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
   .date-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
-  .student-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6}
-  .student-row:last-child{border-bottom:none}
-  .s-avatar{width:34px;height:34px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-  .s-name{flex:1;font-size:13px;font-weight:600;color:var(--deep)}
-  .s-roll{font-size:11px;color:var(--muted)}
-  .radio-group{display:flex;gap:8px}
-  .radio-opt{display:flex;align-items:center;gap:5px;cursor:pointer}
-  .radio-opt input{accent-color:var(--teal);width:14px;height:14px}
-  .radio-opt label{font-size:12px;font-weight:600;cursor:pointer}
-  .bulk-btns{display:flex;gap:8px;margin-bottom:20px}
-  .bulk-btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;cursor:pointer;transition:all .2s}
+
+  /* Topic section */
+  .topic-section{margin-bottom:20px}
+  .topic-label{font-size:12px;font-weight:700;color:var(--deep);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .topic-input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box}
+  .topic-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .topic-input.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+  .topic-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .topic-chip{padding:4px 11px;border-radius:99px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+  .topic-chip:hover{background:rgba(13,115,119,.1);border-color:var(--teal);color:var(--teal)}
+  .topic-chip.selected{background:var(--teal);border-color:var(--teal);color:#fff}
+
+  /* Substitution banner */
+  .sub-banner{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:rgba(99,102,241,.06);border:1.5px solid rgba(99,102,241,.25);border-radius:12px;margin-bottom:18px}
+
+  /* Bulk actions */
+  .bulk-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .bulk-btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
   .bulk-btn:hover{border-color:var(--teal);color:var(--teal)}
-  .submit-btn{width:100%;padding:13px;border-radius:10px;background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:20px;transition:all .2s;font-family:'Inter',sans-serif}
+  .bulk-btn.present:hover{border-color:#059669;color:#059669}
+  .bulk-btn.absent:hover{border-color:var(--red);color:var(--red)}
+  .att-count{margin-left:auto;font-size:12px;font-weight:700;color:var(--muted)}
+
+  /* Student rows */
+  .student-list{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .student-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #f3f4f6;transition:background .1s}
+  .student-row:last-child{border-bottom:none}
+  .student-row:hover{background:#f8fafc}
+  .student-row.is-absent{background:rgba(239,68,68,.03)}
+  .student-row.is-late{background:rgba(230,168,23,.03)}
+  .s-avatar{width:34px;height:34px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .s-name{font-size:13px;font-weight:600;color:var(--deep);line-height:1.3}
+  .s-roll{font-size:11px;color:var(--muted)}
+
+  /* Status toggle buttons */
+  .status-toggle{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+  .st-btn{padding:5px 13px;border-radius:7px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+  .st-btn.active-P{background:#d1fae5;border-color:#059669;color:#065f46}
+  .st-btn.active-A{background:#fee2e2;border-color:var(--red);color:#991b1b}
+  .st-btn.active-L{background:#fef3c7;border-color:#d97706;color:#92400e}
+  .st-btn:not([class*="active"]):hover{border-color:var(--teal);color:var(--teal)}
+
+  /* Submit */
+  .submit-btn{width:100%;padding:13px;border-radius:10px;background:var(--teal);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:20px;transition:all .2s;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
   .submit-btn:hover{background:var(--teal-dk);transform:translateY(-1px)}
+  .submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+  /* Session already marked banner */
+  .session-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(13,115,119,.06);border:1px solid rgba(13,115,119,.2);border-radius:9px;font-size:12px;color:var(--teal);font-weight:600;margin-bottom:16px}
+
+  /* Stats bar */
+  .att-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .att-stat{flex:1;min-width:70px;text-align:center;padding:10px 8px;border-radius:10px;border:1px solid var(--border)}
+  .att-stat-val{font-size:20px;font-weight:900;font-family:'Outfit',sans-serif}
+  .att-stat-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
   .empty{text-align:center;padding:40px;color:var(--muted)}
 </style>
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="att-form">
-  <div class="att-header">
+<div class="att-wrap">
+
+  {% if active_sub %}
+  <div class="sub-banner">
+    <i class="fas fa-people-arrows" style="color:#6366f1;font-size:18px;margin-top:1px;flex-shrink:0"></i>
     <div>
-      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subject &middot; Semester {{ subject.semester }}</div>
-      <div style="font-size:16px;font-weight:700;color:var(--deep)">{{ subject.name }} <span style="color:var(--muted);font-weight:400;font-size:13px">({{ subject.code }})</span></div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ subject.department.name }} &middot; {{ students|length }} student{{ students|length|pluralize }}</div>
-    </div>
-    <div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Date</div>
-      <input type="date" id="date-picker" value="{{ today }}" class="date-input"/>
-    </div>
-  </div>
-
-  {% if students %}
-  <div class="bulk-btns">
-    <button type="button" class="bulk-btn" onclick="markAll('PRESENT')"><i class="fas fa-check" style="color:var(--teal)"></i> All Present</button>
-    <button type="button" class="bulk-btn" onclick="markAll('ABSENT')"><i class="fas fa-times" style="color:var(--red)"></i> All Absent</button>
-  </div>
-
-  <form method="POST">
-    {% csrf_token %}
-    <input type="hidden" name="date" id="form-date" value="{{ today }}"/>
-
-    {% for student in students %}
-    <div class="student-row">
-      <div class="s-avatar">{{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}</div>
-      <div style="flex:1">
-        <div class="s-name">{{ student.user.get_full_name|default:student.user.username }}</div>
-        <div class="s-roll">{{ student.roll_number }}</div>
-      </div>
-      <div class="radio-group">
-        <label class="radio-opt">
-          <input type="radio" name="status_{{ student.id }}" value="PRESENT" checked/>
-          <label style="color:var(--teal)">Present</label>
-        </label>
-        <label class="radio-opt">
-          <input type="radio" name="status_{{ student.id }}" value="ABSENT"/>
-          <label style="color:var(--red)">Absent</label>
-        </label>
-        <label class="radio-opt">
-          <input type="radio" name="status_{{ student.id }}" value="LATE"/>
-          <label style="color:var(--gold)">Late</label>
-        </label>
+      <div style="font-size:13px;font-weight:700;color:var(--deep)">Substitution Session</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">
+        Covering for <strong>{{ active_sub.original_faculty.user.get_full_name }}</strong> today.
+        Topic is required and will be shared with the original faculty.
       </div>
     </div>
-    {% endfor %}
-
-    <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Attendance</button>
-  </form>
-
-  {% else %}
-    <div class="empty"><i class="fas fa-users" style="font-size:32px;display:block;margin-bottom:12px;color:#d1d5db"></i>No active students found for this subject.</div>
+  </div>
   {% endif %}
+
+  <div class="att-card">
+    <!-- Header -->
+    <div class="att-header">
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">
+          {{ subject.department.name }} &middot; Semester {{ subject.semester }}
+        </div>
+        <div class="att-subj-name">{{ subject.name }}</div>
+        <div class="att-subj-meta">{{ subject.code }}{% if subject.credits %} &middot; {{ subject.credits }} Credits{% endif %} &middot; {{ students|length }} student{{ students|length|pluralize }}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Session Date</div>
+        <input type="date" id="date-picker" value="{{ today }}" class="date-input"/>
+      </div>
+    </div>
+
+    {% if existing_session %}
+    <div class="session-banner">
+      <i class="fas fa-check-circle"></i>
+      Attendance already marked today.
+      {% if existing_session.topic_covered %}Topic: <em>{{ existing_session.topic_covered }}</em>.{% endif %}
+      You can update it below.
+    </div>
+    {% endif %}
+
+    {% if students %}
+    <form method="POST" id="att-form">
+      {% csrf_token %}
+      <input type="hidden" name="date" id="form-date" value="{{ today }}"/>
+
+      <!-- ── Topic Covered ──────────────────────────────────────────────── -->
+      <div class="topic-section">
+        <div class="topic-label">
+          <i class="fas fa-book-open" style="color:var(--teal)"></i>
+          Topic Covered <span style="color:var(--red)">*</span>
+          <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">(required)</span>
+        </div>
+        <input type="text" name="topic_covered" id="topic-input" class="topic-input"
+               value="{% if existing_session %}{{ existing_session.topic_covered }}{% elif active_sub %}{{ active_sub.topic_covered }}{% endif %}"
+               placeholder="e.g. Unit 2 — Stacks: Push, Pop operations and applications"
+               autocomplete="off"
+               required/>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">
+          <i class="fas fa-info-circle"></i>
+          Recorded in the session log and visible to HOD.
+          {% if topic_suggestions %}Click a chip to fill quickly:{% endif %}
+        </div>
+        {% if topic_suggestions %}
+        <div class="topic-chips" id="topic-chips">
+          {% for t in topic_suggestions %}
+          <span class="topic-chip" onclick="selectTopic(this)" title="{{ t }}">{{ t }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ── Live stats bar ─────────────────────────────────────────────── -->
+      <div class="att-stats">
+        <div class="att-stat" style="border-color:#d1fae5">
+          <div class="att-stat-val" style="color:#059669" id="stat-present">0</div>
+          <div class="att-stat-lbl">Present</div>
+        </div>
+        <div class="att-stat" style="border-color:#fee2e2">
+          <div class="att-stat-val" style="color:var(--red)" id="stat-absent">{{ students|length }}</div>
+          <div class="att-stat-lbl">Absent</div>
+        </div>
+        <div class="att-stat" style="border-color:#fef3c7">
+          <div class="att-stat-val" style="color:#d97706" id="stat-late">0</div>
+          <div class="att-stat-lbl">Late</div>
+        </div>
+        <div class="att-stat">
+          <div class="att-stat-val" style="color:var(--deep)" id="stat-pct">0%</div>
+          <div class="att-stat-lbl">Present %</div>
+        </div>
+      </div>
+
+      <!-- ── Bulk actions ───────────────────────────────────────────────── -->
+      <div class="bulk-bar">
+        <button type="button" class="bulk-btn present" onclick="markAll('P')">
+          <i class="fas fa-check" style="color:#059669"></i> All Present
+        </button>
+        <button type="button" class="bulk-btn absent" onclick="markAll('A')">
+          <i class="fas fa-times" style="color:var(--red)"></i> All Absent
+        </button>
+        <button type="button" class="bulk-btn" onclick="markAll('L')">
+          <i class="fas fa-clock" style="color:#d97706"></i> All Late
+        </button>
+        <span class="att-count" id="bulk-count">{{ students|length }} students</span>
+      </div>
+
+      <!-- ── Student list ───────────────────────────────────────────────── -->
+      <div class="student-list">
+        {% for student in students %}
+        {% with prev=existing_att|default_if_none:None %}
+        <div class="student-row" id="row-{{ student.id }}">
+          <div class="s-avatar">{{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}</div>
+          <div style="flex:1;min-width:0">
+            <div class="s-name">{{ student.user.get_full_name|default:student.user.username }}</div>
+            <div class="s-roll">{{ student.roll_number }}</div>
+          </div>
+          <!-- Hidden radio inputs (actual form values) -->
+          <input type="radio" name="status_{{ student.id }}" value="PRESENT" id="P-{{ student.id }}"
+                 {% if existing_att and student.id in existing_att %}{% if existing_att|get_item:student.id == 'PRESENT' %}checked{% endif %}{% else %}checked{% endif %}
+                 style="display:none" onchange="updateRow({{ student.id }})"/>
+          <input type="radio" name="status_{{ student.id }}" value="ABSENT"  id="A-{{ student.id }}"
+                 {% if existing_att and student.id in existing_att %}{% if existing_att|get_item:student.id == 'ABSENT' %}checked{% endif %}{% endif %}
+                 style="display:none" onchange="updateRow({{ student.id }})"/>
+          <input type="radio" name="status_{{ student.id }}" value="LATE"    id="L-{{ student.id }}"
+                 {% if existing_att and student.id in existing_att %}{% if existing_att|get_item:student.id == 'LATE' %}checked{% endif %}{% endif %}
+                 style="display:none" onchange="updateRow({{ student.id }})"/>
+          <!-- Visual toggle buttons -->
+          <div class="status-toggle">
+            <button type="button" class="st-btn" id="btn-P-{{ student.id }}" onclick="setStatus({{ student.id }},'P')">P</button>
+            <button type="button" class="st-btn" id="btn-A-{{ student.id }}" onclick="setStatus({{ student.id }},'A')">A</button>
+            <button type="button" class="st-btn" id="btn-L-{{ student.id }}" onclick="setStatus({{ student.id }},'L')">L</button>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">
+        <i class="fas fa-save"></i>
+        <span id="submit-label">Save Attendance</span>
+      </button>
+    </form>
+
+    {% else %}
+    <div class="empty">
+      <i class="fas fa-users" style="font-size:32px;display:block;margin-bottom:12px;color:#d1d5db"></i>
+      No active students found for this subject.
+    </div>
+    {% endif %}
+  </div>
 </div>
 
 <script>
-  document.getElementById('date-picker').addEventListener('change', function(){
-    document.getElementById('form-date').value = this.value;
+// ── Initial state from server ─────────────────────────────────────────────────
+var TOTAL = {{ students|length }};
+
+// Build initial status map from existing attendance
+var statusMap = {};
+{% for student in students %}
+  {% if existing_att and student.id in existing_att %}
+    statusMap[{{ student.id }}] = '{{ existing_att|get_item:student.id|default:"P" }}'.charAt(0);
+  {% else %}
+    statusMap[{{ student.id }}] = 'P';
+  {% endif %}
+{% endfor %}
+
+// ── Date picker ───────────────────────────────────────────────────────────────
+document.getElementById('date-picker').addEventListener('change', function() {
+  document.getElementById('form-date').value = this.value;
+});
+
+// ── Topic chip selection ──────────────────────────────────────────────────────
+function selectTopic(chip) {
+  document.getElementById('topic-input').value = chip.textContent.trim();
+  document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  document.getElementById('topic-input').classList.remove('error');
+}
+
+// ── Status toggle ─────────────────────────────────────────────────────────────
+function setStatus(sid, code) {
+  statusMap[sid] = code;
+  // Check the hidden radio
+  var radioMap = {P:'PRESENT', A:'ABSENT', L:'LATE'};
+  document.getElementById(code + '-' + sid).checked = true;
+  updateRow(sid);
+  updateStats();
+}
+
+function updateRow(sid) {
+  var code = statusMap[sid];
+  // Determine which radio is checked
+  ['P','A','L'].forEach(function(c) {
+    var radio = document.getElementById(c + '-' + sid);
+    if (radio && radio.checked) code = c;
   });
-  function markAll(status){
-    document.querySelectorAll('input[type=radio][value=' + status + ']').forEach(r => r.checked = true);
+  statusMap[sid] = code;
+
+  var row = document.getElementById('row-' + sid);
+  row.classList.remove('is-absent','is-late');
+  if (code === 'A') row.classList.add('is-absent');
+  if (code === 'L') row.classList.add('is-late');
+
+  ['P','A','L'].forEach(function(c) {
+    var btn = document.getElementById('btn-' + c + '-' + sid);
+    if (!btn) return;
+    btn.className = 'st-btn' + (c === code ? ' active-' + c : '');
+  });
+  updateStats();
+}
+
+function markAll(code) {
+  Object.keys(statusMap).forEach(function(sid) {
+    setStatus(parseInt(sid), code);
+  });
+}
+
+function updateStats() {
+  var p = 0, a = 0, l = 0;
+  Object.values(statusMap).forEach(function(c) {
+    if (c === 'P') p++;
+    else if (c === 'A') a++;
+    else if (c === 'L') l++;
+  });
+  document.getElementById('stat-present').textContent = p;
+  document.getElementById('stat-absent').textContent  = a;
+  document.getElementById('stat-late').textContent    = l;
+  var pct = TOTAL > 0 ? Math.round((p + l) / TOTAL * 100) : 0;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  document.getElementById('submit-label').textContent =
+    'Save Attendance (' + p + ' present, ' + a + ' absent' + (l ? ', ' + l + ' late' : '') + ')';
+}
+
+// ── Topic validation on submit ────────────────────────────────────────────────
+document.getElementById('att-form').addEventListener('submit', function(e) {
+  var topic = document.getElementById('topic-input').value.trim();
+  if (!topic) {
+    e.preventDefault();
+    document.getElementById('topic-input').classList.add('error');
+    document.getElementById('topic-input').focus();
+    document.getElementById('topic-input').scrollIntoView({behavior:'smooth', block:'center'});
+    return false;
   }
+  document.getElementById('topic-input').classList.remove('error');
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('submit-label').textContent = 'Saving…';
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  Object.keys(statusMap).forEach(function(sid) { updateRow(parseInt(sid)); });
+  updateStats();
+
+  // Highlight chip if topic already matches
+  var currentTopic = document.getElementById('topic-input').value.trim();
+  if (currentTopic) {
+    document.querySelectorAll('.topic-chip').forEach(function(chip) {
+      if (chip.textContent.trim() === currentTopic) chip.classList.add('selected');
+    });
+  }
+});
 </script>
 {% endblock %}

@@ -6,21 +6,19 @@
 {% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> &middot; <span style="color:var(--deep);font-weight:600">{{ student.roll_number }}</span> &middot; Sem {{ student.current_semester }} &middot; {{ student.department.code }}{% endblock %}
 
 {% block sidebar_links %}
-<a href="{% url 'student_dashboard' %}#dashboard" class="sb-link"><i class="fas fa-home"></i> Dashboard</a>
-<a href="{% url 'student_dashboard' %}#whats-new" class="sb-link"><i class="fas fa-bolt"></i> What's New{% if new_assignments or new_quizzes %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">!</span>{% endif %}</a>
-<a href="{% url 'student_dashboard' %}#profile" class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
-<a href="{% url 'student_dashboard' %}#attendance" class="sb-link active"><i class="fas fa-calendar-check"></i> Attendance</a>
-<a href="{% url 'student_dashboard' %}#results" class="sb-link"><i class="fas fa-chart-bar"></i> Results</a>
-<a href="{% url 'student_dashboard' %}#academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academic Track</a>
+<p class="sb-nav-label">Menu</p>
+<a href="{% url 'student_dashboard' %}#dashboard"      class="sb-link"><i class="fas fa-home"></i> Dashboard</a>
+<a href="{% url 'student_dashboard' %}#profile"        class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
+<a href="{% url 'student_dashboard' %}#attendance"     class="sb-link active"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="{% url 'student_dashboard' %}#academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academics &amp; Results</a>
 <a href="{% url 'student_dashboard' %}#course-structure" class="sb-link"><i class="fas fa-list-ol"></i> Course Structure</a>
-<a href="{% url 'student_dashboard' %}#internals" class="sb-link"><i class="fas fa-table-list"></i> Internal Marks</a>
-<a href="{% url 'student_dashboard' %}#quizzes" class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
-<a href="{% url 'student_dashboard' %}#timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
-<a href="{% url 'student_dashboard' %}#assignments" class="sb-link"><i class="fas fa-file-alt"></i> Assignments</a>
-<a href="{% url 'student_dashboard' %}#fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
-<a href="{% url 'student_dashboard' %}#notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
-<a href="{% url 'student_dashboard' %}#notifications" class="sb-link"><i class="fas fa-inbox"></i> Notifications{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
-<a href="{% url 'student_dashboard' %}#support" class="sb-link"><i class="fas fa-headset"></i> Support</a>
+<a href="{% url 'student_dashboard' %}#my-courses"     class="sb-link"><i class="fas fa-book-open"></i> My Courses</a>
+<a href="{% url 'student_dashboard' %}#timetable"      class="sb-link"><i class="fas fa-clock"></i> Timetable</a>
+<a href="{% url 'student_elective_select' %}"          class="sb-link"><i class="fas fa-layer-group"></i> Choose Electives</a>
+<a href="{% url 'student_dashboard' %}#fees"           class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
+<a href="{% url 'student_dashboard' %}#inbox"          class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
+<a href="{% url 'student_dashboard' %}#quizzes"        class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
+<a href="{% url 'student_dashboard' %}#support"        class="sb-link"><i class="fas fa-headset"></i> Support</a>
 {% endblock %}
 
 {% block extra_css %}

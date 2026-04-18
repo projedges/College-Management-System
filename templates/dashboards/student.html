@@ -7,22 +7,17 @@
 
 {% block sidebar_links %}
 <p class="sb-nav-label">Menu</p>
-<a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
-<a href="#whats-new" data-section-target="whats-new" class="sb-link"><i class="fas fa-bolt"></i> What's New{% if new_assignments or new_quizzes %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">!</span>{% endif %}</a>
-<a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
-<a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="#dashboard"      data-section-target="dashboard"      class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile"        data-section-target="profile"        class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
+<a href="#attendance"     data-section-target="attendance"     class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
 <a href="#academic-track" data-section-target="academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academics &amp; Results</a>
 <a href="#course-structure" data-section-target="course-structure" class="sb-link"><i class="fas fa-list-ol"></i> Course Structure</a>
-<a href="#internals" data-section-target="internals" class="sb-link"><i class="fas fa-table-list"></i> Internal Marks</a>
-<a href="#quizzes" data-section-target="quizzes" class="sb-link"><i class="fas fa-circle-question"></i> Quizzes</a>
-<a href="#quiz-history" data-section-target="quiz-history" class="sb-link"><i class="fas fa-clock-rotate-left"></i> Quiz History</a>
-<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Timetable</a>
+<a href="#my-courses"      data-section-target="my-courses"      class="sb-link"><i class="fas fa-book-open"></i> My Courses</a>
+<a href="#timetable"      data-section-target="timetable"      class="sb-link"><i class="fas fa-clock"></i> Timetable</a>
 <a href="{% url 'student_elective_select' %}" class="sb-link"><i class="fas fa-layer-group"></i> Choose Electives</a>
-<a href="#assignments" data-section-target="assignments" class="sb-link"><i class="fas fa-file-alt"></i> Assignments</a>
-<a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
-<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
-<a href="#notifications" data-section-target="notifications" class="sb-link"><i class="fas fa-inbox"></i> Notifications{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
-<a href="#support" data-section-target="support" class="sb-link"><i class="fas fa-headset"></i> Support</a>
+<a href="#fees"           data-section-target="fees"           class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
+<a href="#inbox"          data-section-target="inbox"          class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
+<a href="#support"        data-section-target="support"        class="sb-link"><i class="fas fa-headset"></i> Support</a>
 {% endblock %}
 
 {% block extra_css %}
@@ -124,6 +119,30 @@
   .sem-tab-active{background:var(--teal);color:#fff;border-color:var(--teal)}
   .sem-pane{display:none}
   .sem-pane-active{display:block}
+  /* Inbox / quiz tabs */
+  .inbox-tab{padding:5px 13px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+  .inbox-tab:hover{border-color:var(--teal);color:var(--teal)}
+  .inbox-tab-active{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .inbox-pane{display:none}
+  .inbox-pane-active{display:block}
+  /* My Courses */
+  .course-card{border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;transition:box-shadow .2s}
+  .course-card:hover{box-shadow:0 4px 18px rgba(7,30,38,.08)}
+  .course-header{display:flex;align-items:center;gap:14px;padding:14px 18px;background:#fff;cursor:pointer;user-select:none}
+  .course-header:hover{background:#f8fbfb}
+  .course-icon{width:42px;height:42px;border-radius:10px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .course-body{display:none;border-top:1px solid var(--border);background:#fafbfc}
+  .course-body.open{display:block}
+  .course-tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);background:#fff;overflow-x:auto}
+  .course-tab{padding:9px 16px;font-size:12px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+  .course-tab:hover{color:var(--teal)}
+  .course-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+  .course-pane{display:none;padding:16px 18px}
+  .course-pane.active{display:block}
+  .ce-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:4px}
+  .ce-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .ce-val{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--teal)}
+  .ce-lbl{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
   .sem-stat-box{text-align:center;padding:14px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)}
   .sem-stat-val{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--deep)}
   .sem-stat-lbl{font-size:11px;color:var(--muted);margin-top:4px}
@@ -804,72 +823,6 @@
 
 </section>
 
-<section data-dashboard-pane="assignments" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-file-alt"></i> Pending Assignments</div>
-    <div class="section-meta">Upcoming submissions in one clean list.</div>
-    {% if pending_assignments %}
-    <div class="content-scroll">
-      {% for item in pending_assignments %}
-      <div class="asgn-row">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ item.assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ item.assignment.subject.name }} &middot; Due {{ item.assignment.deadline|date:"d M, H:i" }}</div>
-        </div>
-        <a href="{% url 'student_submit_assignment' item.assignment.pk %}" class="mini-btn mini-btn-teal"><i class="fas fa-upload"></i> Submit</a>
-        {% if item.urgency == 'urgent' %}
-          <span class="deadline-badge dl-urgent"><i class="fas fa-fire"></i> {{ item.assignment.deadline|timeuntil:now }}</span>
-        {% elif item.urgency == 'soon' %}
-          <span class="deadline-badge dl-soon"><i class="fas fa-hourglass-half"></i> {{ item.assignment.deadline|timeuntil:now }}</span>
-        {% else %}
-          <span class="deadline-badge dl-ok"><i class="fas fa-calendar"></i> {{ item.assignment.deadline|timeuntil:now }}</span>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-check-circle"></i>All caught up!</div>
-    {% endif %}
-  </div>
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-cloud-upload-alt"></i> Submitted Assignments</div>
-    <div class="section-meta">Track submitted work and review status.</div>
-    {% if submitted_assignments %}
-    <div class="content-scroll">
-      {% for sub in submitted_assignments %}
-      <div class="asgn-row">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }} &middot; Submitted {{ sub.submitted_at|date:"d M Y" }}</div>
-        </div>
-        <span class="deadline-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">Under Review</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-file-circle-check"></i>No submissions yet.</div>
-    {% endif %}
-  </div>
-
-  {% if evaluated_assignments %}
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-star"></i> Graded Assignments</div>
-    <div class="section-meta">Results published by faculty.</div>
-    <div class="content-scroll">
-      {% for sub in evaluated_assignments %}
-      <div class="asgn-row">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.assignment.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ sub.assignment.subject.name }}</div>
-        </div>
-        <span class="deadline-badge" style="background:rgba(16,185,129,.1);color:var(--green);margin-left:auto">Scored {{ sub.marks }}</span>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-</section>
-
 <section data-dashboard-pane="fees" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-indian-rupee-sign"></i> Fee Status</div>
@@ -949,44 +902,102 @@
   </div>
 </section>
 
-<section data-dashboard-pane="notices" class="dashboard-pane">
+<section data-dashboard-pane="inbox" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
-    <div class="section-meta">Announcements in one focused stream.</div>
-    {% if announcements %}
-    <div class="content-scroll">
-      {% for ann in announcements %}
-      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ ann.created_at|date:"d M Y" }}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="d-title" style="margin:0"><i class="fas fa-bell"></i> Inbox</div>
+      <div style="display:flex;gap:6px">
+        <button class="inbox-tab inbox-tab-active" onclick="switchInbox('whats-new',this)"><i class="fas fa-bolt"></i> What's New{% if new_assignments or new_quizzes %} <span style="background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:3px">!</span>{% endif %}</button>
+        <button class="inbox-tab" onclick="switchInbox('notices',this)"><i class="fas fa-bullhorn"></i> Notices</button>
+        <button class="inbox-tab" onclick="switchInbox('notifications',this)"><i class="fas fa-inbox"></i> Alerts{% if notifications %} <span style="background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:3px">{{ notifications|length }}</span>{% endif %}</button>
       </div>
-      {% endfor %}
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
-    {% endif %}
-  </div>
-</section>
 
-<section data-dashboard-pane="notifications" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-inbox"></i> Notifications</div>
-    <div class="section-meta">System alerts, attendance warnings, and fee reminders.</div>
-    {% if notifications %}
-    <div class="content-scroll">
-      {% for notif in notifications %}
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:5px"></div>
-        <div style="flex:1">
-          <div style="font-size:13px;color:var(--deep);line-height:1.5">{{ notif.message }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ notif.created_at|date:"d M Y H:i" }}</div>
+    <!-- What's New tab -->
+    <div class="inbox-pane inbox-pane-active" id="inbox-whats-new">
+      <div class="section-meta" style="margin-bottom:12px">Assignments, quizzes, and notices from the last 7 days.</div>
+      {% if new_assignments %}
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:8px"><i class="fas fa-file-alt"></i> New Assignments</div>
+        {% for a in new_assignments %}
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }} &middot; Due {{ a.deadline|date:"d M Y" }}</div>
+          </div>
+          <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="padding:5px 12px;font-size:11px"><i class="fas fa-upload"></i> Submit</a>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% endif %}
+      {% if new_quizzes %}
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#6366f1;margin-bottom:8px"><i class="fas fa-circle-question"></i> Active Quizzes</div>
+        {% for q in new_quizzes %}
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ q.title }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} &middot; {{ q.duration_minutes }} min &middot; {{ q.total_marks }} marks</div>
+          </div>
+          {% if q.pk in attempted_quiz_ids %}<span style="font-size:11px;font-weight:600;color:var(--green);background:rgba(16,185,129,.1);padding:3px 9px;border-radius:99px"><i class="fas fa-check"></i> Done</span>
+          {% else %}<a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;padding:5px 12px;font-size:11px"><i class="fas fa-play"></i> Start</a>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if new_announcements %}
+      <div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px"><i class="fas fa-bell"></i> Recent Notices</div>
+        {% for ann in new_announcements %}
+        <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if not new_assignments and not new_quizzes and not new_announcements %}
+      <div class="empty"><i class="fas fa-check-circle"></i>All caught up &mdash; nothing new in the last 7 days.</div>
+      {% endif %}
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-check-circle"></i>No new notifications.</div>
-    {% endif %}
+
+    <!-- Notices tab -->
+    <div class="inbox-pane" id="inbox-notices">
+      <div class="section-meta" style="margin-bottom:12px">College announcements and circulars.</div>
+      {% if announcements %}
+      <div class="content-scroll">
+        {% for ann in announcements %}
+        <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+      {% endif %}
+    </div>
+
+    <!-- Alerts tab -->
+    <div class="inbox-pane" id="inbox-notifications">
+      <div class="section-meta" style="margin-bottom:12px">System alerts, attendance warnings, and fee reminders.</div>
+      {% if notifications %}
+      <div class="content-scroll">
+        {% for notif in notifications %}
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:5px"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;color:var(--deep);line-height:1.5">{{ notif.message }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ notif.created_at|date:"d M Y H:i" }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-check-circle"></i>No new alerts.</div>
+      {% endif %}
+    </div>
   </div>
 </section>
 
@@ -1003,61 +1014,70 @@
   </div>
 </section>
 
-<!-- WHAT'S NEW -->
-<section data-dashboard-pane="whats-new" class="dashboard-pane">
+<!-- QUIZZES (active + history in one place) -->
+<section data-dashboard-pane="quizzes" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-bolt" style="color:var(--gold)"></i> What's New</div>
-    <div class="section-meta">Assignments, quizzes, and notices from the last 7 days.</div>
-
-    {% if new_assignments %}
-    <div style="margin-bottom:18px">
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:8px"><i class="fas fa-file-alt"></i> New Assignments</div>
-      {% for a in new_assignments %}
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ a.subject.name }} &middot; Due {{ a.deadline|date:"d M Y" }}</div>
-        </div>
-        <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="padding:5px 12px;font-size:11px"><i class="fas fa-upload"></i> Submit</a>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="d-title" style="margin:0"><i class="fas fa-circle-question"></i> Quizzes</div>
+      <div style="display:flex;gap:6px">
+        <button class="inbox-tab inbox-tab-active" onclick="switchInbox('quiz-active',this)"><i class="fas fa-play"></i> Active{% if active_quizzes %} <span style="background:#6366f1;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:3px">{{ active_quizzes|length }}</span>{% endif %}</button>
+        <button class="inbox-tab" onclick="switchInbox('quiz-history',this)"><i class="fas fa-clock-rotate-left"></i> History</button>
       </div>
-      {% endfor %}
     </div>
-    {% endif %}
 
-    {% if new_quizzes %}
-    <div style="margin-bottom:18px">
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#6366f1;margin-bottom:8px"><i class="fas fa-circle-question"></i> Active Quizzes</div>
-      {% for q in new_quizzes %}
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
+    <!-- Active quizzes -->
+    <div class="inbox-pane inbox-pane-active" id="inbox-quiz-active">
+      <div class="section-meta" style="margin-bottom:12px">Quizzes assigned to your subjects by faculty.</div>
+      {% if active_quizzes %}
+      {% for q in active_quizzes %}
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ q.title }}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ q.title }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} &middot; {{ q.duration_minutes }} min &middot; {{ q.total_marks }} marks</div>
+          {% if q.description %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ q.description|truncatechars:80 }}</div>{% endif %}
         </div>
         {% if q.pk in attempted_quiz_ids %}
-        <span style="font-size:11px;font-weight:600;color:var(--green);background:rgba(16,185,129,.1);padding:3px 9px;border-radius:99px"><i class="fas fa-check"></i> Done</span>
+        <span style="font-size:12px;font-weight:700;color:var(--green);background:rgba(16,185,129,.1);padding:5px 12px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> Submitted</span>
         {% else %}
-        <a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;padding:5px 12px;font-size:11px"><i class="fas fa-play"></i> Start</a>
+        <a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;white-space:nowrap"><i class="fas fa-play"></i> Start Quiz</a>
         {% endif %}
       </div>
       {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-circle-question"></i>No active quizzes right now.</div>
+      {% endif %}
     </div>
-    {% endif %}
 
-    {% if new_announcements %}
-    <div>
-      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px"><i class="fas fa-bell"></i> Recent Notices</div>
-      {% for ann in new_announcements %}
-      <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
+    <!-- Quiz history -->
+    <div class="inbox-pane" id="inbox-quiz-history">
+      <div class="section-meta" style="margin-bottom:12px">All your past quiz attempts and scores.</div>
+      {% if quiz_history %}
+      <div class="content-scroll">
+        {% for attempt in quiz_history %}
+        <div class="qh-row">
+          <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ attempt.quiz.title }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ attempt.quiz.subject.name }} &middot; {{ attempt.submitted_at|date:"d M Y, H:i" }}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="qh-score">{{ attempt.score|default:"0"|floatformat:1 }}</div>
+            <div style="font-size:10px;color:var(--muted)">/ {{ attempt.quiz.total_marks }} marks</div>
+          </div>
+          <div style="width:52px;text-align:center">
+            {% if attempt.score and attempt.quiz.total_marks %}
+            {% widthratio attempt.score attempt.quiz.total_marks 100 as spct %}
+            <span class="dbadge {% if spct >= 75 %}dbadge-active{% elif spct >= 50 %}dbadge-warning{% else %}dbadge-red{% endif %}">{{ spct }}%</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-clock-rotate-left"></i>No quiz attempts yet.</div>
+      {% endif %}
     </div>
-    {% endif %}
-
-    {% if not new_assignments and not new_quizzes and not new_announcements %}
-    <div class="empty"><i class="fas fa-check-circle"></i>All caught up &mdash; nothing new in the last 7 days.</div>
-    {% endif %}
   </div>
 </section>
 
@@ -1149,9 +1169,158 @@
   </div>
 </section>
 
+<!-- MY COURSES -->
+<section data-dashboard-pane="my-courses" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-book-open"></i> My Courses &mdash; Semester {{ student.current_semester }}</div>
+    <div class="section-meta">{{ student.department.name }} &middot; Click a subject to see content, quizzes, assignments, CE marks, and feedback.</div>
+
+    {% if my_courses %}
+    {% for course in my_courses %}
+    {% with subj=course.subject cid=forloop.counter %}
+    <div class="course-card">
+      <div class="course-header" onclick="toggleCourse('cc-{{ cid }}', this)">
+        <div class="course-icon"><i class="fas fa-book"></i></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--deep)">{{ subj.name }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            {{ subj.code }}{% if course.faculty %} &middot; {{ course.faculty|join:", " }}{% endif %}
+            &middot; {{ subj.credits }}C &middot; {{ subj.lecture_hours }}L-{{ subj.tutorial_hours }}T-{{ subj.practical_hours }}P
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          {% if course.assignments %}<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(13,115,119,.1);color:var(--teal)">{{ course.assignments|length }} task{{ course.assignments|length|pluralize }}</span>{% endif %}
+          {% if course.quizzes %}<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(99,102,241,.1);color:#6366f1">{{ course.quizzes|length }} quiz{% if course.quizzes|length > 1 %}zes{% endif %}</span>{% endif %}
+          {% if course.internal_mark %}<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(230,168,23,.1);color:#b88510">CE: {{ course.internal_mark.total|floatformat:0 }}/85</span>{% endif %}
+        </div>
+        <i class="fas fa-chevron-down" style="color:var(--muted);font-size:12px;flex-shrink:0;transition:transform .2s" id="cc-chevron-{{ cid }}"></i>
+      </div>
+
+      <div class="course-body" id="cc-{{ cid }}">
+        <div class="course-tab-bar">
+          <button class="course-tab active" onclick="switchCourseTab('{{ cid }}','content',this)"><i class="fas fa-list-ul"></i> Content</button>
+          <button class="course-tab" onclick="switchCourseTab('{{ cid }}','assignments',this)"><i class="fas fa-file-alt"></i> Assignments{% if course.assignments %} ({{ course.assignments|length }}){% endif %}</button>
+          <button class="course-tab" onclick="switchCourseTab('{{ cid }}','quizzes',this)"><i class="fas fa-circle-question"></i> Quizzes{% if course.quizzes %} ({{ course.quizzes|length }}){% endif %}</button>
+          <button class="course-tab" onclick="switchCourseTab('{{ cid }}','ce',this)"><i class="fas fa-table-list"></i> CE Marks</button>
+          <button class="course-tab" onclick="switchCourseTab('{{ cid }}','feedback',this)"><i class="fas fa-star"></i> Feedback</button>
+        </div>
+
+        <!-- Content / Lesson Plans -->
+        <div class="course-pane active" id="cc-{{ cid }}-content">
+          {% if course.lesson_plans %}
+          <div class="table-scroll">
+            <table class="dtable">
+              <thead><tr><th>#</th><th>Topic</th><th>Planned Date</th><th>Status</th></tr></thead>
+              <tbody>
+                {% for lp in course.lesson_plans %}
+                <tr>
+                  <td style="color:var(--muted);font-size:12px">{{ forloop.counter }}</td>
+                  <td style="font-weight:600;color:var(--deep)">{{ lp.topic }}</td>
+                  <td style="color:var(--muted);font-size:12px">{{ lp.planned_date|date:"d M Y" }}</td>
+                  <td>{% if lp.status == 'COMPLETED' %}<span class="dbadge dbadge-active">Done</span>{% elif lp.status == 'IN_PROGRESS' %}<span class="dbadge dbadge-warning">In Progress</span>{% else %}<span class="dbadge" style="background:#f1f5f9;color:#64748b">Planned</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty" style="padding:20px 0"><i class="fas fa-book-open"></i>No lesson plan uploaded yet.</div>
+          {% endif %}
+        </div>
+
+        <!-- Assignments -->
+        <div class="course-pane" id="cc-{{ cid }}-assignments">
+          {% if course.assignments %}
+          {% for a in course.assignments %}
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ a.title }}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Due {{ a.deadline|date:"d M Y, H:i" }}</div>
+              {% if a.description %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ a.description|truncatechars:100 }}</div>{% endif %}
+            </div>
+            {% if a.id in course.submissions_map %}
+            {% with s=course.submissions_map|dictsort:"0" %}
+            {% for sid, sub in course.submissions_map.items %}{% if sid == a.id %}
+            {% if sub.marks is not None %}<span style="font-size:12px;font-weight:700;color:#059669;background:rgba(5,150,105,.1);padding:4px 10px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> {{ sub.marks }}/{{ a.total_marks|default:10 }}</span>
+            {% else %}<span style="font-size:12px;font-weight:600;color:#b88510;background:rgba(230,168,23,.1);padding:4px 10px;border-radius:99px;white-space:nowrap"><i class="fas fa-clock"></i> Submitted</span>{% endif %}
+            {% endif %}{% endfor %}
+            {% endwith %}
+            {% else %}
+            <a href="{% url 'student_submit_assignment' a.pk %}" class="mini-btn mini-btn-teal" style="font-size:11px;padding:5px 12px;white-space:nowrap"><i class="fas fa-upload"></i> Submit</a>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="empty" style="padding:20px 0"><i class="fas fa-file-alt"></i>No assignments for this subject.</div>
+          {% endif %}
+        </div>
+
+        <!-- Quizzes -->
+        <div class="course-pane" id="cc-{{ cid }}-quizzes">
+          {% if course.quizzes %}
+          {% for q in course.quizzes %}
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ q.title }}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ q.duration_minutes }} min &middot; {{ q.total_marks }} marks</div>
+              {% if q.description %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ q.description|truncatechars:80 }}</div>{% endif %}
+            </div>
+            {% if q.id in course.quiz_attempts_map %}
+            {% for qid, att in course.quiz_attempts_map.items %}{% if qid == q.id %}
+            <span style="font-size:12px;font-weight:700;color:#059669;background:rgba(5,150,105,.1);padding:4px 10px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> {{ att.score|default:0|floatformat:1 }}/{{ q.total_marks }}</span>
+            {% endif %}{% endfor %}
+            {% else %}
+            <a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;font-size:11px;padding:5px 12px;white-space:nowrap"><i class="fas fa-play"></i> Start</a>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="empty" style="padding:20px 0"><i class="fas fa-circle-question"></i>No quizzes for this subject.</div>
+          {% endif %}
+        </div>
+
+        <!-- CE Marks -->
+        <div class="course-pane" id="cc-{{ cid }}-ce">
+          {% if course.internal_mark %}{% with im=course.internal_mark %}
+          <div class="ce-row">
+            <div class="ce-box"><div class="ce-val">{{ im.ia1|default:"&mdash;"|floatformat:1 }}</div><div class="ce-lbl">IA 1 /30</div></div>
+            <div class="ce-box"><div class="ce-val">{{ im.ia2|default:"&mdash;"|floatformat:1 }}</div><div class="ce-lbl">IA 2 /30</div></div>
+            <div class="ce-box"><div class="ce-val">{{ im.assignment_marks|default:"&mdash;"|floatformat:1 }}</div><div class="ce-lbl">Assignment /20</div></div>
+            <div class="ce-box"><div class="ce-val">{{ im.attendance_marks|default:"&mdash;"|floatformat:1 }}</div><div class="ce-lbl">Attendance /5</div></div>
+            <div class="ce-box" style="border-color:var(--teal)"><div class="ce-val" style="color:var(--teal)">{{ im.total|floatformat:1 }}</div><div class="ce-lbl">Total /85</div></div>
+          </div>
+          {% endwith %}{% else %}
+          <div class="empty" style="padding:20px 0"><i class="fas fa-table-list"></i>CE marks not entered yet.</div>
+          {% endif %}
+        </div>
+
+        <!-- Feedback -->
+        <div class="course-pane" id="cc-{{ cid }}-feedback">
+          {% with has_feedback=False %}
+          {% for cycle in pending_feedback %}
+          <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ cycle.title }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Ends {{ cycle.end_date|date:"d M Y" }}</div>
+            <a href="{% url 'student_faculty_feedback_submit' cycle.pk %}" class="mini-btn mini-btn-teal" style="margin-top:8px;font-size:11px;padding:5px 12px;display:inline-flex"><i class="fas fa-star"></i> Give Feedback</a>
+          </div>
+          {% empty %}
+          <div class="empty" style="padding:20px 0"><i class="fas fa-star"></i>No feedback forms open right now.</div>
+          {% endfor %}
+          {% endwith %}
+        </div>
+
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+    {% else %}
+    <div class="empty"><i class="fas fa-book-open"></i>No subjects found for Semester {{ student.current_semester }}.</div>
+    {% endif %}
+  </div>
+</section>
+
 <!-- INTERNAL MARKS -->
 <section data-dashboard-pane="internals" class="dashboard-pane">
-  <div class="d-card">
     <div class="d-card-title"><i class="fas fa-table-list"></i> Internal Marks &mdash; All Semesters</div>
     <div class="section-meta">IA1 + IA2 + Assignment + Attendance components across every semester.</div>
     {% if all_internal_semesters %}
@@ -1216,97 +1385,61 @@
   </div>
 </section>
 
-<!-- QUIZZES -->
-<section data-dashboard-pane="quizzes" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-circle-question"></i> Active Quizzes</div>
-    <div class="section-meta">Quizzes assigned to your subjects by faculty.</div>
-    {% if active_quizzes %}
-    {% for q in active_quizzes %}
-    <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f3f4f6">
-      <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ q.title }}</div>
-        <div style="font-size:11px;color:var(--muted)">{{ q.subject.name }} &middot; {{ q.duration_minutes }} min &middot; {{ q.total_marks }} marks</div>
-        {% if q.description %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ q.description|truncatechars:80 }}</div>{% endif %}
-      </div>
-      {% if q.pk in attempted_quiz_ids %}
-      <span style="font-size:12px;font-weight:700;color:var(--green);background:rgba(16,185,129,.1);padding:5px 12px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> Submitted</span>
-      {% else %}
-      <a href="{% url 'student_quiz_attempt' q.pk %}" class="mini-btn" style="background:#6366f1;color:#fff;white-space:nowrap"><i class="fas fa-play"></i> Start Quiz</a>
-      {% endif %}
-    </div>
-    {% endfor %}
-    {% else %}
-    <div class="empty"><i class="fas fa-circle-question"></i>No active quizzes right now.</div>
-    {% endif %}
-  </div>
-</section>
-
-<!-- QUIZ HISTORY -->
-<section data-dashboard-pane="quiz-history" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-clock-rotate-left"></i> Quiz History</div>
-    <div class="section-meta">All your past quiz attempts and scores.</div>
-    {% if quiz_history %}
-    <div class="content-scroll">
-      {% for attempt in quiz_history %}
-      <div class="qh-row">
-        <div style="width:44px;height:44px;border-radius:11px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas fa-circle-question"></i></div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ attempt.quiz.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ attempt.quiz.subject.name }} &middot; Attempted {{ attempt.submitted_at|date:"d M Y, H:i" }}</div>
-        </div>
-        <div style="text-align:right">
-          <div class="qh-score">{{ attempt.score|default:"0"|floatformat:1 }}</div>
-          <div style="font-size:10px;color:var(--muted)">/ {{ attempt.quiz.total_marks }} marks</div>
-        </div>
-        {% with pct=attempt.score|default:0 %}
-        <div style="width:52px;text-align:center">
-          {% if attempt.score and attempt.quiz.total_marks %}
-          {% widthratio attempt.score attempt.quiz.total_marks 100 as spct %}
-          <span class="dbadge {% if spct >= 75 %}dbadge-active{% elif spct >= 50 %}dbadge-warning{% else %}dbadge-red{% endif %}">{{ spct }}%</span>
-          {% endif %}
-        </div>
-        {% endwith %}
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-clock-rotate-left"></i>No quiz attempts yet.</div>
-    {% endif %}
-  </div>
-</section>
-
-{% endblock %}
+{% endblock %}{# dashboard_content #}
 
 {% block extra_js %}
 (function() {
-  var notifLink = document.querySelector('a[data-section-target="notifications"]');
-  var notifBadge = notifLink ? notifLink.querySelector('span') : null;
-  if (!notifBadge) return;
+  // Mark notifications read when inbox alerts tab is opened
+  var inboxLink = document.querySelector('a[data-section-target="inbox"]');
+  var inboxBadge = inboxLink ? inboxLink.querySelector('span') : null;
 
   function markNotificationsRead() {
     fetch("{% url 'student_mark_notifications_read' %}", {
       method: 'POST',
       headers: { 'X-CSRFToken': '{{ csrf_token }}' }
     }).then(function() {
-      if (notifBadge) { notifBadge.remove(); notifBadge = null; }
+      if (inboxBadge) { inboxBadge.remove(); inboxBadge = null; }
+      var alertsTab = document.querySelector('.inbox-tab[onclick*="notifications"]');
+      if (alertsTab) { var sp = alertsTab.querySelector('span'); if (sp) sp.remove(); }
     });
   }
 
-  var observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(m) {
-      if (m.target.dataset.dashboardPane === 'notifications' &&
-          m.target.classList.contains('active') && notifBadge) {
-        markNotificationsRead();
-      }
-    });
-  });
-  document.querySelectorAll('[data-dashboard-pane="notifications"]').forEach(function(el) {
-    observer.observe(el, { attributes: true, attributeFilter: ['class'] });
+  // Fire when user clicks the Alerts tab inside inbox
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.inbox-tab');
+    if (btn && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('notifications') !== -1) {
+      markNotificationsRead();
+    }
   });
 })();
+
+function toggleCourse(id, header) {
+  var body = document.getElementById(id);
+  var chevron = document.getElementById(id.replace('cc-', 'cc-chevron-'));
+  if (!body) return;
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function switchCourseTab(cid, tab, btn) {
+  var prefix = 'cc-' + cid + '-';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p){ p.classList.remove('active'); });
+  var pane = document.getElementById(prefix + tab);
+  if (pane) pane.classList.add('active');
+  var tabBar = btn.closest('.course-tab-bar');
+  if (tabBar) tabBar.querySelectorAll('.course-tab').forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function switchInbox(key, btn) {
+  var card = btn.closest('.d-card');
+  card.querySelectorAll('.inbox-pane').forEach(function(p){ p.classList.remove('inbox-pane-active'); });
+  card.querySelectorAll('.inbox-tab').forEach(function(t){ t.classList.remove('inbox-tab-active'); });
+  var pane = document.getElementById('inbox-' + key);
+  if (pane) pane.classList.add('inbox-pane-active');
+  btn.classList.add('inbox-tab-active');
+}
 
 function showSemPane(id) {
   document.querySelectorAll('.sem-pane').forEach(function(p){ p.classList.remove('sem-pane-active'); });

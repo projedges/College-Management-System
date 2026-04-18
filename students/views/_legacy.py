@@ -105,24 +105,21 @@ def _check_timetable_conflict(day, start, end, faculty=None, classroom=None, ign
 
 def _check_attendance_permission(user, subject, slot=None):
     """
-    Checks if a user has permission to mark attendance for a subject.
-    In DEBUG mode the time-lock is relaxed so testing is possible.
+    Two allowed windows:
+      1. During class: slot.start_time → slot.end_time + 10 min grace
+      2. Evening edit: 17:00 → 20:00 (5 pm – 8 pm) for any assigned subject
     """
-    from django.conf import settings
     role = getattr(user, 'userrole', None)
     if not role: return False, "No role assigned."
     if user.is_superuser: return True, ""
 
-    # HOD Override: HODs can mark for any subject in their department
+    # HOD override
     if role.role == 2 and hasattr(user, 'hod') and user.hod.department == subject.department:
         return True, ""
 
-    # Faculty / Substitute Logic
     if role.role in (2, 3) and hasattr(user, 'faculty'):
-        # Check direct assignment
         is_assigned = FacultySubject.objects.filter(faculty=user.faculty, subject=subject).exists()
 
-        # Check substitution for today
         now = timezone.localtime(timezone.now())
         today_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}.get(now.weekday())
         if not slot:
@@ -131,30 +128,35 @@ def _check_attendance_permission(user, subject, slot=None):
         is_sub = False
         if slot:
             is_sub = Substitution.objects.filter(
-                timetable_slot=slot, substitute_faculty=user.faculty, date=now.date()
+                timetable_slot=slot, substitute_faculty=user.faculty,
+                date=now.date(), status='ACCEPTED',
             ).exists()
 
         if not (is_assigned or is_sub):
             return False, "You are not assigned to this subject."
 
-        # Production: enforce time window (relaxed only in test environments via env var)
         import os
         if os.environ.get('ATTENDANCE_TIME_LOCK_DISABLED') == '1':
             return True, ""
 
-        # Enforce time window
-        if not slot:
-            return False, "No timetable slot found for this subject today."
+        current_time = now.time()
 
-        end_dt = timezone.make_aware(datetime.combine(now.date(), slot.end_time))
-        marking_end = end_dt + timedelta(minutes=10)
-        edit_end    = end_dt + timedelta(minutes=60)
+        # Window 1: during class + 10 min grace
+        if slot:
+            end_dt = timezone.make_aware(datetime.combine(now.date(), slot.end_time))
+            marking_end = (end_dt + timedelta(minutes=10)).time()
+            if slot.start_time <= current_time <= marking_end:
+                return True, ""
 
-        if slot.start_time <= now.time() <= marking_end.time():
-            return True, ""
-        if now > marking_end and now <= edit_end:
-            return True, "Editing window: up to 60 min after class."
-        return False, f"Attendance locked. Window: {slot.start_time}–{slot.end_time} (+10 min grace)."
+        # Window 2: evening edit — 5 pm to 8 pm
+        from datetime import time as dt_time
+        if dt_time(17, 0) <= current_time <= dt_time(20, 0):
+            return True, "Evening window: editable 5 PM – 8 PM."
+
+        # Build a helpful error message
+        if slot:
+            return False, f"Attendance locked. Allowed: during class ({slot.start_time}–{slot.end_time} +10 min) or 5 PM–8 PM."
+        return False, "Attendance locked. Allowed: during class (+10 min grace) or 5 PM–8 PM."
 
     return False, "Unauthorized."
 
@@ -460,7 +462,7 @@ def _determine_student_section(department, admission_year):
     return _section_label_for_index(existing_count // capacity)
 
 
-def _build_weekly_timetable_matrix(entries, breaks=None, days=None):
+def _build_weekly_timetable_matrix(entries, breaks=None, days=None, merge_sections=False):
     days = days or [('MON', 'Monday'), ('TUE', 'Tuesday'), ('WED', 'Wednesday'), ('THU', 'Thursday'), ('FRI', 'Friday'), ('SAT', 'Saturday')]
     slot_map = defaultdict(lambda: {'entries': [], 'break_label': ''})
     slot_times = set()
@@ -474,6 +476,10 @@ def _build_weekly_timetable_matrix(entries, breaks=None, days=None):
         key = (brk.day_of_week, brk.start_time, brk.end_time)
         slot_map[key]['break_label'] = brk.label
         slot_times.add((brk.start_time, brk.end_time))
+
+    if merge_sections:
+        for cell in slot_map.values():
+            cell['entries'] = _merge_timetable_section_rows(cell['entries'])
 
     ordered_times = sorted(slot_times, key=lambda item: (item[0], item[1]))
     rows = []
@@ -496,6 +502,29 @@ def _build_weekly_timetable_matrix(entries, breaks=None, days=None):
         row['is_break_row'] = row_is_break and any(cell['break_label'] for cell in row['cells'])
         rows.append(row)
     return rows
+
+
+def _merge_timetable_section_rows(entries):
+    """Collapse same faculty/subject/time rows for multiple sections into one display item."""
+    grouped = {}
+    for entry in entries:
+        group_key = (
+            entry.subject_id,
+            entry.faculty_id,
+            entry.day_of_week,
+            entry.start_time,
+            entry.end_time,
+        )
+        if group_key not in grouped:
+            entry.display_sections = []
+            entry.display_room_numbers = []
+            grouped[group_key] = entry
+        merged_entry = grouped[group_key]
+        if entry.section and entry.section not in merged_entry.display_sections:
+            merged_entry.display_sections.append(entry.section)
+        if entry.classroom and entry.classroom.room_number not in merged_entry.display_room_numbers:
+            merged_entry.display_room_numbers.append(entry.classroom.room_number)
+    return list(grouped.values())
 
 
 def _generate_roll_number(department, admission_year):
@@ -2017,6 +2046,12 @@ def hod_dashboard(request):
         'sem_breakdown': sem_breakdown,
         'approval_stats': approval_stats,
         'branding': _get_college_branding(dept.college),
+        'hod_faculty': Faculty.objects.filter(user=user).first(),
+        'hod_teaching_subjects': list(
+            FacultySubject.objects.filter(
+                faculty__user=user
+            ).select_related('subject').order_by('subject__semester', 'subject__name')
+        ) if Faculty.objects.filter(user=user).exists() else [],
     }
     return render(request, 'dashboards/hod.html', context)
 
@@ -2063,6 +2098,283 @@ def hod_leave_review(request, pk):
         )
         messages.success(request, f'Leave {action.lower()}.')
     return redirect('hod_dashboard')
+
+
+@login_required
+def faculty_assign_substitution(request):
+    """
+    Faculty requests a substitution for one of their own timetable slots.
+    Only faculty who are FREE at that time on that date are shown.
+    Creates a PENDING substitution and notifies the substitute.
+    """
+    faculty = get_object_or_404(Faculty, user=request.user)
+    if request.method != 'POST':
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    slot_id       = request.POST.get('timetable_slot')
+    sub_faculty_id = request.POST.get('substitute_faculty')
+    date_str      = request.POST.get('date', '').strip()
+
+    slot = get_object_or_404(Timetable, pk=slot_id, faculty=faculty)
+
+    try:
+        sub_date = datetime.fromisoformat(date_str).date()
+    except (ValueError, TypeError):
+        sub_date = timezone.now().date()
+
+    if sub_date < timezone.now().date():
+        messages.error(request, 'Cannot assign substitution for a past date.')
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    sub_faculty = get_object_or_404(Faculty, pk=sub_faculty_id, department=faculty.department)
+
+    if sub_faculty.id == faculty.id:
+        messages.error(request, 'You cannot assign yourself as a substitute.')
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    # Verify the chosen faculty is actually free at that time on that date
+    day_code = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT'}.get(sub_date.weekday(), '')
+    clash = Timetable.objects.filter(
+        faculty=sub_faculty,
+        day_of_week=day_code,
+    ).filter(
+        start_time__lt=slot.end_time,
+        end_time__gt=slot.start_time,
+    ).exists()
+    if clash:
+        messages.error(
+            request,
+            f'{sub_faculty.user.get_full_name()} has a timetable clash at that time. '
+            'Please choose a faculty who is free.'
+        )
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    # Create or update substitution (PENDING)
+    sub, created = Substitution.objects.update_or_create(
+        timetable_slot=slot,
+        date=sub_date,
+        defaults={
+            'original_faculty': faculty,
+            'substitute_faculty': sub_faculty,
+            'status': 'PENDING',
+            'rejection_reason': '',
+            'responded_at': None,
+            'topic_covered': '',
+        }
+    )
+
+    # Notify the substitute faculty
+    Notification.objects.create(
+        user=sub_faculty.user,
+        message=(
+            f'Substitution Request: {request.user.get_full_name() or request.user.username} '
+            f'has requested you to cover {slot.subject.name} ({slot.subject.code}) '
+            f'on {sub_date.strftime("%d %b %Y")} '
+            f'({slot.start_time.strftime("%I:%M %p")}–{slot.end_time.strftime("%I:%M %p")}). '
+            f'Please accept or reject from your dashboard.'
+        )
+    )
+
+    messages.success(
+        request,
+        f'Substitution request sent to {sub_faculty.user.get_full_name() or sub_faculty.user.username}. '
+        f'Waiting for their acceptance.'
+    )
+    return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+
+@login_required
+def faculty_substitution_respond(request, pk):
+    """
+    Substitute faculty accepts or rejects a pending substitution request.
+    Only the designated substitute can respond.
+    """
+    faculty = get_object_or_404(Faculty, user=request.user)
+    sub = get_object_or_404(Substitution, pk=pk, substitute_faculty=faculty)
+
+    if sub.status != 'PENDING':
+        messages.warning(request, 'This substitution request has already been responded to.')
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    if request.method != 'POST':
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    action = request.POST.get('action')  # 'accept' or 'reject'
+    reason = request.POST.get('rejection_reason', '').strip()
+
+    if action == 'accept':
+        sub.status = 'ACCEPTED'
+        sub.responded_at = timezone.now()
+        sub.save(update_fields=['status', 'responded_at'])
+
+        # Notify the original faculty
+        Notification.objects.create(
+            user=sub.original_faculty.user,
+            message=(
+                f'{request.user.get_full_name() or request.user.username} has ACCEPTED your substitution request '
+                f'for {sub.timetable_slot.subject.name} on {sub.date.strftime("%d %b %Y")}. '
+                f'They will cover the class and mark attendance.'
+            )
+        )
+        messages.success(request, f'You have accepted the substitution for {sub.timetable_slot.subject.name} on {sub.date.strftime("%d %b %Y")}.')
+
+    elif action == 'reject':
+        sub.status = 'REJECTED'
+        sub.rejection_reason = reason or 'No reason provided.'
+        sub.responded_at = timezone.now()
+        sub.save(update_fields=['status', 'rejection_reason', 'responded_at'])
+
+        # Notify the original faculty
+        Notification.objects.create(
+            user=sub.original_faculty.user,
+            message=(
+                f'{request.user.get_full_name() or request.user.username} has REJECTED your substitution request '
+                f'for {sub.timetable_slot.subject.name} on {sub.date.strftime("%d %b %Y")}. '
+                f'Reason: {sub.rejection_reason}. Please arrange another substitute.'
+            )
+        )
+        messages.warning(request, f'You have rejected the substitution for {sub.timetable_slot.subject.name}.')
+
+    return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+
+@login_required
+def faculty_substitution_free_faculty(request):
+    """
+    AJAX — returns faculty FREE at the given slot's time on the given date.
+    Also returns the slot's day_of_week and semester date bounds for the JS
+    date-picker constraint.
+
+    GET params: slot_id, date (YYYY-MM-DD)
+    Returns JSON:
+      {
+        faculty: [{id, name, employee_id}, ...],
+        day: 'MON',
+        slot_day_index: 0,          # JS weekday index (0=Sun … 6=Sat)
+        sem_start: 'YYYY-MM-DD',
+        sem_end:   'YYYY-MM-DD',
+      }
+    """
+    faculty = get_object_or_404(Faculty, user=request.user)
+    slot_id  = request.GET.get('slot_id')
+    date_str = request.GET.get('date', '')
+
+    if not slot_id:
+        return JsonResponse({'faculty': [], 'error': 'slot_id required'})
+
+    try:
+        slot = Timetable.objects.select_related('version').get(pk=slot_id, faculty=faculty)
+    except Timetable.DoesNotExist:
+        return JsonResponse({'faculty': [], 'error': 'slot not found'})
+
+    # ── Semester date bounds ──────────────────────────────────────────────────
+    # Use timetable version dates if available, else ±3 months from today
+    today = timezone.localdate()
+    if slot.version and slot.version.valid_from and slot.version.valid_to:
+        sem_start = slot.version.valid_from
+        sem_end   = slot.version.valid_to
+    else:
+        # Fallback: current month start → 5 months ahead (covers a semester)
+        from datetime import date as _date
+        sem_start = today.replace(day=1)
+        # 5 months ahead
+        month = today.month + 5
+        year  = today.year + (month - 1) // 12
+        month = ((month - 1) % 12) + 1
+        sem_end = _date(year, month, 1)
+
+    # ── Day mapping ───────────────────────────────────────────────────────────
+    DAY_TO_JS = {'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6}
+    day_code      = slot.day_of_week
+    slot_day_index = DAY_TO_JS.get(day_code, 1)
+
+    # ── If no date provided, just return bounds (slot just selected) ──────────
+    if not date_str:
+        return JsonResponse({
+            'faculty': [],
+            'day': day_code,
+            'slot_day_index': slot_day_index,
+            'sem_start': sem_start.isoformat(),
+            'sem_end': sem_end.isoformat(),
+        })
+
+    try:
+        check_date = datetime.fromisoformat(date_str).date()
+    except ValueError:
+        return JsonResponse({'faculty': [], 'error': 'invalid date'})
+
+    # Verify the chosen date actually falls on the slot's day
+    actual_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT'}.get(check_date.weekday(), '')
+    if actual_day != day_code:
+        return JsonResponse({
+            'faculty': [],
+            'day': day_code,
+            'slot_day_index': slot_day_index,
+            'sem_start': sem_start.isoformat(),
+            'sem_end': sem_end.isoformat(),
+            'error': f'Selected date is a {actual_day}, but this slot is on {day_code}.',
+        })
+
+    # ── All dept faculty except requester ─────────────────────────────────────
+    dept_faculty = list(
+        Faculty.objects.filter(department=faculty.department)
+        .exclude(pk=faculty.pk)
+        .select_related('user')
+    )
+
+    if not dept_faculty:
+        return JsonResponse({
+            'faculty': [],
+            'day': day_code,
+            'slot_day_index': slot_day_index,
+            'sem_start': sem_start.isoformat(),
+            'sem_end': sem_end.isoformat(),
+        })
+
+    dept_faculty_ids = [f.pk for f in dept_faculty]
+
+    # ── Who has a timetable CLASS at this exact time on this day ──────────────
+    busy_ids = set(
+        Timetable.objects.filter(
+            faculty_id__in=dept_faculty_ids,
+            day_of_week=day_code,
+            start_time__lt=slot.end_time,
+            end_time__gt=slot.start_time,
+        ).values_list('faculty_id', flat=True)
+    )
+
+    # ── Who already has an ACCEPTED substitution at this time on this date ────
+    busy_sub_ids = set(
+        Substitution.objects.filter(
+            timetable_slot__day_of_week=day_code,
+            timetable_slot__start_time__lt=slot.end_time,
+            timetable_slot__end_time__gt=slot.start_time,
+            date=check_date,
+            status='ACCEPTED',
+            substitute_faculty_id__in=dept_faculty_ids,
+        ).values_list('substitute_faculty_id', flat=True)
+    )
+
+    busy_ids |= busy_sub_ids
+
+    # Everyone NOT busy is free
+    free_faculty = [
+        {
+            'id': f.pk,
+            'name': f.user.get_full_name() or f.user.username,
+            'employee_id': f.employee_id or '',
+        }
+        for f in dept_faculty
+        if f.pk not in busy_ids
+    ]
+
+    return JsonResponse({
+        'faculty': free_faculty,
+        'day': day_code,
+        'slot_day_index': slot_day_index,
+        'sem_start': sem_start.isoformat(),
+        'sem_end': sem_end.isoformat(),
+    })
 
 
 @login_required
@@ -2255,6 +2567,26 @@ def hod_faculty_profile(request, pk):
 
 # ── FACULTY DASHBOARD ────────────────────────────────────
 
+def _non_teaching_faculty_dashboard(request, faculty):
+    """Dashboard for faculty with no subject assignments (admin/lab/support roles)."""
+    college = faculty.department.college
+    announcements = _scope_announcements_for_college(college).order_by('-created_at')[:8]
+    leave_history = LeaveApplication.objects.filter(faculty=faculty).order_by('-from_date')[:8]
+    my_requests_qs = HODApproval.objects.filter(requested_by=request.user).order_by('-created_at')
+    notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:10]
+
+    return render(request, 'dashboards/faculty_non_teaching.html', {
+        'faculty': faculty,
+        'college': college,
+        'announcements': announcements,
+        'leave_history': leave_history,
+        'my_requests': my_requests_qs[:5],
+        'my_requests_count': my_requests_qs.filter(status='PENDING').count(),
+        'notifications': notifications,
+        'branding': _get_college_branding(college),
+    })
+
+
 @login_required
 def faculty_dashboard(request):
     user = request.user
@@ -2263,6 +2595,11 @@ def faculty_dashboard(request):
     except Faculty.DoesNotExist:
         messages.error(request, 'Faculty profile not found. Contact admin.')
         return redirect('home')
+
+    # Non-teaching faculty: has Faculty record but no subject assignments
+    is_teaching = FacultySubject.objects.filter(faculty=faculty).exists()
+    if not is_teaching:
+        return _non_teaching_faculty_dashboard(request, faculty)
 
     assigned_subjects = FacultySubject.objects.filter(faculty=faculty).select_related('subject').annotate(
         total_assignments=Count('subject__assignment', distinct=True)
@@ -2348,8 +2685,9 @@ def faculty_dashboard(request):
         Q(faculty=faculty) | Q(substitutions__substitute_faculty=faculty, substitutions__date=today),
         day_of_week=today_day
     ).select_related('subject', 'classroom').order_by('start_time').distinct()
-    today_timetable = list(raw_timetable)
+    today_timetable = _merge_timetable_section_rows(list(raw_timetable))
     today_sessions = today_timetable
+    has_unmarked_today = any(t.subject_id not in marked_subject_ids for t in today_timetable)
 
     # Full week timetable + matrix for the new matrix view
     week_days = ['MON','TUE','WED','THU','FRI','SAT']
@@ -2362,7 +2700,8 @@ def faculty_dashboard(request):
     faculty_week_timetable = [(d, week_day_labels[d], week_tt[d]) for d in week_days]
     week_timetable_matrix = _build_weekly_timetable_matrix(
         all_week_slots,
-        breaks=TimetableBreak.objects.filter(college=faculty.department.college, applies_to_all=True).order_by('day_of_week','start_time')
+        breaks=TimetableBreak.objects.filter(college=faculty.department.college, applies_to_all=True).order_by('day_of_week','start_time'),
+        merge_sections=True
     )
 
     # Faculty availability slots
@@ -2405,6 +2744,82 @@ def faculty_dashboard(request):
         college=faculty.department.college, day_of_week=today_day, applies_to_all=True
     ).order_by('start_time'))
 
+    # Per-subject enriched data for My Subjects panel
+    all_subject_ids = [s.id for s in subjects]
+    fac_assignments_qs = Assignment.objects.filter(
+        created_by=user, subject_id__in=all_subject_ids
+    ).select_related('subject').order_by('subject_id', '-deadline')
+    fac_assignments_by_subj = {}
+    for a in fac_assignments_qs:
+        fac_assignments_by_subj.setdefault(a.subject_id, []).append(a)
+
+    fac_quizzes_qs = Quiz.objects.filter(
+        created_by=user, subject_id__in=all_subject_ids
+    ).select_related('subject').order_by('subject_id', '-created_at')
+    fac_quizzes_by_subj = {}
+    for q in fac_quizzes_qs:
+        fac_quizzes_by_subj.setdefault(q.subject_id, []).append(q)
+
+    ce_submissions = HODApproval.objects.filter(
+        requested_by=user, approval_type='CE_MARKS',
+        subject_id__in=all_subject_ids,
+    ).select_related('subject').order_by('subject_id', '-created_at')
+    ce_submission_by_subj = {}
+    for ce in ce_submissions:
+        if ce.subject_id not in ce_submission_by_subj:
+            ce_submission_by_subj[ce.subject_id] = ce
+
+    fac_lesson_plans_qs = LessonPlan.objects.filter(
+        faculty=faculty, subject_id__in=all_subject_ids
+    ).select_related('subject').order_by('subject_id', 'planned_date')
+    fac_lesson_plans_by_subj = {}
+    for lp in fac_lesson_plans_qs:
+        fac_lesson_plans_by_subj.setdefault(lp.subject_id, []).append(lp)
+
+    im_filled_by_subj = {}
+    for subj in subjects:
+        # Use section-scoped student count
+        sec_students = _get_section_students(faculty, subj)
+        enrolled = sec_students.count()
+        filled = InternalMark.objects.filter(subject=subj, student__in=sec_students).count()
+        im_filled_by_subj[subj.id] = {'filled': filled, 'total': enrolled}
+
+    from django.db.models import Avg as _Avg
+    my_subjects = []
+    for item in subject_cards:
+        subj = item['subject']
+        sec_students = _get_section_students(faculty, subj)
+        sec_enrolled = sec_students.count()
+
+        assignments = fac_assignments_by_subj.get(subj.id, [])
+        for a in assignments:
+            a.sub_count = AssignmentSubmission.objects.filter(assignment=a).count()
+            a.graded_count = AssignmentSubmission.objects.filter(assignment=a, marks__isnull=False).count()
+            a.pending_review = a.sub_count - a.graded_count
+            a.not_submitted = max(0, sec_enrolled - a.sub_count)
+            a.first_ungraded = AssignmentSubmission.objects.filter(assignment=a, marks__isnull=True).first()
+
+        quizzes = fac_quizzes_by_subj.get(subj.id, [])
+        for q in quizzes:
+            q.attempted = QuizAttempt.objects.filter(quiz=q, is_submitted=True).count()
+            q.not_attempted = max(0, sec_enrolled - q.attempted)
+            q.avg_score = QuizAttempt.objects.filter(quiz=q, is_submitted=True).aggregate(a=_Avg('score'))['a']
+
+        sec_filled = InternalMark.objects.filter(subject=subj, student__in=sec_students).count()
+        ce_existing = {im.student_id: im for im in InternalMark.objects.filter(subject=subj, student__in=sec_students)}
+
+        my_subjects.append({
+            **item,
+            'enrolled': sec_enrolled,
+            'assignments': assignments,
+            'quizzes': quizzes,
+            'ce_submission': ce_submission_by_subj.get(subj.id),
+            'lesson_plans': fac_lesson_plans_by_subj.get(subj.id, []),
+            'im_status': {'filled': sec_filled, 'total': sec_enrolled},
+            'ce_students': list(sec_students),
+            'ce_existing': ce_existing,
+        })
+
     context = {
         'faculty': faculty,
         'college': faculty.department.college,
@@ -2419,6 +2834,7 @@ def faculty_dashboard(request):
         'week_timetable_matrix': week_timetable_matrix,
         'availability_slots': availability_slots,
         'marked_subject_ids': marked_subject_ids,
+        'has_unmarked_today': has_unmarked_today,
         'recent_sessions': recent_sessions,
         'pending_submissions': pending_submissions_qs[:10],
         'pending_submissions_count': pending_submissions_qs.count(),
@@ -2428,6 +2844,12 @@ def faculty_dashboard(request):
         'leave_history': leave_history,
         'announcements': announcements,
         'branding': _get_college_branding(faculty.department.college),
+        'my_subjects': my_subjects,
+        'now': timezone.now(),
+        'dept_faculty_list': Faculty.objects.filter(
+            department=faculty.department, is_deleted=False
+        ).exclude(pk=faculty.pk).select_related('user').order_by('user__first_name'),
+        'all_week_slots': list(all_week_slots),
     }
     return render(request, 'dashboards/faculty.html', context)
 
@@ -2459,11 +2881,34 @@ def faculty_request_add(request):
 
 
 @login_required
+def _get_section_students(faculty, subject):
+    """
+    Returns the queryset of students this faculty should see for a subject.
+    If a SectionSubjectFacultyMap exists for this faculty+subject, scope to that section.
+    Otherwise fall back to all active students in the department+semester.
+    """
+    ssf = SectionSubjectFacultyMap.objects.filter(faculty=faculty, subject=subject).select_related('section').first()
+    base_qs = Student.objects.filter(
+        department=subject.department,
+        current_semester=subject.semester,
+        status='ACTIVE',
+        is_deleted=False,
+    ).select_related('user').order_by('roll_number')
+    if ssf:
+        return base_qs.filter(section=ssf.section.label)
+    return base_qs
+
+
 def faculty_mark_attendance(request, subject_id):
-    """Create an attendance session and mark students with Smart Locking."""
+    """
+    Mark attendance for a subject session.
+    - Topic covered is REQUIRED for every session (not just substitutions).
+    - Lesson plan topics are passed as quick-select chips.
+    - Substitution sessions show a banner and also save topic to Substitution record.
+    - Existing attendance pre-filled when re-opening a session.
+    """
     subject = get_object_or_404(Subject, pk=subject_id)
 
-    # Resolve the faculty doing the marking (could be a substitute)
     try:
         faculty = Faculty.objects.get(user=request.user)
     except Faculty.DoesNotExist:
@@ -2473,39 +2918,77 @@ def faculty_mark_attendance(request, subject_id):
     if not allowed:
         messages.error(request, msg)
         return redirect('dashboard')
+    if msg:
+        messages.info(request, msg)
 
-    if msg: messages.info(request, msg)
+    students = _get_section_students(faculty, subject)
+    today = timezone.localdate()
+    day_code = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT'}.get(today.weekday(), '')
 
-    students = Student.objects.filter(
-        department=subject.department,
-        current_semester=subject.semester,
-        status='ACTIVE',
-        is_deleted=False
-    ).select_related('user').order_by('roll_number')
+    # Check for accepted substitution today
+    active_sub = None
+    if faculty:
+        slot = Timetable.objects.filter(subject=subject, day_of_week=day_code).first()
+        if slot:
+            active_sub = Substitution.objects.filter(
+                timetable_slot=slot, substitute_faculty=faculty,
+                date=today, status='ACCEPTED',
+            ).first()
+
+    # Existing session for today (pre-fill topic + attendance)
+    existing_session = AttendanceSession.objects.filter(subject=subject, date=today).first()
+
+    # Lesson plan topics → quick-select chips
+    topic_suggestions = []
+    if faculty:
+        for lp in LessonPlan.objects.filter(subject=subject, faculty=faculty).order_by('unit_number', 'planned_date'):
+            if lp.topics:
+                for t in lp.topics.split(','):
+                    t = t.strip()
+                    if t:
+                        topic_suggestions.append(f"Unit {lp.unit_number} — {t}")
+            else:
+                topic_suggestions.append(f"Unit {lp.unit_number} — {lp.unit_title}")
+
+    # Pre-fill existing attendance statuses
+    existing_att = {}
+    if existing_session:
+        existing_att = {
+            a.student_id: a.status
+            for a in Attendance.objects.filter(session=existing_session)
+        }
 
     if request.method == 'POST':
-        date_str = request.POST.get('date', str(timezone.now().date()))
+        topic_covered = request.POST.get('topic_covered', '').strip()
+        if not topic_covered:
+            messages.error(request, 'Topic covered is required before saving attendance.')
+            return render(request, 'faculty/mark_attendance.html', {
+                'subject': subject, 'students': students, 'today': today,
+                'active_sub': active_sub, 'topic_suggestions': topic_suggestions,
+                'existing_session': existing_session, 'existing_att': existing_att,
+            })
+
+        date_str = request.POST.get('date', str(today))
         try:
             session_date = datetime.fromisoformat(date_str).date()
         except (ValueError, TypeError):
-            session_date = timezone.now().date()
+            session_date = today
 
-        if session_date > timezone.now().date():
+        if session_date > today:
             messages.error(request, 'Cannot mark attendance for a future date.')
             return redirect('faculty_dashboard')
 
-        session = AttendanceSession.objects.filter(subject=subject, date=session_date).first()
-        created = session is None
-        if created:
-            session = AttendanceSession.objects.create(
-                subject=subject,
-                faculty=faculty,
-                date=session_date,
-            )
-        elif faculty and session.faculty_id != faculty.id:
-            # Keep the existing record but reflect who handled the latest update.
-            session.faculty = faculty
-            session.save(update_fields=['faculty'])
+        # Always store topic on the session
+        session, created = AttendanceSession.objects.update_or_create(
+            subject=subject,
+            date=session_date,
+            defaults={'faculty': faculty, 'topic_covered': topic_covered},
+        )
+
+        # Mirror topic on substitution record
+        if active_sub:
+            active_sub.topic_covered = topic_covered
+            active_sub.save(update_fields=['topic_covered'])
 
         saved_count = 0
         for student in students:
@@ -2513,20 +2996,30 @@ def faculty_mark_attendance(request, subject_id):
             if status not in {'PRESENT', 'ABSENT', 'LATE'}:
                 status = 'ABSENT'
             Attendance.objects.update_or_create(
-                session=session,
-                student=student,
+                session=session, student=student,
                 defaults={'status': status, 'marked_by': request.user},
             )
             saved_count += 1
 
-        if created:
-            messages.success(request, f'Attendance marked for {subject.name} on {session_date} for {saved_count} student(s).')
-        else:
-            messages.success(request, f'Attendance updated for {subject.name} on {session_date} for {saved_count} student(s).')
+        verb = 'marked' if created else 'updated'
+        messages.success(
+            request,
+            f'Attendance {verb} for {subject.name} on {session_date} '
+            f'({saved_count} students). Topic: {topic_covered}'
+        )
         return redirect('faculty_dashboard')
 
-    context = {'subject': subject, 'students': students, 'today': timezone.now().date()}
+    context = {
+        'subject': subject,
+        'students': students,
+        'today': today,
+        'active_sub': active_sub,
+        'topic_suggestions': topic_suggestions,
+        'existing_session': existing_session,
+        'existing_att': existing_att,
+    }
     return render(request, 'faculty/mark_attendance.html', context)
+
 
 
 @login_required
@@ -2546,12 +3039,7 @@ def faculty_enter_marks(request, subject_id, exam_id):
     exam = get_object_or_404(Exam, pk=exam_id, college=faculty.department.college)
     if exam.semester != subject.semester:
         raise PermissionDenied('This exam does not match the subject semester.')
-    students = Student.objects.filter(
-        department=subject.department,
-        current_semester=subject.semester,
-        status='ACTIVE'
-    ).select_related('user').order_by('roll_number')
-
+    students = _get_section_students(faculty, subject)
     existing_marks = {m.student_id: m for m in Marks.objects.filter(subject=subject, exam=exam)}
     student_rows = [{'student': student, 'existing_mark': existing_marks.get(student.id)} for student in students]
 
@@ -2956,6 +3444,182 @@ def faculty_quiz_create(request):
 
 
 @login_required
+def faculty_quiz_toggle(request, pk):
+    """Toggle quiz active/inactive from the dashboard modal."""
+    quiz = get_object_or_404(Quiz, pk=pk, created_by=request.user)
+    if request.method == 'POST':
+        quiz.is_active = not quiz.is_active
+        quiz.save(update_fields=['is_active'])
+        state = 'activated' if quiz.is_active else 'deactivated'
+        messages.success(request, f'Quiz "{quiz.title}" {state}.')
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
+@login_required
+def faculty_quiz_add_question_inline(request, pk):
+    """Add a question to an existing quiz from the dashboard modal."""
+    quiz = get_object_or_404(Quiz, pk=pk, created_by=request.user)
+    if request.method != 'POST':
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+    q_text = request.POST.get('question_text', '').strip()
+    if not q_text:
+        messages.error(request, 'Question text is required.')
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+    question = QuizQuestion.objects.create(
+        quiz=quiz,
+        question_text=q_text,
+        question_type='MCQ',
+        marks=_safe_float(request.POST.get('marks'), 1),
+    )
+    correct = _safe_int(request.POST.get('correct_option'), 1)
+    for i in range(1, 5):
+        opt_text = request.POST.get(f'opt{i}', '').strip()
+        if opt_text:
+            QuizOption.objects.create(
+                question=question,
+                option_text=opt_text,
+                is_correct=(i == correct),
+            )
+    messages.success(request, f'Question added to "{quiz.title}".')
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
+@login_required
+def faculty_quiz_delete_question(request, pk):
+    """Delete a quiz question from the dashboard modal."""
+    question = get_object_or_404(QuizQuestion, pk=pk, quiz__created_by=request.user)
+    if request.method == 'POST':
+        quiz_title = question.quiz.title
+        question.delete()
+        messages.success(request, f'Question deleted from "{quiz_title}".')
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
+def _import_quiz_questions_from_csv(quiz, file_obj):
+    """
+    Import questions from a CSV template into a quiz.
+    Expected columns: question_text, option1, option2, option3, option4, correct_option (1-4), marks
+    """
+    try:
+        import io
+        decoded = file_obj.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(decoded))
+        for row in reader:
+            q_text = (row.get('question_text') or row.get('Question') or '').strip()
+            if not q_text:
+                continue
+            correct_raw = (row.get('correct_option') or row.get('Correct') or '1').strip()
+            try:
+                correct_num = int(correct_raw)
+            except ValueError:
+                correct_num = 1
+            marks = _safe_float(row.get('marks') or row.get('Marks'), 1)
+            question = QuizQuestion.objects.create(
+                quiz=quiz, question_text=q_text, question_type='MCQ', marks=marks,
+            )
+            for i in range(1, 5):
+                opt = (row.get(f'option{i}') or row.get(f'Option{i}') or '').strip()
+                if opt:
+                    QuizOption.objects.create(
+                        question=question, option_text=opt, is_correct=(i == correct_num),
+                    )
+    except Exception:
+        pass  # Silently skip bad rows — user can add manually
+
+
+@login_required
+def faculty_quiz_create_inline(request, subject_id):
+    faculty = get_object_or_404(Faculty, user=request.user)
+    get_object_or_404(FacultySubject, faculty=faculty, subject_id=subject_id)
+    if request.method != 'POST':
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+    title = request.POST.get('title', '').strip()
+    if not title:
+        messages.error(request, 'Quiz title is required.')
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+    start_raw = request.POST.get('start_time', '').strip()
+    end_raw = request.POST.get('end_time', '').strip()
+    start_dt = _assignment_deadline_from_input(start_raw) if start_raw else None
+    end_dt = _assignment_deadline_from_input(end_raw) if end_raw else None
+
+    quiz = Quiz.objects.create(
+        subject_id=subject_id,
+        created_by=request.user,
+        title=title,
+        description=request.POST.get('description', '').strip(),
+        duration_minutes=_safe_int(request.POST.get('duration_minutes'), 30),
+        total_marks=_safe_float(request.POST.get('total_marks'), 10),
+        start_time=start_dt,
+        end_time=end_dt,
+        access_password=request.POST.get('access_password', '').strip(),
+        questions_per_student=_safe_int(request.POST.get('questions_per_student'), 0) or None,
+        is_active=False,
+    )
+
+    # Handle template file upload (CSV with questions)
+    template_file = request.FILES.get('template_file')
+    if template_file:
+        quiz.template_file = template_file
+        quiz.save(update_fields=['template_file'])
+        _import_quiz_questions_from_csv(quiz, template_file)
+
+    # Inline questions
+    questions_added = 0
+    for i in range(1, 51):
+        q_text = request.POST.get(f'q{i}_text', '').strip()
+        if not q_text:
+            continue
+        question = QuizQuestion.objects.create(
+            quiz=quiz, question_text=q_text, question_type='MCQ',
+            marks=_safe_float(request.POST.get(f'q{i}_marks'), 1),
+        )
+        for opt_num in range(1, 5):
+            opt_text = request.POST.get(f'q{i}_opt{opt_num}', '').strip()
+            if opt_text:
+                QuizOption.objects.create(
+                    question=question, option_text=opt_text,
+                    is_correct=(request.POST.get(f'q{i}_correct') == str(opt_num)),
+                )
+        questions_added += 1
+
+    if questions_added > 0 or quiz.questions.exists():
+        quiz.is_active = True
+        quiz.save(update_fields=['is_active'])
+        messages.success(request, f'Quiz "{quiz.title}" created with {quiz.questions.count()} questions.')
+    else:
+        messages.success(request, f'Quiz "{quiz.title}" created — add questions via Edit to activate.')
+
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
+@login_required
+def faculty_assignment_create_inline(request, subject_id):
+    """Create an assignment inline from the My Subjects dashboard tab."""
+    faculty = get_object_or_404(Faculty, user=request.user)
+    get_object_or_404(FacultySubject, faculty=faculty, subject_id=subject_id)
+    if request.method != 'POST':
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+    title = request.POST.get('title', '').strip()
+    description = request.POST.get('description', '').strip()
+    deadline_value = request.POST.get('deadline', '').strip()
+    if not title or not deadline_value:
+        messages.error(request, 'Title and deadline are required.')
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+    Assignment.objects.create(
+        subject_id=subject_id,
+        title=title,
+        description=description,
+        deadline=_assignment_deadline_from_input(deadline_value),
+        created_by=request.user,
+        submission_type=request.POST.get('submission_type', 'ONLINE'),
+        max_marks=_safe_float(request.POST.get('max_marks'), 10),
+    )
+    messages.success(request, f'Assignment "{title}" created.')
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
+@login_required
 def faculty_quiz_edit(request, pk):
     """Add/edit questions and options for a quiz."""
     quiz = get_object_or_404(Quiz, pk=pk, created_by=request.user)
@@ -3017,12 +3681,7 @@ def faculty_internal_marks(request, subject_id):
     get_object_or_404(FacultySubject, faculty=faculty, subject_id=subject_id)
     subject = get_object_or_404(Subject, pk=subject_id)
 
-    students = Student.objects.filter(
-        department=subject.department,
-        current_semester=subject.semester,
-        status='ACTIVE', is_deleted=False,
-    ).select_related('user').order_by('roll_number')
-
+    students = _get_section_students(faculty, subject)
     existing = {im.student_id: im for im in InternalMark.objects.filter(subject=subject, student__in=students)}
 
     if request.method == 'POST':
@@ -3055,6 +3714,98 @@ def faculty_internal_marks(request, subject_id):
     return render(request, 'faculty/internal_marks.html', {'subject': subject, 'rows': rows})
 
 
+@login_required
+def faculty_ce_marks_inline(request, subject_id):
+    """Save CE marks inline from the My Subjects dashboard — no page navigation."""
+    faculty = get_object_or_404(Faculty, user=request.user)
+    get_object_or_404(FacultySubject, faculty=faculty, subject_id=subject_id)
+    subject = get_object_or_404(Subject, pk=subject_id)
+    if request.method != 'POST':
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+    students = _get_section_students(faculty, subject)
+    with transaction.atomic():
+        for student in students:
+            def _fv(key, max_val):
+                v = request.POST.get(f'{key}_{student.id}', '').strip()
+                if not v: return None
+                try: val = float(v)
+                except ValueError: return None
+                return min(max(val, 0), max_val)
+            im, _ = InternalMark.objects.get_or_create(
+                student=student, subject=subject,
+                defaults={'entered_by': request.user}
+            )
+            im.ia1 = _fv('ia1', 30)
+            im.ia2 = _fv('ia2', 30)
+            im.assignment_marks = _fv('assignment', 20)
+            im.attendance_marks = _fv('attendance', 5)
+            im.entered_by = request.user
+            im.save()
+    messages.success(request, f'CE marks saved for {subject.name}.')
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
+@login_required
+def faculty_submit_ce_marks(request, subject_id):
+    """Faculty submits CE marks for a subject to the HOD for review."""
+    faculty = get_object_or_404(Faculty, user=request.user)
+    get_object_or_404(FacultySubject, faculty=faculty, subject_id=subject_id)
+    subject = get_object_or_404(Subject, pk=subject_id)
+
+    if request.method != 'POST':
+        return redirect('faculty_dashboard')
+
+    # Check if already submitted and pending
+    existing = HODApproval.objects.filter(
+        requested_by=request.user,
+        approval_type='CE_MARKS',
+        subject=subject,
+        status='PENDING',
+    ).first()
+    if existing:
+        messages.warning(request, f'CE marks for {subject.name} are already submitted and pending HOD review.')
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+    # Count how many students have marks entered (scoped to faculty's section)
+    students = _get_section_students(faculty, subject)
+    filled = InternalMark.objects.filter(subject=subject, student__in=students).count()
+    total = students.count()
+
+    if filled == 0:
+        messages.error(request, f'No CE marks entered for {subject.name} yet. Enter marks before submitting.')
+        return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+    HODApproval.objects.create(
+        requested_by=request.user,
+        department=subject.department,
+        subject=subject,
+        approval_type='CE_MARKS',
+        description=(
+            f'CE marks submission for {subject.name} ({subject.code}) — '
+            f'Semester {subject.semester}. '
+            f'{filled}/{total} students have marks entered.'
+        ),
+    )
+
+    # Notify HOD
+    try:
+        hod = HOD.objects.filter(department=subject.department, is_active=True).first()
+        if hod:
+            Notification.objects.create(
+                user=hod.user,
+                message=(
+                    f'{request.user.get_full_name() or request.user.username} has submitted '
+                    f'CE marks for {subject.name} (Sem {subject.semester}) for your review.'
+                ),
+            )
+    except Exception:
+        pass
+
+    messages.success(request, f'CE marks for {subject.name} submitted to HOD for review.')
+    return redirect(f"{reverse('faculty_dashboard')}#subjects")
+
+
 # ── FACULTY: ATTENDANCE DEFAULTERS ───────────────────────────────────────────
 
 @login_required
@@ -3066,11 +3817,7 @@ def faculty_attendance_defaulters(request, subject_id):
     att_rule = _get_attendance_rule(subject.department.college, subject.department, subject.semester)
     threshold = att_rule.effective_min_subject
 
-    students = Student.objects.filter(
-        department=subject.department,
-        current_semester=subject.semester,
-        status='ACTIVE', is_deleted=False,
-    ).select_related('user').order_by('roll_number')
+    students = _get_section_students(faculty, subject)
 
     stats = Attendance.objects.filter(
         session__subject=subject, student__in=students
@@ -3182,14 +3929,25 @@ def faculty_leave_apply(request):
                         reason=reason,
                         suggested_substitute=substitute,
                     )
+                    # Notify HOD
+                    hod = HOD.objects.filter(department=faculty.department, is_active=True).first()
+                    if hod:
+                        Notification.objects.create(
+                            user=hod.user,
+                            message=(
+                                f'{request.user.get_full_name() or request.user.username} has submitted a '
+                                f'{dict(LeaveApplication.LEAVE_TYPES).get(leave_type, leave_type)} '
+                                f'from {from_date} to {to_date}. Please review in your dashboard.'
+                            )
+                        )
                     messages.success(request, 'Leave application submitted to HOD.')
-                    return redirect('faculty_leave_apply')
+                    return redirect(f"{reverse('faculty_dashboard')}#leave")
         elif action == 'cancel':
             LeaveApplication.objects.filter(
                 pk=request.POST.get('leave_id'), faculty=faculty, status='PENDING'
             ).delete()
             messages.success(request, 'Application withdrawn.')
-            return redirect('faculty_leave_apply')
+            return redirect(f"{reverse('faculty_dashboard')}#leave")
 
     # Show affected timetable slots for awareness
     timetable_slots = Timetable.objects.filter(faculty=faculty).select_related('subject', 'classroom').order_by('day_of_week', 'start_time')
@@ -3637,6 +4395,61 @@ def student_dashboard(request):
         student=student, is_submitted=True
     ).select_related('quiz__subject').order_by('-submitted_at')[:20]
 
+    # ── My Courses: per-subject data for current semester ────────────────────
+    all_sem_assignments = (
+        Assignment.objects.filter(
+            subject__department=student.department,
+            subject__semester=student.current_semester,
+            is_published=True,
+        ).select_related('subject').order_by('subject_id', 'deadline')
+    )
+    my_submissions_map = {
+        sub.assignment_id: sub
+        for sub in AssignmentSubmission.objects.filter(
+            student=student,
+            assignment__subject__semester=student.current_semester,
+        ).select_related('assignment')
+    }
+    all_sem_quizzes = (
+        Quiz.objects.filter(
+            subject__department=student.department,
+            subject__semester=student.current_semester,
+            is_active=True,
+        ).select_related('subject').order_by('subject_id', '-created_at')
+    )
+    my_quiz_attempts_map = {
+        att.quiz_id: att
+        for att in QuizAttempt.objects.filter(
+            student=student,
+            quiz__subject__semester=student.current_semester,
+            is_submitted=True,
+        ).select_related('quiz')
+    }
+    lesson_plans_qs = LessonPlan.objects.filter(
+        subject__department=student.department,
+        subject__semester=student.current_semester,
+    ).select_related('subject').order_by('subject_id', 'planned_date')
+    lesson_plans_map = {}
+    for lp in lesson_plans_qs:
+        lesson_plans_map.setdefault(lp.subject_id, []).append(lp)
+
+    my_courses = []
+    for subj in course_subjects:
+        faculty_names = [
+            fs.faculty.user.get_full_name() or fs.faculty.user.username
+            for fs in subj.facultysubject_set.all()
+        ]
+        my_courses.append({
+            'subject': subj,
+            'faculty': faculty_names,
+            'assignments': [a for a in all_sem_assignments if a.subject_id == subj.id],
+            'quizzes': [q for q in all_sem_quizzes if q.subject_id == subj.id],
+            'internal_mark': internal_map.get(subj.id),
+            'lesson_plans': lesson_plans_map.get(subj.id, []),
+            'submissions_map': my_submissions_map,
+            'quiz_attempts_map': my_quiz_attempts_map,
+        })
+
     context = {
         'student': student,
         'college': student.department.college,
@@ -3697,6 +4510,7 @@ def student_dashboard(request):
         'all_fees': all_fees,
         'total_fees_due': total_fees_due,
         'paid_fee_types': paid_fee_types,
+        'my_courses': my_courses,
     }
     return render(request, 'dashboards/student.html', context)
 
@@ -4204,24 +5018,6 @@ def razorpay_verify_payment(request):
             from django.conf import settings as _s
             paid_at_str = timezone.localtime(payment.paid_at).strftime('%d %b %Y, %I:%M %p') + ' IST'
             college_name = student.department.college.name if student.department.college else 'EduTrack'
-
-            # ── Email to student ──────────────────────────────────────────────
-            student_email = student.user.email
-            if student_email:
-                student_subject = f'Payment Confirmation — Rs {payment.amount:.0f} received'
-                student_body = (
-                    f'Dear {student.user.get_full_name()},\n\n'
-                    f'Your payment has been successfully processed.\n\n'
-                    f'  Amount    : Rs {payment.amount:.2f}\n'
-                    f'  Type      : {payment.payment_type}\n'
-                    f'  Method    : {payment.payment_method}\n'
-                    f'  Txn ID    : {payment.transaction_id}\n'
-                    f'  Date/Time : {paid_at_str}\n\n'
-                    f'You can download your receipt from the EduTrack student portal.\n\n'
-                    f'Regards,\n{college_name}'
-                )
-                send_mail(student_subject, student_body, _s.DEFAULT_FROM_EMAIL,
-                          [student_email], fail_silently=True)
 
             # ── Email to college admin(s) ─────────────────────────────────────
             admin_emails = list(
@@ -5575,10 +6371,32 @@ def admin_students_bulk_promote(request):
                     )
                     for student in promoted:
                         _create_default_fee(student)
+
+                    # ── Semester reset: clear per-semester data ──────────────
+                    # Clear SectionSubjectFacultyMap for old semester (sections will be rebuilt)
+                    from students.models import SectionSubjectFacultyMap as _SSF, Section as _Sec
+                    old_sections = _Sec.objects.filter(department_id=dept_id, semester=from_sem)
+                    _SSF.objects.filter(section__in=old_sections).delete()
+                    old_sections.delete()
+
+                    # Deactivate quizzes for old semester subjects
+                    old_subject_ids = list(Subject.objects.filter(
+                        department_id=dept_id, semester=from_sem
+                    ).values_list('id', flat=True))
+                    Quiz.objects.filter(subject_id__in=old_subject_ids, is_active=True).update(is_active=False)
+
+                    # Clear pending HOD CE approvals for old semester
+                    HODApproval.objects.filter(
+                        department_id=dept_id,
+                        approval_type='CE_MARKS',
+                        subject_id__in=old_subject_ids,
+                        status='PENDING',
+                    ).update(status='REJECTED')
+
                     _audit('USER_PROMOTED', request.user,
                            f"Batch promotion: {affected} students from {dept_id} Sem {from_sem} → {from_sem + 1}",
                            college=_get_admin_college(request), request=request)
-                    messages.success(request, f'{affected} student(s) promoted to Semester {from_sem + 1}.')
+                    messages.success(request, f'{affected} student(s) promoted to Semester {from_sem + 1}. Semester data reset.')
             return redirect('/dashboard/admin/#students')
 
     return render(request, 'admin_panel/bulk_promote.html', {'departments': departments})
@@ -7315,7 +8133,11 @@ def admin_report_pdf(request, report_type):
 
     from django.core.files.base import ContentFile
     report = SystemReport(report_type=system_report_type, generated_by=request.user)
-    report.file.save(filename, ContentFile(payload), save=True)
+    try:
+        report.file.save(filename, ContentFile(payload), save=True)
+    except OSError:
+        # The download should still work if local archival storage is unavailable.
+        pass
 
     response = HttpResponse(payload, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -7729,13 +8551,14 @@ def exam_hall_tickets(request, exam_id):
 
     if request.method == 'POST' and request.POST.get('action') == 'generate':
         created = updated = 0
+        # Build seating arrangement: sort eligible students by roll number, assign rooms
+        eligible_students = []
         for student in students_qs:
             att = att_map.get(student.id, {'total': 0, 'present': 0})
             pct = round(att['present'] / att['total'] * 100, 1) if att['total'] > 0 else 0
             has_dues = student.id in fee_dues
             exam_rule = _get_attendance_rule(ec.college, student.department, exam.semester)
             threshold = exam_rule.effective_min_overall
-            # Check for approved override
             has_override = EligibilityOverride.objects.filter(
                 student=student, exam=exam, status='APPROVED'
             ).exists()
@@ -7747,6 +8570,33 @@ def exam_hall_tickets(request, exam_id):
                 status = 'WITHHELD'
             else:
                 status = 'ISSUED'
+            eligible_students.append((student, pct, has_dues, status))
+
+        # Auto-assign seats to ISSUED students using available classrooms
+        classrooms = list(Classroom.objects.filter(
+            college=ec.college
+        ).order_by('room_number'))
+        seat_map = {}  # student_id -> (room_number, seat_number, row_number)
+        if classrooms:
+            room_idx = 0
+            seat_num = 1
+            for student, pct, has_dues, status in eligible_students:
+                if status != 'ISSUED':
+                    continue
+                if room_idx >= len(classrooms):
+                    break
+                room = classrooms[room_idx]
+                capacity = room.capacity or 30
+                row = chr(65 + ((seat_num - 1) // 10))  # A, B, C, ...
+                seat_in_row = ((seat_num - 1) % 10) + 1
+                seat_map[student.id] = (room.room_number, f'{row}{seat_in_row}', row)
+                seat_num += 1
+                if seat_num > capacity:
+                    room_idx += 1
+                    seat_num = 1
+
+        for student, pct, has_dues, status in eligible_students:
+            room_no, seat_no, row_no = seat_map.get(student.id, ('', '', ''))
             ht, was_created = HallTicket.objects.update_or_create(
                 student=student, exam=exam,
                 defaults={
@@ -7754,13 +8604,16 @@ def exam_hall_tickets(request, exam_id):
                     'has_fee_dues': has_dues,
                     'issued_at': timezone.now() if status == 'ISSUED' else None,
                     'generated_by': request.user,
+                    'room_number': room_no,
+                    'seat_number': seat_no,
+                    'row_number': row_no,
                 }
             )
             if was_created:
                 created += 1
             else:
                 updated += 1
-        messages.success(request, f'Hall tickets generated: {created} new, {updated} updated.')
+        messages.success(request, f'Hall tickets generated: {created} new, {updated} updated. Seats auto-assigned.')
         return redirect('exam_hall_tickets', exam_id=exam.pk)
 
     departments = Department.objects.filter(college=ec.college, is_deleted=False).order_by('name')
