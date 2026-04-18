@@ -106,7 +106,7 @@
       <div class="leave-card">
         <div style="flex:1">
           <div class="leave-type">{{ leave.get_leave_type_display }}</div>
-          <div class="leave-dates">{{ leave.from_date|date:"d M Y" }} â†’ {{ leave.to_date|date:"d M Y" }} <span style="font-size:11px;color:var(--muted)">({{ leave.days }} day{{ leave.days|pluralize }})</span></div>
+          <div class="leave-dates">{{ leave.from_date|date:"d M Y" }} &rarr; {{ leave.to_date|date:"d M Y" }} <span style="font-size:11px;color:var(--muted)">({{ leave.days }} day{{ leave.days|pluralize }})</span></div>
           <div class="leave-reason">{{ leave.reason|truncatechars:80 }}</div>
           {% if leave.suggested_substitute %}
           <div class="leave-sub"><i class="fas fa-user-check" style="color:var(--teal)"></i> Suggested sub: {{ leave.suggested_substitute.user.get_full_name|default:leave.suggested_substitute.user.username }}</div>

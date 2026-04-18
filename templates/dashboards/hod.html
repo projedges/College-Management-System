@@ -8,6 +8,7 @@
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
 <a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-user-tie"></i> My Profile</a>
+{% if hod_teaching_subjects %}<a href="#my-teaching" data-section-target="my-teaching" class="sb-link"><i class="fas fa-book"></i> My Teaching</a>{% endif %}
 <a href="#faculty" data-section-target="faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="#students" data-section-target="students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
@@ -235,7 +236,7 @@
     <div class="content-scroll">
       {% for t in today_timetable %}
       <div class="tt-row">
-        <div class="tt-time">{{ t.start_time|time:"g:i A" }} ΓÇô {{ t.end_time|time:"g:i A" }}</div>
+        <div class="tt-time">{{ t.start_time|time:"g:i A" }} &ndash; {{ t.end_time|time:"g:i A" }}</div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
           <div style="font-size:11px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
@@ -286,6 +287,32 @@
     {% endif %}
   </div>
 </section>
+
+<!-- MY TEACHING (HOD who also teaches) -->
+{% if hod_teaching_subjects %}
+<section data-dashboard-pane="my-teaching" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-book"></i> My Teaching Subjects</div>
+    <div class="section-meta">Subjects you are personally assigned to teach this semester.</div>
+    <div style="margin-bottom:14px">
+      <a href="{% url 'faculty_dashboard' %}" class="btn-sm btn-sm-teal"><i class="fas fa-external-link-alt"></i> Open Full Faculty Dashboard</a>
+    </div>
+    {% for fs in hod_teaching_subjects %}
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div style="width:36px;height:36px;border-radius:9px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-book"></i></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ fs.subject.name }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ fs.subject.code }} &middot; Sem {{ fs.subject.semester }} &middot; {{ fs.subject.credits }}C</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <a href="{% url 'faculty_mark_attendance' fs.subject.id %}" class="btn-sm btn-sm-teal" style="font-size:11px"><i class="fas fa-calendar-check"></i> Attendance</a>
+        <a href="{% url 'faculty_internal_marks' fs.subject.id %}" class="btn-sm btn-sm-deep" style="font-size:11px"><i class="fas fa-table-list"></i> CE Marks</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 
 <!-- FACULTY WORKLOAD (new) -->
 <section data-dashboard-pane="faculty" class="dashboard-pane">
@@ -347,31 +374,127 @@
 <section data-dashboard-pane="approvals" class="dashboard-pane">
   <div class="two-col">
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-list-check"></i> Pending Queue</div>
-      {% if pending_approvals %}
+      <div class="d-title"><i class="fas fa-list-check"></i> Pending Queue
+        {% if pending_approvals or pending_leaves %}
+        <span style="margin-left:8px;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px">
+          {{ pending_approvals.count|add:pending_leaves.count }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if not pending_approvals and not pending_leaves %}
+      <div class="empty"><i class="fas fa-check-double"></i>No pending approvals.</div>
+
+      {% else %}
       <div class="content-scroll">
+
+        {# ── Leave Applications ─────────────────────────────────────────── #}
+        {% for leave in pending_leaves %}
+        <div class="approval-card" style="border-left:3px solid #6366f1">
+          <div class="approval-type" style="color:#6366f1">
+            <i class="fas fa-calendar-minus"></i> Leave Application — {{ leave.get_leave_type_display }}
+          </div>
+          <div class="approval-desc">
+            <strong>{{ leave.faculty.user.get_full_name|default:leave.faculty.user.username }}</strong>
+            &middot; {{ leave.from_date|date:"d M Y" }} to {{ leave.to_date|date:"d M Y" }}
+            ({{ leave.days }} day{{ leave.days|pluralize }})
+          </div>
+          {% if leave.reason %}
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;font-style:italic">"{{ leave.reason|truncatechars:120 }}"</div>
+          {% endif %}
+          {% if leave.suggested_substitute %}
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">
+            <i class="fas fa-user-check" style="color:#059669"></i>
+            Suggested substitute: <strong>{{ leave.suggested_substitute.user.get_full_name }}</strong>
+          </div>
+          {% endif %}
+          <div class="approval-meta">
+            <i class="fas fa-clock" style="font-size:10px"></i> Applied {{ leave.created_at|date:"d M Y, H:i" }}
+          </div>
+          <div class="approval-actions">
+            <form method="POST" action="{% url 'hod_leave_review' leave.pk %}" style="display:inline">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="APPROVED"/>
+              <button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button>
+            </form>
+            <form method="POST" action="{% url 'hod_leave_review' leave.pk %}" style="display:inline" id="reject-leave-{{ leave.pk }}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="REJECTED"/>
+              <input type="hidden" name="remarks" id="remarks-{{ leave.pk }}" value=""/>
+              <button type="button" class="btn-reject"
+                      onclick="rejectLeave({{ leave.pk }})">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+
+        {# ── Generic HOD Approval Requests ──────────────────────────────── #}
         {% for ap in pending_approvals %}
         <div class="approval-card">
           <div class="approval-type">{{ ap.get_approval_type_display }}</div>
           <div class="approval-desc">{{ ap.description|truncatechars:140 }}</div>
-          <div class="approval-meta"><i class="fas fa-user" style="font-size:10px"></i> {{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
+          <div class="approval-meta">
+            <i class="fas fa-user" style="font-size:10px"></i>
+            {{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}
+          </div>
           <div class="approval-actions">
-            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
-            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="REJECTED"/><button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button></form>
+            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">
+              {% csrf_token %}<input type="hidden" name="action" value="APPROVED"/>
+              <button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button>
+            </form>
+            <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">
+              {% csrf_token %}<input type="hidden" name="action" value="REJECTED"/>
+              <button type="submit" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
+            </form>
           </div>
         </div>
         {% endfor %}
+
       </div>
-      {% else %}
-      <div class="empty"><i class="fas fa-check-double"></i>No pending approvals.</div>
       {% endif %}
     </div>
+
     <div class="d-card">
       <div class="d-title"><i class="fas fa-lightbulb"></i> How Approvals Work</div>
-      <div class="hint-box">Faculty submit leave, event, or course requests. They appear here for HOD review. Use the Approve or Reject buttons to act on each request.</div>
+      <div class="hint-box">
+        Faculty submit leave applications and general requests (event, course, etc.).
+        Both appear here. Approving a leave notifies the faculty immediately.
+        If a substitute was suggested, you can confirm the substitution after approving.
+      </div>
+
+      {% if recent_leaves %}
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recent Leave Decisions</div>
+        {% for leave in recent_leaves %}
+        {% if leave.status != 'PENDING' %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;gap:10px">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--deep)">{{ leave.faculty.user.get_full_name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ leave.get_leave_type_display }} &middot; {{ leave.from_date|date:"d M" }}–{{ leave.to_date|date:"d M Y" }}</div>
+          </div>
+          <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;
+            background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};
+            color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">
+            {{ leave.get_status_display }}
+          </span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
 </section>
+
+<script>
+function rejectLeave(pk) {
+  var remarks = prompt('Reason for rejection (optional):') || '';
+  document.getElementById('remarks-' + pk).value = remarks;
+  document.getElementById('reject-leave-' + pk).submit();
+}
+</script>
 
 <section data-dashboard-pane="history" class="dashboard-pane">
   <div class="d-card">

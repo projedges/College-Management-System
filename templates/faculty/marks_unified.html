@@ -1,0 +1,299 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Marks Entry — {{ subject.name }}{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block page_title %}Marks Entry{% endblock %}
+{% block page_sub %}{{ subject.name }} ({{ subject.code }}) &middot; Semester {{ subject.semester }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'faculty_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .marks-tabs{display:flex;gap:0;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;margin-bottom:20px;width:fit-content}
+  .marks-tab{padding:10px 24px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif}
+  .marks-tab.active{background:var(--teal);color:#fff}
+  .marks-tab:not(.active):hover{background:var(--surface2);color:var(--deep)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .info-bar{display:flex;gap:20px;flex-wrap:wrap;padding:12px 16px;background:var(--surface2);border-radius:var(--r);margin-bottom:20px;font-size:12px}
+  .info-bar span{color:var(--muted)}
+  .info-bar strong{color:var(--deep)}
+  .marks-grid{width:100%;border-collapse:collapse;font-size:13px}
+  .marks-grid th{padding:10px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);background:var(--surface2);text-align:left;white-space:nowrap}
+  .marks-grid td{padding:9px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+  .marks-grid tbody tr:hover{background:#f8fafc}
+  .marks-grid tbody tr:last-child td{border-bottom:none}
+  .m-input{width:72px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;text-align:center;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+  .m-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .m-input.wide{width:90px}
+  .total-cell{font-weight:700;color:var(--teal)}
+  .grade-badge{width:36px;text-align:center;font-size:13px;font-weight:800;color:var(--teal)}
+  .hint-chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .hint-chip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+  .exam-select-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+  .exam-select-row label{font-size:13px;font-weight:600;color:var(--text)}
+  .exam-select{padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff;cursor:pointer}
+  .exam-select:focus{border-color:var(--teal)}
+  .max-marks-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .max-marks-row label{font-size:13px;font-weight:600;color:var(--text)}
+  .ce-status-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:600;margin-bottom:16px}
+  .ce-status-pending{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:#92400e}
+  .ce-status-approved{background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.3);color:#065f46}
+  .ce-status-rejected{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#991b1b}
+  .action-bar{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+  .empty-state{text-align:center;padding:40px;color:var(--muted)}
+  .roll-cell{font-weight:700;color:var(--teal);font-size:12px}
+  .name-cell{font-weight:500;color:var(--deep)}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-card">
+
+  <!-- Subject info bar -->
+  <div class="info-bar">
+    <div><span>Department</span><br><strong>{{ subject.department.name }}</strong></div>
+    <div><span>Semester</span><br><strong>{{ subject.semester }}</strong></div>
+    <div><span>Credits</span><br><strong>{{ subject.credits|default:"—" }}</strong></div>
+    <div><span>Students</span><br><strong>{{ students|length }}</strong></div>
+    {% if subject.code %}<div><span>Code</span><br><strong>{{ subject.code }}</strong></div>{% endif %}
+  </div>
+
+  <!-- Tabs -->
+  <div class="marks-tabs">
+    <button class="marks-tab {% if active_tab == 'internal' %}active{% endif %}" onclick="switchTab('internal')">
+      <i class="fas fa-clipboard-list"></i> Internal Marks
+    </button>
+    <button class="marks-tab {% if active_tab == 'external' %}active{% endif %}" onclick="switchTab('external')">
+      <i class="fas fa-file-alt"></i> External Marks
+    </button>
+  </div>
+
+  <!-- ── INTERNAL MARKS TAB ─────────────────────────────────────────────── -->
+  <div id="tab-internal" class="tab-panel {% if active_tab == 'internal' %}active{% endif %}">
+
+    <!-- CE submission status -->
+    {% if ce_submission %}
+    <div class="ce-status-bar ce-status-{{ ce_submission.status|lower }}">
+      <i class="fas {% if ce_submission.status == 'PENDING' %}fa-clock{% elif ce_submission.status == 'APPROVED' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+      CE Marks: <strong>{{ ce_submission.get_status_display }}</strong>
+      {% if ce_submission.status == 'PENDING' %}&mdash; Awaiting HOD review{% endif %}
+      {% if ce_submission.review_note %}&mdash; Note: {{ ce_submission.review_note }}{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="hint-chips">
+      <span class="hint-chip"><i class="fas fa-info-circle" style="color:var(--teal)"></i> IA1 / IA2: out of 30</span>
+      <span class="hint-chip"><i class="fas fa-file-alt" style="color:var(--gold)"></i> Assignment: out of 20</span>
+      <span class="hint-chip"><i class="fas fa-calendar-check" style="color:var(--green)"></i> Attendance: out of 5</span>
+      <span class="hint-chip"><i class="fas fa-sigma" style="color:var(--deep)"></i> Total: out of 85</span>
+    </div>
+
+    {% if internal_rows %}
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_internal"/>
+      <input type="hidden" name="exam_id" value="{{ selected_exam.pk|default:'' }}"/>
+      <div class="table-scroll">
+        <table class="marks-grid">
+          <thead>
+            <tr>
+              <th>Roll No.</th>
+              <th>Name</th>
+              <th>IA 1 <span style="font-weight:400">/30</span></th>
+              <th>IA 2 <span style="font-weight:400">/30</span></th>
+              <th>Assignment <span style="font-weight:400">/20</span></th>
+              <th>Attendance <span style="font-weight:400">/5</span></th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in internal_rows %}
+            <tr>
+              <td class="roll-cell">{{ row.student.roll_number }}</td>
+              <td class="name-cell">{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+              <td><input type="number" name="ia1_{{ row.student.id }}" class="m-input" min="0" max="30" step="0.5" placeholder="—" value="{% if row.im and row.im.ia1 is not None %}{{ row.im.ia1|floatformat:'-1' }}{% endif %}" oninput="calcIntTotal({{ row.student.id }})"/></td>
+              <td><input type="number" name="ia2_{{ row.student.id }}" class="m-input" min="0" max="30" step="0.5" placeholder="—" value="{% if row.im and row.im.ia2 is not None %}{{ row.im.ia2|floatformat:'-1' }}{% endif %}" oninput="calcIntTotal({{ row.student.id }})"/></td>
+              <td><input type="number" name="assignment_{{ row.student.id }}" class="m-input" min="0" max="20" step="0.5" placeholder="—" value="{% if row.im and row.im.assignment_marks is not None %}{{ row.im.assignment_marks|floatformat:'-1' }}{% endif %}" oninput="calcIntTotal({{ row.student.id }})"/></td>
+              <td><input type="number" name="attendance_{{ row.student.id }}" class="m-input" min="0" max="5" step="0.5" placeholder="—" value="{% if row.im and row.im.attendance_marks is not None %}{{ row.im.attendance_marks|floatformat:'-1' }}{% endif %}" oninput="calcIntTotal({{ row.student.id }})"/></td>
+              <td class="total-cell" id="int_total_{{ row.student.id }}">{% if row.im %}{{ row.im.total|floatformat:1 }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="action-bar">
+        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Internal Marks</button>
+        <a href="{% url 'faculty_dashboard' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</a>
+      </div>
+    </form>
+
+    <!-- Submit to HOD -->
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+        <i class="fas fa-info-circle"></i> Once all marks are entered, submit to HOD for review and approval.
+      </div>
+      {% if ce_submission and ce_submission.status == 'PENDING' %}
+      <button class="qa-btn" disabled style="opacity:.5;cursor:not-allowed"><i class="fas fa-paper-plane"></i> Already Submitted — Pending HOD Review</button>
+      {% else %}
+      <form method="POST" onsubmit="return confirm('Submit CE marks for {{ subject.name }} to HOD for review?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="submit_ce"/>
+        <input type="hidden" name="exam_id" value="{{ selected_exam.pk|default:'' }}"/>
+        <button type="submit" class="qa-btn" style="background:var(--gold);color:#fff"><i class="fas fa-paper-plane"></i> Submit to HOD for Review</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% else %}
+    <div class="empty-state"><i class="fas fa-users" style="font-size:32px;display:block;margin-bottom:12px;color:#d1d5db"></i>No active students found for this subject.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── EXTERNAL MARKS TAB ─────────────────────────────────────────────── -->
+  <div id="tab-external" class="tab-panel {% if active_tab == 'external' %}active{% endif %}">
+
+    <!-- Exam selector -->
+    <div class="exam-select-row">
+      <label><i class="fas fa-file-alt"></i> Select Exam:</label>
+      {% if exams %}
+      <form method="GET" style="display:flex;align-items:center;gap:10px">
+        <input type="hidden" name="tab" value="external"/>
+        <select name="exam_id" class="exam-select" onchange="this.form.submit()">
+          {% for exam in exams %}
+          <option value="{{ exam.pk }}" {% if selected_exam and exam.pk == selected_exam.pk %}selected{% endif %}>
+            {{ exam.name }} — Sem {{ exam.semester }}
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+      {% else %}
+      <span style="font-size:13px;color:var(--muted)">No exams available for Semester {{ subject.semester }}.</span>
+      {% endif %}
+    </div>
+
+    {% if selected_exam and external_rows %}
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_external"/>
+      <input type="hidden" name="exam_id" value="{{ selected_exam.pk }}"/>
+
+      <div class="max-marks-row">
+        <label>Max Marks:</label>
+        <input type="number" name="max_marks" id="max-marks" value="{{ default_max|floatformat:'-1' }}" min="1" max="200" class="m-input wide" onchange="updateAllGrades()"/>
+      </div>
+
+      <div class="table-scroll">
+        <table class="marks-grid">
+          <thead>
+            <tr>
+              <th>Roll No.</th>
+              <th>Name</th>
+              <th>Marks Obtained</th>
+              <th>Grade</th>
+              <th>Grade Point</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in external_rows %}
+            <tr>
+              <td class="roll-cell">{{ row.student.roll_number }}</td>
+              <td class="name-cell">{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+              <td>
+                <input type="number" name="marks_{{ row.student.id }}" class="m-input wide" placeholder="—"
+                       min="0" step="0.5" id="ext_{{ row.student.id }}"
+                       value="{% if row.existing_mark %}{{ row.existing_mark.marks_obtained|floatformat:'-1' }}{% endif %}"
+                       oninput="calcExtGrade(this)"/>
+              </td>
+              <td class="grade-badge" id="ext_grade_{{ row.student.id }}">
+                {% if row.existing_mark %}{{ row.existing_mark.grade }}{% else %}—{% endif %}
+              </td>
+              <td style="font-size:12px;color:var(--muted)" id="ext_gp_{{ row.student.id }}">
+                {% if row.existing_mark %}{{ row.existing_mark.grade_point|floatformat:1 }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="action-bar">
+        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save External Marks</button>
+        <a href="{% url 'faculty_dashboard' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</a>
+      </div>
+    </form>
+
+    {% elif not exams %}
+    <div class="empty-state"><i class="fas fa-calendar-times" style="font-size:32px;display:block;margin-bottom:12px;color:#d1d5db"></i>No exams scheduled for Semester {{ subject.semester }} yet.</div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-users" style="font-size:32px;display:block;margin-bottom:12px;color:#d1d5db"></i>No active students found for this subject.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.marks-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.marks-tab').forEach(b => {
+    if (b.textContent.toLowerCase().includes(tab === 'internal' ? 'internal' : 'external')) {
+      b.classList.add('active');
+    }
+  });
+}
+
+// ── Internal marks total ──────────────────────────────────────────────────────
+function calcIntTotal(sid) {
+  var fields = ['ia1', 'ia2', 'assignment', 'attendance'];
+  var total = 0;
+  fields.forEach(function(f) {
+    var el = document.querySelector('[name="' + f + '_' + sid + '"]');
+    var v = parseFloat(el ? el.value : 0);
+    if (!isNaN(v)) total += v;
+  });
+  var cell = document.getElementById('int_total_' + sid);
+  if (cell) cell.textContent = total > 0 ? total.toFixed(1) : '—';
+}
+
+// ── External marks grade preview ──────────────────────────────────────────────
+var GP_MAP = {'O':10,'A+':9,'A':8,'B+':7,'B':6,'C':5,'F':0};
+
+function calcExtGrade(input) {
+  var max = parseFloat(document.getElementById('max-marks').value) || 100;
+  var val = parseFloat(input.value);
+  var sid = input.name.replace('marks_', '');
+  var gradeEl = document.getElementById('ext_grade_' + sid);
+  var gpEl = document.getElementById('ext_gp_' + sid);
+  if (isNaN(val) || !gradeEl) return;
+  if (val > max) { input.value = max; input.style.borderColor = 'var(--red)'; }
+  else { input.style.borderColor = ''; }
+  var pct = (Math.min(val, max) / max) * 100;
+  var g = 'F';
+  if (pct >= 90) g = 'O';
+  else if (pct >= 80) g = 'A+';
+  else if (pct >= 70) g = 'A';
+  else if (pct >= 60) g = 'B+';
+  else if (pct >= 50) g = 'B';
+  else if (pct >= 40) g = 'C';
+  gradeEl.textContent = g;
+  gradeEl.style.color = pct >= 40 ? 'var(--teal)' : 'var(--red)';
+  if (gpEl) gpEl.textContent = GP_MAP[g] !== undefined ? GP_MAP[g].toFixed(1) : '—';
+}
+
+function updateAllGrades() {
+  document.querySelectorAll('[id^="ext_"]').forEach(function(input) {
+    if (input.tagName === 'INPUT' && input.value) calcExtGrade(input);
+  });
+}
+
+// Init grade previews on load
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[name^="marks_"]').forEach(function(input) {
+    if (input.value) calcExtGrade(input);
+  });
+});
+</script>
+{% endblock %}

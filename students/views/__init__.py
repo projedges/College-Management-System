@@ -18,3 +18,6 @@ _helpers.py contains all shared utilities and decorators.
 
 # Re-export everything from the legacy module so urls.py keeps working unchanged.
 from ._legacy import *  # noqa: F401, F403
+
+# New modular views
+from ._marks import faculty_marks_unified  # noqa: F401

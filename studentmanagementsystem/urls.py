@@ -6,6 +6,8 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('students.urls')),
+    # REST API v1 — JWT-authenticated endpoints for mobile app / integrations
+    path('api/v1/', include('students.api_urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler400 = 'students.views.error_400'

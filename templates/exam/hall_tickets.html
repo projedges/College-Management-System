@@ -25,7 +25,7 @@
   {% if rows %}
   <div class="table-scroll">
     <table class="dtable">
-      <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Attendance %</th><th>Fee Dues</th><th>Auto Status</th><th>Hall Ticket</th></tr></thead>
+      <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Attendance %</th><th>Fee Dues</th><th>Auto Status</th><th>Hall Ticket</th><th>Room</th><th>Seat</th></tr></thead>
       <tbody>
         {% for row in rows %}
         <tr>
@@ -53,6 +53,12 @@
               {% elif row.hall_ticket.status == 'WITHHELD' %}<span class="dbadge dbadge-warning">Withheld</span>
               {% else %}<span class="dbadge dbadge-purple">{{ row.hall_ticket.status }}</span>{% endif %}
             {% else %}<span style="font-size:12px;color:var(--muted)">Not generated</span>{% endif %}
+          </td>
+          <td style="font-size:12px;font-weight:600;color:var(--deep)">
+            {% if row.hall_ticket and row.hall_ticket.room_number %}{{ row.hall_ticket.room_number }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}
+          </td>
+          <td style="font-size:12px;font-weight:700;color:#7c3aed">
+            {% if row.hall_ticket and row.hall_ticket.seat_number %}{{ row.hall_ticket.seat_number }}{% else %}<span style="color:var(--muted)">—</span>{% endif %}
           </td>
         </tr>
         {% endfor %}

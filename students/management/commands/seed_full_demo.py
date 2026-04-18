@@ -225,6 +225,10 @@ class Command(BaseCommand):
                 # Section B duplicates for same subjects
                 ('fac_ml_b',  'ml_b@anu.edu',  'Dr. Kiran',   'Sharma',   'ISE-F07', 'Associate Professor', ['ISE501', 'ISE501_LAB']),
                 ('fac_bd_b',  'bd_b@anu.edu',  'Dr. Meena',   'Pillai',   'ISE-F08', 'Associate Professor', ['ISE502', 'ISE502_LAB']),
+                ('fac_cloud_b', 'cloud_b@anu.edu', 'Dr. Nisha', 'Rao',     'ISE-F09', 'Assistant Professor', ['ISE503']),
+                ('fac_eth_b',   'eth_b@anu.edu',   'Mr. Arjun', 'Menon',   'ISE-F10', 'Assistant Professor', ['ISE504']),
+                ('fac_iot_b',   'iot_b@anu.edu',   'Dr. Kavya', 'Iyer',    'ISE-F11', 'Associate Professor', ['ISE511', 'ISE511_LAB']),
+                ('fac_oe_b',    'oe_b@anu.edu',    'Ms. Divya', 'Nair',    'ISE-F12', 'Assistant Professor', ['ISE521']),
             ]
 
             fac_map = {}
@@ -308,9 +312,9 @@ class Command(BaseCommand):
             sec_b_fac = {
                 'ISE501': 'fac_ml_b', 'ISE501_LAB': 'fac_ml_b',
                 'ISE502': 'fac_bd_b', 'ISE502_LAB': 'fac_bd_b',
-                'ISE503': 'fac_cloud', 'ISE504': 'fac_eth',
-                'ISE511': 'fac_iot',  'ISE511_LAB': 'fac_iot',
-                'ISE521': 'fac_oe',
+                'ISE503': 'fac_cloud_b', 'ISE504': 'fac_eth_b',
+                'ISE511': 'fac_iot_b',  'ISE511_LAB': 'fac_iot_b',
+                'ISE521': 'fac_oe_b',
             }
             # Section A rooms
             sec_a_room = {
@@ -322,7 +326,7 @@ class Command(BaseCommand):
             sec_b_room = {
                 'ISE501': 'ISE-102', 'ISE502': 'ISE-102', 'ISE503': 'ISE-102',
                 'ISE504': 'ISE-102', 'ISE511': 'ISE-102', 'ISE521': 'ISE-102',
-                'ISE501_LAB': 'ISE-LAB1', 'ISE502_LAB': 'ISE-LAB1', 'ISE511_LAB': 'ISE-LAB2',
+                'ISE501_LAB': 'ISE-LAB2', 'ISE502_LAB': 'ISE-LAB2', 'ISE511_LAB': 'ISE-LAB1',
             }
 
             tt_count = 0

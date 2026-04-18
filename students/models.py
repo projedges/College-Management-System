@@ -1159,28 +1159,31 @@ class StudentGroupConflict(models.Model):
 
 class HODApproval(models.Model):
     APPROVAL_TYPE = (
-        ('LEAVE', 'Leave Request'),
-        ('EVENT', 'Event Approval'),
-        ('COURSE', 'Course Approval'),
+        ('LEAVE',    'Leave Request'),
+        ('EVENT',    'Event Approval'),
+        ('COURSE',   'Course Approval'),
+        ('CE_MARKS', 'CE Marks Submission'),
     )
 
     STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
+        ('PENDING',  'Pending'),
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
     )
 
     requested_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    department   = models.ForeignKey(Department, on_delete=models.CASCADE)
+    subject      = models.ForeignKey('Subject', on_delete=models.SET_NULL,
+                                     null=True, blank=True, related_name='hod_approvals')
 
     approval_type = models.CharField(max_length=20, choices=APPROVAL_TYPE)
-    description = models.TextField()
+    description   = models.TextField()
 
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    status      = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='hod_reviews')
 
-    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='hod_reviews')
-
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
@@ -1363,17 +1366,28 @@ class Timetable(models.Model):
         return f"{self.subject.name}{sec} - {self.day_of_week}"
 
 class Substitution(models.Model):
-    timetable_slot = models.ForeignKey(Timetable, on_delete=models.CASCADE, related_name='substitutions')
-    original_faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='original_slots')
+    STATUS_CHOICES = (
+        ('PENDING',  'Pending Acceptance'),
+        ('ACCEPTED', 'Accepted'),
+        ('REJECTED', 'Rejected'),
+    )
+    timetable_slot     = models.ForeignKey(Timetable, on_delete=models.CASCADE, related_name='substitutions')
+    original_faculty   = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='original_slots')
     substitute_faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='substitute_slots')
-    date = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    date               = models.DateField()
+    status             = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    rejection_reason   = models.CharField(max_length=200, blank=True, default='')
+    responded_at       = models.DateTimeField(null=True, blank=True)
+    # Topic the substitute must enter before marking attendance
+    topic_covered      = models.CharField(max_length=300, blank=True, default='',
+                                          help_text='Topic covered — required before marking attendance')
+    created_at         = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('timetable_slot', 'date')
 
     def __str__(self):
-        return f"Sub: {self.substitute_faculty} for {self.original_faculty} on {self.date}"
+        return f"Sub: {self.substitute_faculty} for {self.original_faculty} on {self.date} [{self.status}]"
 
 
 class TimetableBreak(models.Model):
@@ -1521,6 +1535,9 @@ class AttendanceSession(models.Model):
         help_text='Timetable slot this session was generated from'
     )
     date = models.DateField()
+    # Topic covered in this session — required before saving attendance
+    topic_covered = models.CharField(max_length=300, blank=True, default='',
+                                     help_text='Topic taught in this session')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1594,14 +1611,17 @@ class Result(models.Model):
     def __str__(self):
         return f"{self.student} - Sem {self.semester}"
 class Assignment(models.Model):
+    SUBMISSION_TYPE = (
+        ('ONLINE',  'Online — students upload file'),
+        ('OFFLINE', 'Offline — physical submission'),
+    )
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-
     title = models.CharField(max_length=200)
     description = models.TextField()
-
     deadline = models.DateTimeField()
     is_published = models.BooleanField(default=False)
-
+    submission_type = models.CharField(max_length=10, choices=SUBMISSION_TYPE, default='ONLINE')
+    max_marks = models.FloatField(default=10)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -1610,10 +1630,8 @@ class Assignment(models.Model):
 class AssignmentSubmission(models.Model):
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
-
-    file = models.FileField(upload_to='assignments/')
+    file = models.FileField(upload_to='assignments/', null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
-
     marks = models.FloatField(null=True, blank=True)
     feedback = models.TextField(blank=True, default='')
 
@@ -1714,9 +1732,22 @@ class Quiz(models.Model):
     description = models.TextField(blank=True)
     duration_minutes = models.IntegerField(default=30)
     total_marks = models.FloatField(default=10)
-    is_active = models.BooleanField(default=False)   # faculty activates when ready
+    is_active = models.BooleanField(default=False)
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
+    # Question pool settings
+    questions_per_student = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='How many questions each student gets (random from pool). Leave blank = all questions.'
+    )
+    access_password = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Optional password students must enter before starting the quiz.'
+    )
+    template_file = models.FileField(
+        upload_to='quiz_templates/', null=True, blank=True,
+        help_text='Upload a CSV/Excel with questions to bulk-import into the pool.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -2077,6 +2108,10 @@ class HallTicket(models.Model):
     remarks = models.TextField(blank=True)
     issued_at = models.DateTimeField(null=True, blank=True)
     generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    # Seating arrangement
+    room_number = models.CharField(max_length=50, blank=True)
+    seat_number = models.CharField(max_length=20, blank=True)
+    row_number = models.CharField(max_length=10, blank=True)
 
     class Meta:
         unique_together = ('student', 'exam')

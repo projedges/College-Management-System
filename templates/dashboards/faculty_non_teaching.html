@@ -1,0 +1,199 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Faculty Dashboard - EduTrack{% endblock %}
+{% block role_label %}Faculty{% endblock %}
+{% block role_label_foot %}Faculty{% endblock %}
+{% block page_title %}Faculty Dashboard{% endblock %}
+{% block page_sub %}<span style="color:var(--teal);font-weight:700">{{ request.user.get_full_name|default:request.user.username }}</span> &middot; <span style="color:var(--deep);font-weight:600">{{ faculty.designation }}</span> &middot; {{ faculty.department.code }}{% endblock %}
+
+{% block sidebar_links %}
+<p class="sb-nav-label">Menu</p>
+<a href="#dashboard"  data-section-target="dashboard"  class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile"    data-section-target="profile"    class="sb-link"><i class="fas fa-id-badge"></i> My Profile</a>
+<a href="#leave"      data-section-target="leave"      class="sb-link"><i class="fas fa-calendar-minus"></i> Leave Application</a>
+<a href="#requests"   data-section-target="requests"   class="sb-link"><i class="fas fa-paper-plane"></i> My Requests{% if my_requests_count > 0 %} <span style="background:var(--gold);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ my_requests_count }}</span>{% endif %}</a>
+<a href="#notices"    data-section-target="notices"    class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .summary-list{display:grid;gap:0}
+  .summary-item{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+  .summary-item:last-child{border-bottom:none}
+  .req-card{background:var(--surface2);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .req-type{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:3px}
+  .req-desc{font-size:13px;color:var(--deep)}
+  .req-meta{font-size:11px;color:var(--muted);margin-top:3px}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+
+<!-- DASHBOARD -->
+<section data-dashboard-pane="dashboard" class="dashboard-pane active">
+  <div class="d-card" style="margin-bottom:20px;background:linear-gradient(135deg,rgba(13,115,119,.06),rgba(13,115,119,.02));border:1.5px solid rgba(13,115,119,.15)">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="width:56px;height:56px;border-radius:14px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-user-tie"></i></div>
+      <div>
+        <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:2px">{{ faculty.designation }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">{{ faculty.department.name }} &middot; {{ college.name }}</div>
+      </div>
+      <div style="margin-left:auto;padding:8px 16px;background:rgba(230,168,23,.1);border:1px solid rgba(230,168,23,.3);border-radius:99px;font-size:12px;font-weight:700;color:#b88510">
+        <i class="fas fa-info-circle"></i> Non-Teaching Staff
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-bell"></i> Recent Notices</div>
+      {% if announcements %}
+      <div class="content-scroll">
+        {% for ann in announcements %}
+        <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:120 }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+      {% endif %}
+    </div>
+
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-list-check"></i> Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a href="#leave" data-section-target="leave" class="qa-btn qa-teal"><i class="fas fa-calendar-minus"></i> Apply for Leave</a>
+        <a href="#requests" data-section-target="requests" class="qa-btn qa-deep"><i class="fas fa-paper-plane"></i> Submit Request to HOD</a>
+        {% if my_requests_count > 0 %}
+        <div style="padding:10px 14px;background:rgba(230,168,23,.08);border:1px solid rgba(230,168,23,.25);border-radius:10px;font-size:12px;color:#b88510;font-weight:600">
+          <i class="fas fa-clock"></i> {{ my_requests_count }} pending request{{ my_requests_count|pluralize }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROFILE -->
+<section data-dashboard-pane="profile" class="dashboard-pane">
+  <div class="d-card" style="max-width:640px">
+    <div style="display:flex;align-items:center;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:#fff;flex-shrink:0">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ faculty.employee_id }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ faculty.designation }} &middot; {{ faculty.department.name }}</div>
+      </div>
+    </div>
+    <div class="summary-list">
+      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
+      <div class="summary-item"><span>Qualification</span><strong>{{ faculty.qualification }}</strong></div>
+      <div class="summary-item"><span>Experience</span><strong>{{ faculty.experience_years }} years</strong></div>
+      <div class="summary-item"><span>Department</span><strong>{{ faculty.department.name }}</strong></div>
+      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
+      <div class="summary-item"><span>Phone</span><strong>{{ faculty.phone_number|default:"Not set" }}</strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- LEAVE -->
+<section data-dashboard-pane="leave" class="dashboard-pane">
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-calendar-minus"></i> Apply for Leave</div>
+      <div class="section-meta">Submit a leave request to your HOD for approval.</div>
+      <div style="margin-top:8px">
+        <a href="{% url 'faculty_leave_apply' %}" class="qa-btn qa-teal"><i class="fas fa-file-signature"></i> Apply for Leave</a>
+      </div>
+    </div>
+    <div class="d-card">
+      <div class="d-card-title"><i class="fas fa-history"></i> Leave History</div>
+      {% if leave_history %}
+      <div class="content-scroll">
+        {% for leave in leave_history %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:10px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ leave.get_leave_type_display }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ leave.from_date|date:"d M" }} &ndash; {{ leave.to_date|date:"d M Y" }} &middot; {{ leave.days }} day{{ leave.days|pluralize }}</div>
+          </div>
+          <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ leave.get_status_display }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-check"></i>No leave applications yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- REQUESTS -->
+<section data-dashboard-pane="requests" class="dashboard-pane">
+  <div class="two-col">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-paper-plane"></i> Submit New Request</div>
+      <form method="POST" action="{% url 'faculty_request_add' %}">
+        {% csrf_token %}
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Request Type</label>
+          <select name="approval_type" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+            <option value="LEAVE">Leave Request</option>
+            <option value="EVENT">Event Approval</option>
+            <option value="COURSE">Course Approval</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Details</label>
+          <textarea name="description" rows="4" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Describe your request clearly..."></textarea>
+        </div>
+        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
+      </form>
+    </div>
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-list-check"></i> My Recent Requests</div>
+      {% if my_requests %}
+      <div class="content-scroll">
+        {% for req in my_requests %}
+        <div class="req-card">
+          <div>
+            <div class="req-type">{{ req.get_approval_type_display }}</div>
+            <div class="req-desc">{{ req.description|truncatechars:100 }}</div>
+            <div class="req-meta">{{ req.created_at|date:"d M Y" }}</div>
+          </div>
+          <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if req.status == 'APPROVED' %}#d1fae5{% elif req.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if req.status == 'APPROVED' %}#065f46{% elif req.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ req.get_status_display }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-paper-plane"></i>No requests yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- NOTICES -->
+<section data-dashboard-pane="notices" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-bell"></i> All Notices</div>
+    {% if announcements %}
+    <div class="content-scroll">
+      {% for ann in announcements %}
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6">{{ ann.message }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}
