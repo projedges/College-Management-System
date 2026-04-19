@@ -1,12 +1,64 @@
 {% extends 'admin_panel/base_admin.html' %}
-{% block title %}Elective Pools{% endblock %}
-{% block breadcrumb %} / Elective Pools{% endblock %}
-{% block page_title %}Elective Pools{% endblock %}
-{% block page_sub %}Open elective slots for students to choose their subjects.{% endblock %}
+{% block title %}Elective Pools & Course Registration{% endblock %}
+{% block breadcrumb %} / Course Registration{% endblock %}
+{% block page_title %}Course Registration{% endblock %}
+{% block page_sub %}Manage elective pools and control the student course registration window.{% endblock %}
 {% block page_action %}
-  <a href="{% url 'admin_elective_pool_add' %}" class="btn-add"><i class="fas fa-plus"></i> Create Pool</a>
+  <a href="{% url 'admin_elective_pool_add' %}" class="btn-add"><i class="fas fa-plus"></i> Create Elective Pool</a>
 {% endblock %}
 {% block content %}
+
+<!-- Course Registration Window Control -->
+<div class="ap-card" style="margin-bottom:20px;border:2px solid {% if feature_cfg.course_registration_open %}#10b981{% else %}var(--border){% endif %}">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:14px;font-weight:800;color:var(--deep);margin-bottom:4px">
+        <i class="fas fa-layer-group" style="color:{% if feature_cfg.course_registration_open %}#10b981{% else %}var(--muted){% endif %}"></i>
+        Course Registration Window
+      </div>
+      <div style="font-size:12px;color:var(--muted)">
+        {% if feature_cfg.course_registration_open %}
+          <span style="color:#059669;font-weight:700"><i class="fas fa-circle" style="font-size:8px"></i> OPEN</span>
+          &mdash; Students can register for <strong>Semester {{ feature_cfg.course_registration_semester }}</strong>
+        {% else %}
+          <span style="color:var(--muted);font-weight:700"><i class="fas fa-circle" style="font-size:8px"></i> CLOSED</span>
+          &mdash; Students cannot see course registration
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      {% if feature_cfg.course_registration_open %}
+        <form method="POST" action="{% url 'admin_course_registration_toggle' %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="close">
+          <input type="hidden" name="next" value="{% url 'admin_elective_pools' %}">
+          <button type="submit" class="btn-edit" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5"
+                  onclick="return confirm('Close course registration? Students will no longer see the registration window.')">
+            <i class="fas fa-lock"></i> Close Registration
+          </button>
+        </form>
+      {% else %}
+        <form method="POST" action="{% url 'admin_course_registration_toggle' %}" style="display:flex;align-items:center;gap:8px">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="open">
+          <input type="hidden" name="next" value="{% url 'admin_elective_pools' %}">
+          <select name="semester" required
+                  style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff">
+            <option value="">Select Semester</option>
+            {% for i in "12345678" %}
+            <option value="{{ forloop.counter }}">Semester {{ forloop.counter }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn-add" style="font-size:12px;padding:7px 14px">
+            <i class="fas fa-lock-open"></i> Open Registration
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Elective Pools -->
 {% if pools %}
 <div class="ap-card">
   <table class="ap-table">

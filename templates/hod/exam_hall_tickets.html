@@ -1,0 +1,186 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Hall Tickets — {{ exam.name }} — EduTrack{% endblock %}
+{% block role_label %}Head of Department{% endblock %}
+{% block page_title %}Hall Tickets — {{ exam.name }}{% endblock %}
+{% block page_sub %}{{ dept.name }} &middot; Semester {{ exam.semester }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'hod_hall_tickets' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Hall Tickets</a>
+<a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-home"></i> HOD Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:24px 16px">
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;
+    background:{% if msg.tags == 'success' %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% elif msg.tags == 'warning' %}rgba(230,168,23,.08);border:1px solid rgba(230,168,23,.3);color:#92400e{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Header + Generate button -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div>
+      <div style="font-size:18px;font-weight:800;color:var(--deep)"><i class="fas fa-id-card-clip" style="color:var(--teal)"></i> {{ exam.name }}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">
+        Semester {{ exam.semester }} &middot; {{ dept.name }} &middot;
+        Min attendance: <strong>{{ threshold }}%</strong>
+      </div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="generate"/>
+      <button type="submit" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">
+        <i class="fas fa-wand-magic-sparkles"></i> Generate / Refresh Hall Tickets
+      </button>
+    </form>
+  </div>
+
+  <!-- Stats row -->
+  {% with total=rows|length %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:var(--deep)">{{ total }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Total Students</div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:var(--teal)">{{ rows|length }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Eligible</div>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:#dc2626">
+        {% with cnt=0 %}{% for r in rows %}{% if r.auto_status == 'DETAINED' %}{% with cnt=cnt|add:1 %}{% endwith %}{% endif %}{% endfor %}
+        {% for r in rows %}{% if r.auto_status == 'DETAINED' %}{{ forloop.revcounter0|add:1 }}{% if forloop.last %}{% endif %}{% endif %}{% endfor %}
+        {% endwith %}
+        {{ rows|length }}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Detained</div>
+    </div>
+  </div>
+  {% endwith %}
+
+  <!-- Student table -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;min-width:700px">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th style="padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:2px solid var(--border)">Roll No.</th>
+          <th style="padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:2px solid var(--border)">Name</th>
+          <th style="padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Attendance</th>
+          <th style="padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Status</th>
+          <th style="padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Hall Ticket</th>
+          <th style="padding:11px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Exemption</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr style="border-bottom:1px solid #f3f4f6{% if r.auto_status == 'DETAINED' %};background:rgba(239,68,68,.02){% endif %}">
+          <td style="padding:12px 14px;font-weight:700;color:var(--teal);font-size:13px">{{ r.student.roll_number }}</td>
+          <td style="padding:12px 14px;font-weight:600;color:var(--deep)">{{ r.student.user.get_full_name|default:r.student.user.username }}</td>
+          <td style="padding:12px 14px;text-align:center">
+            <span style="font-size:13px;font-weight:700;color:{% if r.att_pct >= threshold %}var(--teal){% elif r.att_pct >= threshold|add:'-10' %}var(--gold){% else %}#dc2626{% endif %}">
+              {{ r.att_pct }}%
+            </span>
+            <div style="font-size:10px;color:var(--muted)">min {{ threshold }}%</div>
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+              background:{% if r.auto_status == 'ELIGIBLE' %}rgba(13,115,119,.1);color:var(--teal)
+              {% elif r.auto_status == 'DETAINED' %}rgba(239,68,68,.1);color:#dc2626
+              {% else %}rgba(230,168,23,.1);color:#b88510{% endif %}">
+              {{ r.auto_status }}
+            </span>
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            {% if r.hall_ticket %}
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+              background:{% if r.hall_ticket.status == 'ISSUED' %}rgba(13,115,119,.1);color:var(--teal)
+              {% elif r.hall_ticket.status == 'DETAINED' %}rgba(239,68,68,.1);color:#dc2626
+              {% else %}rgba(100,116,139,.1);color:var(--muted){% endif %}">
+              {{ r.hall_ticket.get_status_display }}
+            </span>
+            {% else %}
+            <span style="font-size:11px;color:var(--muted)">Not generated</span>
+            {% endif %}
+          </td>
+          <td style="padding:12px 14px;text-align:center">
+            {% if r.auto_status == 'DETAINED' %}
+              {% if r.override %}
+                <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+                  background:{% if r.override.status == 'APPROVED' %}rgba(13,115,119,.1);color:var(--teal)
+                  {% elif r.override.status == 'REJECTED' %}rgba(239,68,68,.1);color:#dc2626
+                  {% else %}rgba(230,168,23,.1);color:#b88510{% endif %}">
+                  {{ r.override.get_status_display }}
+                </span>
+              {% else %}
+                <button onclick="openExemptionModal('{{ r.student.pk }}','{{ r.student.roll_number }}','{{ r.student.user.get_full_name|default:r.student.user.username }}')"
+                        style="padding:5px 12px;border-radius:7px;background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2);font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-file-medical"></i> Request Exemption
+                </button>
+              {% endif %}
+            {% else %}
+            <span style="color:var(--muted);font-size:12px">&mdash;</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="padding:32px;text-align:center;color:var(--muted)">No students found for this semester.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:14px;background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:10px;padding:14px;font-size:12px;color:var(--muted);line-height:1.7">
+    <strong style="color:var(--teal)">Exemption flow:</strong>
+    Click "Request Exemption" for a detained student → provide reason → submitted to college admin for approval →
+    once approved, click "Generate / Refresh Hall Tickets" to issue the hall ticket.
+  </div>
+</div>
+
+<!-- Exemption Modal -->
+<div id="exemption-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;margin:16px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:4px">Request Exemption</div>
+    <div id="exemption-student-label" style="font-size:12px;color:var(--muted);margin-bottom:16px"></div>
+    <form method="post" id="exemption-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="request_exemption"/>
+      <input type="hidden" name="student_id" id="exemption-student-id"/>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Reason for Exemption *</label>
+        <textarea name="reason" rows="4" required placeholder="Explain why this student should be granted an exemption (medical, family emergency, etc.)..."
+                  style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+      <div style="background:rgba(230,168,23,.06);border:1px solid rgba(230,168,23,.25);border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:16px">
+        <i class="fas fa-circle-info"></i> This request will be sent to the college admin for approval before the hall ticket is issued.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" style="flex:1;padding:10px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">
+          <i class="fas fa-paper-plane"></i> Submit Request
+        </button>
+        <button type="button" onclick="closeExemptionModal()" style="padding:10px 18px;border-radius:9px;background:#f3f4f6;color:var(--text);font-size:13px;font-weight:700;border:none;cursor:pointer">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openExemptionModal(studentId, rollNo, name) {
+  document.getElementById('exemption-student-id').value = studentId;
+  document.getElementById('exemption-student-label').textContent = rollNo + ' — ' + name;
+  var overlay = document.getElementById('exemption-modal-overlay');
+  overlay.style.display = 'flex';
+}
+function closeExemptionModal() {
+  document.getElementById('exemption-modal-overlay').style.display = 'none';
+}
+document.getElementById('exemption-modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeExemptionModal();
+});
+</script>
+{% endblock %}

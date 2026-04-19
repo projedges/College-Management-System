@@ -18,6 +18,8 @@
 <a href="{% url 'admin_ssf_map' %}" class="sb-link {% if active_section == 'ssf' %}active{% endif %}"><i class="fas fa-diagram-project"></i> SSF Mapping</a>
 <a href="{% url 'admin_elective_pools' %}" class="sb-link {% if active_section == 'electives' %}active{% endif %}"><i class="fas fa-list-check"></i> Elective Pools</a>
 <a href="{% url 'admin_dashboard' %}#exams" class="sb-link {% if active_section == 'exams' %}active{% endif %}"><i class="fas fa-file-pen"></i> Exams</a>
+<a href="{% url 'admin_hall_tickets' %}" class="sb-link {% if active_section == 'hall_tickets' %}active{% endif %}"><i class="fas fa-id-card-clip"></i> Hall Tickets</a>
+<a href="{% url 'admin_leave_quotas' %}" class="sb-link {% if active_section == 'leave_quotas' %}active{% endif %}"><i class="fas fa-calendar-minus"></i> Leave Quotas</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Finance &amp; Comms</p>
 <a href="{% url 'admin_dashboard' %}#finance" class="sb-link {% if active_section == 'finance' %}active{% endif %}"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>

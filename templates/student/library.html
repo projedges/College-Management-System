@@ -1,0 +1,50 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Library — EduTrack{% endblock %}
+{% block role_label %}Student{% endblock %}
+{% block page_title %}Library Portal{% endblock %}
+{% block page_sub %}{{ student.department.name }} &middot; {{ student.roll_number }}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}#library" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+<a href="?tab=borrow" class="sb-link {% if tab == 'borrow' %}active{% endif %}"><i class="fas fa-book-bookmark"></i> Borrowed Books</a>
+<a href="?tab=search" class="sb-link {% if tab == 'search' %}active{% endif %}"><i class="fas fa-magnifying-glass"></i> Search Catalogue</a>
+<a href="?tab=history" class="sb-link {% if tab == 'history' %}active{% endif %}"><i class="fas fa-clock-rotate-left"></i> Borrow History</a>
+<a href="?tab=fines" class="sb-link {% if tab == 'fines' %}active{% endif %}"><i class="fas fa-indian-rupee-sign"></i> Fines &amp; Dues</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:24px 16px">
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534">{{ msg }}</div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;margin-bottom:24px;width:fit-content">
+    {% for t, label, icon in tab_list|default:"" %}{% endfor %}
+    <a href="?tab=borrow" style="padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;{% if tab == 'borrow' %}background:var(--teal);color:#fff{% else %}color:var(--muted){% endif %}"><i class="fas fa-book-bookmark"></i> Borrowed</a>
+    <a href="?tab=search" style="padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;{% if tab == 'search' %}background:var(--teal);color:#fff{% else %}color:var(--muted){% endif %}"><i class="fas fa-magnifying-glass"></i> Search</a>
+    <a href="?tab=history" style="padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;{% if tab == 'history' %}background:var(--teal);color:#fff{% else %}color:var(--muted){% endif %}"><i class="fas fa-clock-rotate-left"></i> History</a>
+    <a href="?tab=fines" style="padding:9px 18px;font-size:12px;font-weight:700;text-decoration:none;{% if tab == 'fines' %}background:var(--teal);color:#fff{% else %}color:var(--muted){% endif %}"><i class="fas fa-indian-rupee-sign"></i> Fines</a>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:32px;text-align:center">
+    <i class="fas fa-book-open-reader" style="font-size:48px;color:var(--teal);display:block;margin-bottom:16px"></i>
+    <div style="font-size:18px;font-weight:800;color:var(--deep);margin-bottom:8px">Library Module</div>
+    <div style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.7">
+      The library management system is ready to be connected. Once integrated, you'll be able to:
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0;text-align:left">
+      <div style="padding:14px;background:var(--surface2);border-radius:10px;font-size:13px;color:var(--deep)"><i class="fas fa-book-bookmark" style="color:var(--teal);margin-right:8px"></i> View borrowed books &amp; due dates</div>
+      <div style="padding:14px;background:var(--surface2);border-radius:10px;font-size:13px;color:var(--deep)"><i class="fas fa-magnifying-glass" style="color:var(--teal);margin-right:8px"></i> Search the book catalogue</div>
+      <div style="padding:14px;background:var(--surface2);border-radius:10px;font-size:13px;color:var(--deep)"><i class="fas fa-bell" style="color:var(--gold);margin-right:8px"></i> Get overdue reminders</div>
+      <div style="padding:14px;background:var(--surface2);border-radius:10px;font-size:13px;color:var(--deep)"><i class="fas fa-indian-rupee-sign" style="color:var(--red);margin-right:8px"></i> Pay library fines online</div>
+      <div style="padding:14px;background:var(--surface2);border-radius:10px;font-size:13px;color:var(--deep)"><i class="fas fa-id-card" style="color:var(--teal);margin-right:8px"></i> Renew membership</div>
+      <div style="padding:14px;background:var(--surface2);border-radius:10px;font-size:13px;color:var(--deep)"><i class="fas fa-clock-rotate-left" style="color:var(--muted);margin-right:8px"></i> Full borrowing history</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">Contact your library staff or admin to enable the library integration.</div>
+  </div>
+</div>
+{% endblock %}

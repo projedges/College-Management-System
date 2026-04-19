@@ -32,6 +32,18 @@
       <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Experience (Years)</label><input type="number" name="experience_years" value="0" min="0" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     </div>
     <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Phone Number</label><input type="text" name="phone_number" placeholder="10-digit mobile" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+    <div class="form-row">
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Designation</label><input type="text" name="designation" value="Head of Department" placeholder="e.g. Professor &amp; Head" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Joined Date</label><input type="date" name="joined_date" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+    </div>
+    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Specialization</label><input type="text" name="specialization" placeholder="e.g. Machine Learning, VLSI Design" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/><div style="font-size:11px;color:var(--muted);margin-top:4px">Research or teaching specialization areas.</div></div>
+    <div style="margin-bottom:20px;padding:14px 16px;background:rgba(13,115,119,.05);border:1.5px solid rgba(13,115,119,.2);border-radius:var(--r)">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" name="can_take_classes" id="can-take-classes" style="width:16px;height:16px;accent-color:var(--teal)"/>
+        <span style="font-size:13px;font-weight:600">This HOD also teaches classes (like a faculty member)</span>
+      </label>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;margin-left:26px">Enabling this will auto-create a Faculty profile so subjects and timetable slots can be assigned.</div>
+    </div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Add HOD</button>
       <a href="{% url 'admin_dashboard' %}#faculty" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>

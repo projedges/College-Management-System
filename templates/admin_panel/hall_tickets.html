@@ -1,0 +1,146 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Hall Tickets — EduTrack{% endblock %}
+{% block role_label %}{% if hod_dept %}Head of Department{% else %}Admin{% endif %}{% endblock %}
+{% block page_title %}Hall Ticket Management{% endblock %}
+{% block page_sub %}Generate and manage exam hall tickets for students{% endblock %}
+
+{% block sidebar_links %}
+{% if hod_dept %}
+<a href="{% url 'hod_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to HOD Dashboard</a>
+{% else %}
+{% include 'admin_panel/_admin_sidebar.html' with active_section='hall_tickets' %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:24px 16px">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+    <div>
+      <div style="font-size:20px;font-weight:800;color:var(--deep)"><i class="fas fa-id-card-clip" style="color:var(--teal)"></i> Hall Ticket Management</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Generate eligibility checks and issue hall tickets per exam. Students can download issued tickets from their dashboard.</div>
+    </div>
+    {% if departments %}
+    <form method="get" style="display:flex;gap:8px;align-items:center">
+      <select name="dept" onchange="this.form.submit()" style="padding:8px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px;background:#fff;color:var(--deep)">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+        <option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;
+    background:{% if msg.tags == 'success' %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if exam_summaries %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:2px solid var(--border)">Examination</th>
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Semester</th>
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Date</th>
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Issued</th>
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Detained</th>
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Withheld</th>
+          <th style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;border-bottom:2px solid var(--border)">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for es in exam_summaries %}
+        <tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:14px 16px;font-weight:600;color:var(--deep)">{{ es.exam.name }}</td>
+          <td style="padding:14px 16px;text-align:center;color:var(--muted);font-size:13px">Sem {{ es.exam.semester }}</td>
+          <td style="padding:14px 16px;text-align:center;color:var(--muted);font-size:12px">{{ es.exam.start_date|date:"d M Y"|default:"—" }}</td>
+          <td style="padding:14px 16px;text-align:center">
+            <span style="font-size:13px;font-weight:700;color:var(--teal)">{{ es.issued }}</span>
+            {% if es.total > 0 %}<span style="font-size:11px;color:var(--muted)">/{{ es.total }}</span>{% endif %}
+          </td>
+          <td style="padding:14px 16px;text-align:center">
+            {% if es.detained > 0 %}
+            <span style="font-size:13px;font-weight:700;color:#dc2626">{{ es.detained }}</span>
+            {% else %}<span style="color:var(--muted)">0</span>{% endif %}
+          </td>
+          <td style="padding:14px 16px;text-align:center">
+            {% if es.withheld > 0 %}
+            <span style="font-size:13px;font-weight:700;color:#b88510">{{ es.withheld }}</span>
+            {% else %}<span style="color:var(--muted)">0</span>{% endif %}
+          </td>
+          <td style="padding:14px 16px;text-align:center">
+            <a href="{% if hod_dept %}{% url 'hod_exam_hall_tickets' es.exam.pk %}{% else %}{% url 'exam_hall_tickets' es.exam.pk %}{% endif %}"
+               style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--teal);color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">
+              <i class="fas fa-{% if es.total == 0 %}wand-magic-sparkles{% else %}eye{% endif %}"></i>
+              {% if es.total == 0 %}Generate{% else %}Manage{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px 24px;background:#fff;border:1px solid var(--border);border-radius:14px">
+    <i class="fas fa-id-card-clip" style="font-size:36px;color:var(--border);margin-bottom:12px;display:block"></i>
+    <div style="font-size:15px;font-weight:700;color:var(--deep);margin-bottom:6px">No exams found</div>
+    <div style="font-size:13px;color:var(--muted)">Create exams first from the Exams section, then generate hall tickets here.</div>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:20px;background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:12px;padding:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:8px"><i class="fas fa-circle-info"></i> How Hall Tickets Work</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8">
+      Click <strong>Generate</strong> on any exam to run eligibility checks (attendance, fee clearance) and issue hall tickets to eligible students.
+      Students with attendance below threshold are <strong style="color:#dc2626">Detained</strong>.
+      Students with fee dues are <strong style="color:#b88510">Withheld</strong>.
+      Issued hall tickets are immediately visible to students in their dashboard under <em>Hall Tickets</em>.
+    </div>
+  </div>
+
+  {% if pending_overrides %}
+  <div style="margin-top:24px">
+    <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:12px">
+      <i class="fas fa-file-medical" style="color:#b88510"></i> Pending Exemption Requests
+      <span style="font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px;background:rgba(230,168,23,.12);color:#b88510;margin-left:8px">{{ pending_overrides|length }}</span>
+    </div>
+    {% for ov in pending_overrides %}
+    <div style="background:#fff;border:1px solid rgba(230,168,23,.25);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--deep)">{{ ov.student.roll_number }} — {{ ov.student.user.get_full_name|default:ov.student.user.username }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">{{ ov.student.department.name }} &middot; {{ ov.exam.name }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Attendance at request: <strong style="color:#dc2626">{{ ov.attendance_pct_at_request }}%</strong></div>
+          <div style="font-size:12px;color:var(--deep);margin-top:6px;background:var(--surface2);border-radius:7px;padding:8px 10px">{{ ov.reason }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Requested by {{ ov.requested_by.get_full_name|default:ov.requested_by.username }} on {{ ov.created_at|date:"d M Y" }}</div>
+        </div>
+        <form method="post" style="display:flex;flex-direction:column;gap:8px;min-width:200px">
+          {% csrf_token %}
+          <input type="hidden" name="override_id" value="{{ ov.pk }}"/>
+          <input type="text" name="review_note" placeholder="Review note (optional)" style="padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:'Inter',sans-serif"/>
+          <div style="display:flex;gap:8px">
+            <button type="submit" name="action" value="APPROVED"
+                    style="flex:1;padding:8px;border-radius:8px;background:rgba(13,115,119,.1);color:var(--teal);border:1px solid rgba(13,115,119,.2);font-size:12px;font-weight:700;cursor:pointer">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button type="submit" name="action" value="REJECTED"
+                    style="flex:1;padding:8px;border-radius:8px;background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2);font-size:12px;font-weight:700;cursor:pointer">
+              <i class="fas fa-times"></i> Reject
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

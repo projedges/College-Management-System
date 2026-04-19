@@ -1,0 +1,66 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Leave & Substitution Quotas — EduTrack{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block page_title %}Leave & Substitution Quotas{% endblock %}
+{% block page_sub %}Set the maximum leave days and substitution limits for faculty{% endblock %}
+
+{% block sidebar_links %}
+{% include 'admin_panel/_admin_sidebar.html' with active_section='leave_quotas' %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto;padding:24px 16px">
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534">
+    <i class="fas fa-check-circle"></i> {{ msg }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+    <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:4px"><i class="fas fa-calendar-minus" style="color:var(--teal)"></i> Leave Quotas</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Maximum leave days per faculty member per academic year.</div>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div style="display:grid;gap:14px;margin-bottom:24px">
+        {% for field_name, label, val in leave_fields %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:10px;gap:16px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ label }}</div>
+            <div style="font-size:11px;color:var(--muted)">days per year</div>
+          </div>
+          <input type="number" name="{{ field_name }}" value="{{ val }}" min="0" max="365"
+                 style="width:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;text-align:center;outline:none">
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:4px"><i class="fas fa-people-arrows" style="color:var(--teal)"></i> Substitution Quota</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Maximum substitution requests per faculty per semester.</div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:10px;gap:16px;margin-bottom:24px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">Max Substitutions</div>
+          <div style="font-size:11px;color:var(--muted)">per faculty per semester</div>
+        </div>
+        <input type="number" name="max_substitutions" value="{{ cfg.max_substitutions }}" min="0" max="100"
+               style="width:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;text-align:center;outline:none">
+      </div>
+
+      <button type="submit" style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;cursor:pointer">
+        <i class="fas fa-save"></i> Save Quotas
+      </button>
+    </form>
+  </div>
+
+  <div style="margin-top:14px;background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:10px;padding:14px;font-size:12px;color:var(--muted);line-height:1.7">
+    <strong style="color:var(--teal)">How it works:</strong>
+    Faculty see their remaining leave balance on the Leave &amp; Requests section of their dashboard.
+    When a faculty member applies for leave, the system checks against these limits.
+    Substitution quota resets each semester.
+  </div>
+</div>
+{% endblock %}

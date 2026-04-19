@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Faculty Dashboard - EduTrack{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block role_label_foot %}Faculty{% endblock %}
@@ -10,9 +10,9 @@
 <a href="#dashboard"  data-section-target="dashboard"  class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
 <a href="#profile"    data-section-target="profile"    class="sb-link"><i class="fas fa-id-badge"></i> My Profile</a>
 <a href="#subjects"   data-section-target="subjects"   class="sb-link"><i class="fas fa-book"></i> My Subjects</a>
-<a href="#leave"      data-section-target="leave"      class="sb-link"><i class="fas fa-calendar-minus"></i> Leave Application</a>
+<a href="#students"     data-section-target="students"     class="sb-link"><i class="fas fa-user-graduate"></i> My Students</a>
+<a href="#leave"        data-section-target="leave"        class="sb-link"><i class="fas fa-calendar-minus"></i> Leave &amp; Requests</a>
 <a href="#substitution" data-section-target="substitution" class="sb-link"><i class="fas fa-people-arrows"></i> Substitution</a>
-<a href="#requests"   data-section-target="requests"   class="sb-link"><i class="fas fa-paper-plane"></i> My Requests{% if my_requests_count > 0 %} <span style="background:var(--gold);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ my_requests_count }}</span>{% endif %}</a>
 <a href="#notices"    data-section-target="notices"    class="sb-link"><i class="fas fa-bell"></i> Notices</a>
 {% endblock %}
 
@@ -105,6 +105,11 @@
     .faculty-stat-grid{grid-template-columns:1fr}
     .marks-entry-row{flex-wrap:wrap}
   }
+  /* Notice + filter tabs */
+  .att-view-tab{padding:8px 16px;font-size:12px;font-weight:700;border:none;border-right:1px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+  .att-view-tab:last-child{border-right:none}
+  .att-view-tab.active{background:var(--teal);color:#fff}
+  .att-view-tab:hover:not(.active){background:var(--surface2)}
 </style>
 {% endblock %}
 
@@ -148,6 +153,7 @@
     <div class="d-card">
       <div class="d-title"><i class="fas fa-book"></i> My Subjects</div>
       <div class="section-meta">Click a subject in <a href="#subjects" data-section-target="subjects" style="color:var(--teal);font-weight:600">My Subjects</a> to manage attendance, assignments, quizzes, and CE marks.</div>
+<a href="#students"     data-section-target="students"     class="sb-link"><i class="fas fa-user-graduate"></i> My Students</a>
       {% if subject_cards %}
       {% for item in subject_cards %}
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
@@ -501,13 +507,7 @@
                 <div style="font-size:11px;color:var(--muted);margin-bottom:8px">CSV columns: <code>question_text, option1, option2, option3, option4, correct_option (1-4), marks</code></div>
                 <input type="file" name="template_file" accept=".csv,.xlsx" class="fac-input" style="padding:6px">
               </div>
-              <!-- Manual questions -->
-              <div style="font-size:12px;font-weight:700;color:var(--deep);margin-bottom:8px;padding-top:10px;border-top:1px solid var(--border)">
-                Manual Questions (MCQ) <span id="qcount-{{ fid }}" style="font-weight:400;color:var(--muted)">— 0 added</span>
-              </div>
-              <div id="qcontainer-{{ fid }}"></div>
-              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-                <button type="button" onclick="addQ('{{ fid }}')" class="fac-btn" style="background:rgba(13,115,119,.1);color:var(--teal);border:1px solid rgba(13,115,119,.2)"><i class="fas fa-plus"></i> Add Question</button>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
                 <button type="submit" class="fac-btn fac-btn-primary"><i class="fas fa-check"></i> Create Quiz</button>
                 <button type="button" onclick="this.closest('details').removeAttribute('open')" class="fac-btn fac-btn-ghost"><i class="fas fa-times"></i> Cancel</button>
               </div>
@@ -575,24 +575,18 @@
                 {% endfor %}
                 {% endif %}
                 {% endwith %}
-                <div style="font-size:12px;font-weight:700;color:var(--deep);margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--border)">Add New Question</div>
-                <form method="POST" action="{% url 'faculty_quiz_add_question_inline' q.pk %}">
-                  {% csrf_token %}
-                  <input type="text" name="question_text" placeholder="Question text *" class="fac-input" required style="margin-bottom:8px">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
-                    {% for i in "1234" %}
-                    <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
-                      <input type="radio" name="correct_option" value="{{ forloop.counter }}" {% if forloop.first %}required{% endif %}>
-                      <input type="text" name="opt{{ forloop.counter }}" placeholder="Option {{ forloop.counter }}" class="fac-input" style="border:none;padding:0;box-shadow:none;font-size:12px">
-                    </label>
-                    {% endfor %}
-                  </div>
-                  <div style="display:flex;gap:8px;align-items:center">
-                    <label class="fac-lbl" style="margin:0">Marks:</label>
-                    <input type="number" name="marks" value="1" min="0.5" step="0.5" class="fac-input" style="width:70px">
-                    <button type="submit" class="fac-btn fac-btn-primary" style="font-size:11px"><i class="fas fa-plus"></i> Add Question</button>
-                  </div>
-                </form>
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+                  <div style="font-size:12px;font-weight:700;color:var(--deep);margin-bottom:8px">Add Questions via CSV Upload</div>
+                  <form method="POST" action="{% url 'faculty_quiz_edit' q.pk %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="upload_csv">
+                    <div style="padding:12px;background:rgba(13,115,119,.04);border:1.5px dashed rgba(13,115,119,.25);border-radius:10px;margin-bottom:10px">
+                      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">CSV columns: <code>question_text, option1, option2, option3, option4, correct_option (1-4), marks</code></div>
+                      <input type="file" name="csv_file" accept=".csv" class="fac-input" style="padding:6px" required>
+                    </div>
+                    <button type="submit" class="fac-btn fac-btn-primary" style="font-size:11px"><i class="fas fa-upload"></i> Upload &amp; Import Questions</button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
@@ -699,6 +693,23 @@
 
 <!-- LEAVE -->
 <section data-dashboard-pane="leave" class="dashboard-pane">
+
+  <!-- Leave quota summary -->
+  {% if leave_quota %}
+  <div class="d-card" style="padding:14px 18px;margin-bottom:0">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Leave Balance (This Year)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">
+      {% for code, data in leave_quota.items %}
+      <div style="padding:10px 12px;border-radius:10px;border:1px solid {% if data.remaining == 0 %}rgba(239,68,68,.3){% elif data.remaining <= 2 %}rgba(230,168,23,.3){% else %}var(--border){% endif %};background:{% if data.remaining == 0 %}rgba(239,68,68,.04){% elif data.remaining <= 2 %}rgba(230,168,23,.04){% else %}var(--surface2){% endif %}">
+        <div style="font-size:18px;font-weight:900;color:{% if data.remaining == 0 %}var(--red){% elif data.remaining <= 2 %}#b88510{% else %}var(--teal){% endif %}">{{ data.remaining }}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">{{ code }} remaining</div>
+        <div style="font-size:10px;color:var(--muted)">{{ data.used }}/{{ data.max }} used</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="two-col">
 
     <!-- Apply form (inline — no page navigation) -->
@@ -832,10 +843,70 @@
     </div>
 
   </div>
+  <!-- HOD Requests (merged) -->
+  <div class="d-card" style="margin-top:16px">
+    <div class="d-title"><i class="fas fa-paper-plane"></i> Other Requests to HOD</div>
+    <div class="section-meta">Event approvals, course requests, or any other HOD approval needed.</div>
+    <div class="two-col">
+      <div>
+        <form method="POST" action="{% url 'faculty_request_add' %}">
+          {% csrf_token %}
+          <div style="margin-bottom:10px">
+            <label class="fac-lbl">Request Type</label>
+            <select name="approval_type" class="fac-input">
+              <option value="EVENT">Event Approval</option>
+              <option value="COURSE">Course Approval</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="fac-lbl">Details *</label>
+            <textarea name="description" rows="3" required class="fac-input" style="resize:vertical" placeholder="Describe your request..."></textarea>
+          </div>
+          <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
+        </form>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Recent Requests</div>
+        {% if my_requests %}
+        {% for req in my_requests %}
+        <div class="req-card">
+          <div>
+            <div class="req-type">{{ req.get_approval_type_display }}</div>
+            <div class="req-desc">{{ req.description|truncatechars:80 }}</div>
+            <div class="req-meta">{{ req.created_at|date:"d M Y" }}</div>
+          </div>
+          <span style="padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if req.status == 'APPROVED' %}#d1fae5{% elif req.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if req.status == 'APPROVED' %}#065f46{% elif req.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ req.get_status_display }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty" style="padding:12px 0"><i class="fas fa-paper-plane"></i>No requests yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
 </section>
 
 <!-- SUBSTITUTION -->
 <section data-dashboard-pane="substitution" class="dashboard-pane">
+
+  <!-- Substitution quota -->
+  {% if sub_quota %}
+  <div class="d-card" style="padding:14px 18px;margin-bottom:0">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="padding:10px 16px;border-radius:10px;border:1px solid {% if sub_quota.remaining == 0 %}rgba(239,68,68,.3){% elif sub_quota.remaining <= 2 %}rgba(230,168,23,.3){% else %}var(--border){% endif %};background:{% if sub_quota.remaining == 0 %}rgba(239,68,68,.04){% elif sub_quota.remaining <= 2 %}rgba(230,168,23,.04){% else %}var(--surface2){% endif %}">
+        <div style="font-size:22px;font-weight:900;color:{% if sub_quota.remaining == 0 %}var(--red){% elif sub_quota.remaining <= 2 %}#b88510{% else %}var(--teal){% endif %}">{{ sub_quota.remaining }}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">Substitutions remaining this semester</div>
+        <div style="font-size:10px;color:var(--muted)">{{ sub_quota.used }}/{{ sub_quota.max }} used</div>
+      </div>
+      {% if sub_quota.remaining == 0 %}
+      <div style="font-size:13px;color:var(--red);font-weight:600"><i class="fas fa-triangle-exclamation"></i> You have used all your substitution quota for this semester.</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="two-col">
 
     <!-- Assign substitute form -->
@@ -844,18 +915,17 @@
       <div class="section-meta">Can't take a class? Select your slot and date — only free faculty are shown.</div>
 
       {% if all_week_slots %}
+      <!-- Embed pre-computed free faculty data -->
+      <script id="sub-faculty-data" type="application/json">{{ sub_faculty_json|safe }}</script>
+
       <form method="POST" action="{% url 'faculty_assign_substitution' %}" style="margin-top:14px" id="sub-form">
         {% csrf_token %}
 
         <div style="margin-bottom:14px">
           <label class="fac-lbl">My Timetable Slot *</label>
-          <select name="timetable_slot" class="fac-input" required id="sub-slot-select">
-            <option value="">— Select a slot —</option>
+          <select name="timetable_slot" class="fac-input" required id="sub-slot-select" onchange="subUpdateFaculty()">
             {% for slot in all_week_slots %}
-            <option value="{{ slot.pk }}"
-                    data-day="{{ slot.day_of_week }}"
-                    data-start="{{ slot.start_time|time:'H:i' }}"
-                    data-end="{{ slot.end_time|time:'H:i' }}">
+            <option value="{{ slot.pk }}" data-day="{{ slot.day_of_week }}"{% if forloop.first %} selected{% endif %}>
               {{ slot.get_day_of_week_display }} &middot; {{ slot.start_time|time:"g:i A" }}–{{ slot.end_time|time:"g:i A" }} &middot; {{ slot.subject.name }} ({{ slot.subject.code }}){% if slot.classroom %} &middot; {{ slot.classroom.room_number }}{% endif %}
             </option>
             {% endfor %}
@@ -865,20 +935,27 @@
         <div style="margin-bottom:14px">
           <label class="fac-lbl">Date *</label>
           <input type="date" name="date" class="fac-input" required id="sub-date-input"
-                 value="{{ now|date:'Y-m-d' }}" min="{{ now|date:'Y-m-d' }}"/>
+                 value="" min="{{ now|date:'Y-m-d' }}" onchange="subUpdateFaculty()"/>
           <div style="font-size:11px;color:var(--muted);margin-top:4px" id="sub-day-hint"></div>
         </div>
 
+        <div style="margin-bottom:14px">
+          <label class="fac-lbl">Note <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="text" name="note" class="fac-input" maxlength="500"
+                 placeholder="e.g. Attending conference, medical appointment…"
+                 style="width:100%;box-sizing:border-box"/>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Shown to the substitute so they know why you need coverage.</div>
+        </div>
+
         <div style="margin-bottom:18px">
-          <label class="fac-lbl">Substitute Faculty *
-            <span id="sub-fac-loading" style="display:none;font-weight:400;color:var(--teal)"><i class="fas fa-spinner fa-spin"></i> Loading free faculty…</span>
-          </label>
-          <select name="substitute_faculty" class="fac-input" required id="sub-fac-select">
-            <option value="">— Select slot and date first —</option>
+          <label class="fac-lbl">Substitute Faculty *</label>
+          <select name="substitute_faculty" class="fac-input" required id="sub-fac-select" onchange="subOnFacChange()">
+            <option value="">— Select a slot first —</option>
           </select>
           <div style="font-size:11px;color:var(--muted);margin-top:4px" id="sub-fac-hint">
-            <i class="fas fa-info-circle"></i> Only faculty free at that time on that date are shown.
+            <i class="fas fa-info-circle"></i> Only faculty free at that time are shown.
           </div>
+          <div id="sub-smart-card" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(13,115,119,.06);border:1px solid rgba(13,115,119,.2);border-radius:8px;font-size:12px;color:var(--teal)"></div>
         </div>
 
         <button type="submit" class="qa-btn qa-teal" id="sub-submit-btn" disabled
@@ -914,6 +991,9 @@
               <div style="font-size:11px;color:var(--muted);margin-top:2px">
                 Requested by: <strong>{{ sub.original_faculty.user.get_full_name }}</strong>
               </div>
+              {% if sub.note %}
+              <div style="font-size:11px;color:#6366f1;margin-top:4px;padding:5px 8px;background:rgba(99,102,241,.06);border-radius:6px"><i class="fas fa-comment-dots"></i> {{ sub.note }}</div>
+              {% endif %}
             </div>
             <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(230,168,23,.1);color:#b88510;white-space:nowrap">Pending</span>
           </div>
@@ -1035,62 +1115,130 @@
 </section>
 
 <!-- HOD REQUESTS -->
-<section data-dashboard-pane="requests" class="dashboard-pane">
-  <div class="two-col">
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-paper-plane"></i> Submit New Request</div>
-      <div class="section-meta">Leave, event, or course requests go to your HOD for approval.</div>
-      <form method="POST" action="{% url 'faculty_request_add' %}">
-        {% csrf_token %}
-        <div style="margin-bottom:14px">
-          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Request Type</label>
-          <select name="approval_type" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
-            <option value="LEAVE">Leave Request</option>
-            <option value="EVENT">Event Approval</option>
-            <option value="COURSE">Course Approval</option>
-          </select>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Details</label>
-          <textarea name="description" rows="4" required style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical" placeholder="Describe your request clearly&hellip;"></textarea>
-        </div>
-        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
-      </form>
-    </div>
-
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-list-check"></i> My Recent Requests</div>
-      {% if my_requests %}
-      <div class="content-scroll">
-        {% for req in my_requests %}
-        <div class="req-card">
-          <div>
-            <div class="req-type">{{ req.get_approval_type_display }}</div>
-            <div class="req-desc">{{ req.description|truncatechars:100 }}</div>
-            <div class="req-meta">{{ req.created_at|date:"d M Y" }}</div>
-          </div>
-          <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if req.status == 'APPROVED' %}#d1fae5{% elif req.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if req.status == 'APPROVED' %}#065f46{% elif req.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ req.get_status_display }}</span>
-        </div>
+<!-- MY STUDENTS -->
+<section data-dashboard-pane="students" class="dashboard-pane">
+  <div class="d-card" style="padding:14px 18px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <input id="stu-search" type="text" placeholder="Search name or roll no..." oninput="filterStudents()"
+        style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;flex:1;min-width:160px">
+      <select id="stu-filter-subject" onchange="filterStudents()"
+        style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;background:#fff;outline:none">
+        <option value="">All Subjects</option>
+        {% for item in subject_cards %}
+        <option value="{{ item.subject.id }}">{{ item.subject.name }}</option>
         {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty"><i class="fas fa-paper-plane"></i>No requests submitted yet.</div>
-      {% endif %}
+      </select>
+      <select id="stu-filter-risk" onchange="filterStudents()"
+        style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;background:#fff;outline:none">
+        <option value="">All</option>
+        <option value="top">Top Performers</option>
+        <option value="at_risk">At Risk</option>
+        <option value="absent">Recently Absent</option>
+      </select>
+      <span id="stu-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
     </div>
   </div>
+  <div class="d-card" id="stu-top-card">
+    <div class="d-title"><i class="fas fa-trophy"></i> Top Performers</div>
+    <div class="section-meta">Highest marks average across your subjects.</div>
+    {% if top_performers %}
+    <div style="display:grid;gap:8px">
+      {% for row in top_performers %}
+      <div class="stu-row" data-name="{{ row.student.user.get_full_name|lower|default:row.student.user.username|lower }}" data-roll="{{ row.student.roll_number|lower }}" data-risk="top"
+           style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:{% if forloop.counter <= 3 %}rgba(13,115,119,.03){% else %}#fff{% endif %}">
+        <div style="width:28px;height:28px;border-radius:50%;background:{% if forloop.counter == 1 %}#fbbf24{% elif forloop.counter == 2 %}#94a3b8{% elif forloop.counter == 3 %}#b45309{% else %}var(--surface2){% endif %};color:{% if forloop.counter <= 3 %}#fff{% else %}var(--muted){% endif %};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">{{ forloop.counter }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ row.student.roll_number }}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:var(--teal)">{{ row.avg_marks_pct }}%</div>
+          <div style="font-size:10px;color:var(--muted)">{{ row.overall_pct }}% att.</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-trophy"></i>No marks data yet.</div>
+    {% endif %}
+  </div>
+  <div class="d-card" id="stu-risk-card">
+    <div class="d-title"><i class="fas fa-circle-exclamation"></i> At-Risk Students</div>
+    <div class="section-meta">Low attendance (&lt;75%) or low marks (&lt;40%).</div>
+    {% if at_risk_students %}
+    <div style="display:grid;gap:8px">
+      {% for row in at_risk_students %}
+      <div class="stu-row" data-name="{{ row.student.user.get_full_name|lower|default:row.student.user.username|lower }}" data-roll="{{ row.student.roll_number|lower }}" data-risk="at_risk"
+           style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(239,68,68,.2);border-radius:10px;background:rgba(239,68,68,.02)">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-user-slash"></i></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ row.student.roll_number }}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:{% if row.overall_pct < 60 %}rgba(239,68,68,.12);color:var(--red){% else %}rgba(230,168,23,.12);color:#b88510{% endif %}">{{ row.overall_pct }}% att.</span>
+          {% if row.avg_marks_pct %}<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:{% if row.avg_marks_pct < 40 %}rgba(239,68,68,.12);color:var(--red){% else %}rgba(230,168,23,.12);color:#b88510{% endif %}">{{ row.avg_marks_pct }}% marks</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:16px;text-align:center;background:#f0fdf4;border-radius:12px">
+      <i class="fas fa-circle-check" style="font-size:22px;color:var(--teal);display:block;margin-bottom:6px"></i>
+      <div style="font-size:13px;font-weight:700;color:var(--teal)">All students on track.</div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="d-card" id="stu-absent-card">
+    <div class="d-title"><i class="fas fa-calendar-xmark"></i> Recently Absent</div>
+    <div class="section-meta">Absences in the last 7 days.</div>
+    {% if recent_absent %}
+    <div class="table-scroll">
+      <table class="dtable">
+        <thead><tr><th>Student</th><th>Subject</th><th style="text-align:center">Date</th></tr></thead>
+        <tbody>
+          {% for rec in recent_absent %}
+          <tr class="stu-row" data-name="{{ rec.student.user.get_full_name|lower|default:rec.student.user.username|lower }}" data-roll="{{ rec.student.roll_number|lower }}" data-risk="absent" data-subject="{{ rec.session.subject.id }}">
+            <td><div style="font-weight:600;color:var(--deep)">{{ rec.student.user.get_full_name|default:rec.student.user.username }}</div><div style="font-size:11px;color:var(--muted)">{{ rec.student.roll_number }}</div></td>
+            <td style="font-size:12px;color:var(--muted)">{{ rec.session.subject.name }}</td>
+            <td style="text-align:center;font-size:12px;color:var(--muted)">{{ rec.session.date|date:"d M Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-check"></i>No absences in the last 7 days.</div>
+    {% endif %}
+  </div>
 </section>
-
 <!-- NOTICES -->
 <section data-dashboard-pane="notices" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
+    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff;margin-bottom:16px;width:fit-content">
+      <button class="att-view-tab active" id="notice-tab-all"     onclick="switchNoticeTab('all',this)">All</button>
+      <button class="att-view-tab"        id="notice-tab-hod"     onclick="switchNoticeTab('hod',this)"><i class="fas fa-user-tie"></i> HOD</button>
+      <button class="att-view-tab"        id="notice-tab-college" onclick="switchNoticeTab('college',this)"><i class="fas fa-building"></i> College</button>
+    </div>
     {% if announcements %}
     <div class="content-scroll">
       {% for ann in announcements %}
-      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ ann.created_at|date:"d M Y" }}</div>
+      <div class="notice-item" data-source="{% if ann.created_by.hods.exists %}hod{% else %}college{% endif %}"
+           style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{% if ann.created_by.hods.exists %}rgba(99,102,241,.1){% else %}rgba(13,115,119,.1){% endif %}">
+            <i class="fas {% if ann.created_by.hods.exists %}fa-user-tie{% else %}fa-building{% endif %}" style="font-size:13px;color:{% if ann.created_by.hods.exists %}#6366f1{% else %}var(--teal){% endif %}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
+              <span style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</span>
+              <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:{% if ann.created_by.hods.exists %}rgba(99,102,241,.1);color:#6366f1{% else %}rgba(13,115,119,.1);color:var(--teal){% endif %}">{% if ann.created_by.hods.exists %}HOD{% else %}College{% endif %}</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }} &middot; {{ ann.created_by.get_full_name|default:ann.created_by.username }}</div>
+          </div>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -1099,10 +1247,41 @@
     {% endif %}
   </div>
 </section>
-
 {% endblock %}{# dashboard_content #}
 
 {% block extra_js %}
+// My Students filters
+function filterStudents() {
+  var q      = (document.getElementById('stu-search').value || '').toLowerCase();
+  var subjId = document.getElementById('stu-filter-subject').value;
+  var risk   = document.getElementById('stu-filter-risk').value;
+  var rows   = document.querySelectorAll('.stu-row');
+  var vis    = 0;
+  rows.forEach(function(r) {
+    var nm = !q || (r.dataset.name||'').includes(q) || (r.dataset.roll||'').includes(q);
+    var rk = !risk || r.dataset.risk === risk;
+    var sj = !subjId || (r.dataset.subject||'') === subjId;
+    r.style.display = (nm && rk && sj) ? '' : 'none';
+    if (nm && rk && sj) vis++;
+  });
+  var cnt = document.getElementById('stu-count');
+  if (cnt) cnt.textContent = vis + ' student' + (vis !== 1 ? 's' : '');
+  var tc = document.getElementById('stu-top-card');
+  var rc = document.getElementById('stu-risk-card');
+  var ac = document.getElementById('stu-absent-card');
+  if (risk === 'top')     { if(tc)tc.style.display=''; if(rc)rc.style.display='none'; if(ac)ac.style.display='none'; }
+  else if(risk==='at_risk'){ if(tc)tc.style.display='none'; if(rc)rc.style.display=''; if(ac)ac.style.display='none'; }
+  else if(risk==='absent') { if(tc)tc.style.display='none'; if(rc)rc.style.display='none'; if(ac)ac.style.display=''; }
+  else { if(tc)tc.style.display=''; if(rc)rc.style.display=''; if(ac)ac.style.display=''; }
+}
+// Notices tab filter
+function switchNoticeTab(tab, btn) {
+  document.querySelectorAll('#notice-tab-all,#notice-tab-hod,#notice-tab-college').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.notice-item').forEach(function(item) {
+    item.style.display = (tab === 'all' || item.dataset.source === tab) ? '' : 'none';
+  });
+}
 function toggleCourse(id, header) {
   var body = document.getElementById(id);
   var chevron = document.getElementById(id.replace('fs-', 'fs-chevron-'));
@@ -1190,230 +1369,159 @@ function updateQCount(fid) {
     if (label) label.textContent = 'Question ' + (idx + 1);
   });
 }
-{% endblock %}
-
-<script>
 // ── Substitution: smart slot + date + free-faculty loader ─────────────────────
-(function() {
+// ── Substitution: client-side faculty loader (no AJAX) ───────────────────────
+var subFacultyData = (function() {
+  try {
+    var el = document.getElementById('sub-faculty-data');
+    return el ? JSON.parse(el.textContent) : {};
+  } catch(e) { return {}; }
+})();
+
+var DAY_NAMES = {MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
+var DAY_TO_JS = {MON:1,TUE:2,WED:3,THU:4,FRI:5,SAT:6};
+
+function subUpdateFaculty() {
   var slotSel   = document.getElementById('sub-slot-select');
   var dateInp   = document.getElementById('sub-date-input');
   var facSel    = document.getElementById('sub-fac-select');
-  var loading   = document.getElementById('sub-fac-loading');
   var hint      = document.getElementById('sub-fac-hint');
   var submitBtn = document.getElementById('sub-submit-btn');
   var dayHint   = document.getElementById('sub-day-hint');
+  var smartCard = document.getElementById('sub-smart-card');
+  if (!slotSel || !facSel) return;
 
-  if (!slotSel || !dateInp || !facSel) return;
-
-  // JS weekday index: Sun=0 Mon=1 … Sat=6
-  var DAY_NAMES = {MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
-  var DAY_TO_JS = {MON:1, TUE:2, WED:3, THU:4, FRI:5, SAT:6};
-
-  // State set when a slot is chosen
-  var currentDayIndex = null;   // JS weekday index the slot falls on
-  var semStart = null;          // Date object
-  var semEnd   = null;          // Date object
-
-  // ── Step 1: slot selected → fetch bounds, constrain date picker ────────────
-  function onSlotChange() {
-    var slotId = slotSel.value;
-    if (!slotId) {
-      resetDatePicker();
-      resetFacultySelect('— Select slot and date first —');
-      return;
-    }
-
-    // Show loading state on date
-    if (dayHint) dayHint.textContent = 'Loading semester dates…';
-    dateInp.disabled = true;
-
-    fetch('{% url "faculty_substitution_free_faculty" %}?slot_id=' + slotId, {
-      headers: {'X-Requested-With': 'XMLHttpRequest'}
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      dateInp.disabled = false;
-
-      if (data.error && !data.slot_day_index) {
-        if (dayHint) dayHint.textContent = 'Error: ' + data.error;
-        return;
-      }
-
-      currentDayIndex = data.slot_day_index;   // 1=Mon … 6=Sat
-      semStart = data.sem_start ? new Date(data.sem_start + 'T00:00:00') : null;
-      semEnd   = data.sem_end   ? new Date(data.sem_end   + 'T00:00:00') : null;
-
-      var dayName = DAY_NAMES[data.day] || data.day;
-
-      // Set date picker min/max
-      if (semStart) dateInp.min = data.sem_start;
-      if (semEnd)   dateInp.max = data.sem_end;
-
-      // Find the NEXT occurrence of this weekday from today
-      var today = new Date();
-      today.setHours(0,0,0,0);
-      var next = nextWeekday(today, currentDayIndex);
-      // Clamp to semester bounds
-      if (semStart && next < semStart) next = nextWeekday(semStart, currentDayIndex);
-      if (semEnd   && next > semEnd)   next = null;
-
-      if (next) {
-        dateInp.value = toISO(next);
-      } else {
-        dateInp.value = '';
-      }
-
-      if (dayHint) {
-        dayHint.innerHTML =
-          '<i class="fas fa-info-circle" style="color:var(--teal)"></i> ' +
-          'This slot is on <strong>' + dayName + 's</strong>. ' +
-          'Only ' + dayName + 's within the semester are selectable.';
-      }
-
-      resetFacultySelect('— Pick a date to see free faculty —');
-      if (submitBtn) submitBtn.disabled = true;
-
-      // Auto-load if a valid date is already set
-      if (dateInp.value) onDateChange();
-    })
-    .catch(function() {
-      dateInp.disabled = false;
-      if (dayHint) dayHint.textContent = 'Could not load semester info. Try again.';
-    });
-  }
-
-  // ── Step 2: date changed → validate day, then fetch free faculty ───────────
-  function onDateChange() {
-    var slotId = slotSel.value;
-    var date   = dateInp.value;
-
-    if (!slotId || !date) {
-      resetFacultySelect('— Select slot and date first —');
-      return;
-    }
-
-    // Client-side day validation
-    if (currentDayIndex !== null) {
-      var chosen = new Date(date + 'T00:00:00');
-      if (chosen.getDay() !== currentDayIndex) {
-        var dayName = Object.keys(DAY_TO_JS).find(function(k){ return DAY_TO_JS[k] === currentDayIndex; });
-        if (hint) hint.innerHTML =
-          '<i class="fas fa-triangle-exclamation" style="color:var(--red)"></i> ' +
-          'That date is not a <strong>' + (DAY_NAMES[dayName] || dayName) + '</strong>. ' +
-          'Please pick a ' + (DAY_NAMES[dayName] || dayName) + '.';
-        resetFacultySelect('— Wrong day selected —');
-        if (submitBtn) submitBtn.disabled = true;
-        return;
-      }
-    }
-
-    // Show loading
-    if (loading) loading.style.display = 'inline';
-    facSel.innerHTML = '<option value="">Loading free faculty…</option>';
-    facSel.disabled = true;
+  var slotId = slotSel.value;
+  if (!slotId) {
+    facSel.innerHTML = '<option value="">— Select a slot first —</option>';
     if (submitBtn) submitBtn.disabled = true;
-    if (hint) hint.innerHTML = '';
-
-    fetch('{% url "faculty_substitution_free_faculty" %}?slot_id=' + slotId + '&date=' + date, {
-      headers: {'X-Requested-With': 'XMLHttpRequest'}
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (loading) loading.style.display = 'none';
-      facSel.disabled = false;
-
-      if (data.error) {
-        resetFacultySelect('— ' + data.error + ' —');
-        if (hint) hint.innerHTML =
-          '<i class="fas fa-triangle-exclamation" style="color:var(--red)"></i> ' + data.error;
-        return;
-      }
-
-      if (!data.faculty || data.faculty.length === 0) {
-        facSel.innerHTML = '<option value="">No free faculty at this time</option>';
-        if (hint) hint.innerHTML =
-          '<i class="fas fa-triangle-exclamation" style="color:var(--gold)"></i> ' +
-          'All department faculty have a class at this time on ' + date + '.';
-        return;
-      }
-
-      facSel.innerHTML = '';
-      var ph = document.createElement('option');
-      ph.value = '';
-      ph.textContent = '— Select free faculty (' + data.faculty.length + ' available) —';
-      facSel.appendChild(ph);
-
-      data.faculty.forEach(function(f) {
-        var opt = document.createElement('option');
-        opt.value = f.id;
-        opt.textContent = f.name + (f.employee_id ? ' (' + f.employee_id + ')' : '') + ' \u2713 Free';
-        facSel.appendChild(opt);
-      });
-
-      if (hint) hint.innerHTML =
-        '<i class="fas fa-check-circle" style="color:#059669"></i> ' +
-        data.faculty.length + ' faculty free at this time.';
-    })
-    .catch(function() {
-      if (loading) loading.style.display = 'none';
-      facSel.disabled = false;
-      facSel.innerHTML = '<option value="">Error — try again</option>';
-    });
+    return;
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function resetDatePicker() {
-    currentDayIndex = null;
-    semStart = null;
-    semEnd   = null;
-    dateInp.min = '{% now "Y-m-d" %}';
-    dateInp.max = '';
-    dateInp.value = '{% now "Y-m-d" %}';
-    if (dayHint) dayHint.textContent = '';
-  }
+  // Get the day for this slot
+  var opt = slotSel.options[slotSel.selectedIndex];
+  var dayCode = opt ? opt.dataset.day : '';
+  var dayName = DAY_NAMES[dayCode] || dayCode;
 
-  function resetFacultySelect(msg) {
-    facSel.innerHTML = '<option value="">' + msg + '</option>';
-    facSel.disabled = false;
-  }
+  // ── Restrict date picker to only the slot's weekday within semester ──────
+  // JS weekday: 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  var DAY_JS = {MON:1,TUE:2,WED:3,THU:4,FRI:5,SAT:6};
+  var targetJsDay = DAY_JS[dayCode];
 
-  function nextWeekday(fromDate, targetDay) {
-    // targetDay: 1=Mon … 6=Sat (JS: 0=Sun)
+  // Get semester bounds from pre-computed data (use first slot's bounds as fallback)
+  var allData = window.subFacultyData || {};
+  var slotData = allData[slotId] || {};
+  var semStart = slotData.sem_start ? new Date(slotData.sem_start) : new Date();
+  var semEnd   = slotData.sem_end   ? new Date(slotData.sem_end)   : new Date(semStart.getFullYear(), semStart.getMonth()+5, 1);
+  var today    = new Date(); today.setHours(0,0,0,0);
+  var rangeStart = semStart > today ? semStart : today;
+
+  // Find the next occurrence of targetJsDay on or after rangeStart
+  function nextWeekday(fromDate, jsDay) {
     var d = new Date(fromDate);
-    var diff = (targetDay - d.getDay() + 7) % 7;
-    if (diff === 0) diff = 7; // always next occurrence, not today
+    var diff = (jsDay - d.getDay() + 7) % 7;
     d.setDate(d.getDate() + diff);
     return d;
   }
-
-  function toISO(d) {
-    var mm = String(d.getMonth() + 1).padStart(2, '0');
-    var dd = String(d.getDate()).padStart(2, '0');
-    return d.getFullYear() + '-' + mm + '-' + dd;
+  function toYMD(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
 
-  // ── Wire events ───────────────────────────────────────────────────────────
-  facSel.addEventListener('change', function() {
-    if (submitBtn) submitBtn.disabled = !facSel.value;
-  });
+  var firstValid = nextWeekday(rangeStart, targetJsDay);
+  // Find last valid date (last occurrence of targetJsDay on or before semEnd)
+  var lastValid = new Date(semEnd);
+  while (lastValid.getDay() !== targetJsDay && lastValid > firstValid) {
+    lastValid.setDate(lastValid.getDate() - 1);
+  }
 
-  // Block typing invalid days into the date input
-  dateInp.addEventListener('input', function() {
-    if (!currentDayIndex || !dateInp.value) return;
-    var chosen = new Date(dateInp.value + 'T00:00:00');
-    if (chosen.getDay() !== currentDayIndex) {
-      dateInp.setCustomValidity('Please select a date that falls on the correct day of week for this slot.');
-    } else {
-      dateInp.setCustomValidity('');
+  dateInp.min = toYMD(firstValid);
+  dateInp.max = toYMD(lastValid);
+
+  // If current value is not on the correct weekday, reset to first valid
+  var curVal = dateInp.value;
+  if (curVal) {
+    var curDate = new Date(curVal + 'T00:00:00');
+    if (curDate.getDay() !== targetJsDay || curDate < rangeStart || curDate > lastValid) {
+      dateInp.value = toYMD(firstValid);
     }
+  } else {
+    dateInp.value = toYMD(firstValid);
+  }
+
+  if (dayHint) dayHint.innerHTML =
+    '<i class="fas fa-info-circle" style="color:var(--teal)"></i> This slot is on <strong>' + dayName + 's</strong>. Only ' + dayName + ' dates within this semester are selectable.';
+
+  // Get free faculty from pre-computed data
+  var freeFaculty = (allData[slotId] && allData[slotId].faculty) ? allData[slotId].faculty : (allData[slotId] || []);
+  // Handle both array format and object format
+  if (!Array.isArray(freeFaculty)) freeFaculty = [];
+
+  facSel.innerHTML = '';
+  if (freeFaculty.length === 0) {
+    facSel.innerHTML = '<option value="">No free faculty at this time</option>';
+    if (hint) hint.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:var(--gold)"></i> All faculty have a class at this time.';
+    if (submitBtn) submitBtn.disabled = true;
+    if (smartCard) smartCard.style.display = 'none';
+    return;
+  }
+
+  var ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = '— Select free faculty (' + freeFaculty.length + ' available) —';
+  facSel.appendChild(ph);
+
+  freeFaculty.forEach(function(f) {
+    var o = document.createElement('option');
+    o.value = f.id;
+    o.textContent = f.name + (f.employee_id ? ' (' + f.employee_id + ')' : '');
+    facSel.appendChild(o);
   });
 
-  slotSel.addEventListener('change', onSlotChange);
-  dateInp.addEventListener('change', onDateChange);
-})();
+  // Auto-select first (smart suggestion)
+  if (freeFaculty.length > 0) {
+    facSel.selectedIndex = 1;
+    if (smartCard) {
+      smartCard.style.display = 'block';
+      smartCard.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> <strong>Smart suggestion:</strong> ' + freeFaculty[0].name + ' is free at this time.';
+    }
+    if (submitBtn) submitBtn.disabled = false;
+  }
+
+  if (hint) hint.innerHTML = '<i class="fas fa-check-circle" style="color:#059669"></i> ' + freeFaculty.length + ' faculty free at this time.';
+}
+
+function subOnFacChange() {
+  var facSel    = document.getElementById('sub-fac-select');
+  var submitBtn = document.getElementById('sub-submit-btn');
+  var smartCard = document.getElementById('sub-smart-card');
+  if (submitBtn) submitBtn.disabled = !facSel.value;
+  if (smartCard && facSel.value) smartCard.style.display = 'none';
+}
+
+// Auto-populate on page load and when substitution tab is opened
+function subInit() {
+  var slotSel = document.getElementById('sub-slot-select');
+  if (!slotSel) return;
+  if (slotSel.value) subUpdateFaculty();
+}
+
+// Run immediately (DOMContentLoaded already fired by the time this script executes)
+subInit();
+
+// Also trigger when the substitution sidebar link is clicked
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  while (t && t !== document) {
+    if (t.dataset && t.dataset.sectionTarget === 'substitution') {
+      setTimeout(subInit, 50);
+      break;
+    }
+    t = t.parentElement;
+  }
+});
 
 function toggleRejectForm(id) {
   var el = document.getElementById(id);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
-</script>
+{% endblock %}
