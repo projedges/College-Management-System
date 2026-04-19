@@ -106,20 +106,41 @@ def _check_attendance_permission(user, subject, slot=None):
     if not role: return False, "No role assigned."
     if user.is_superuser: return True, ""
 
+    # HOD of the same department — full access (admin override, no time lock)
     if role.role == 2 and hasattr(user, 'hod') and user.hod.department == subject.department:
+        # If HOD also teaches, apply time-lock for their own teaching sessions
+        # but still allow unrestricted access for admin/override purposes
         return True, ""
 
+    # Faculty (role=3) OR teaching HOD (role=2 with can_take_classes + Faculty record)
     if role.role in (2, 3) and hasattr(user, 'faculty'):
+        # Teaching HOD must have can_take_classes enabled
+        if role.role == 2:
+            hod = getattr(user, 'hod', None)
+            if not hod or not hod.can_take_classes:
+                return False, "Unauthorized."
+
         is_assigned = FacultySubject.objects.filter(faculty=user.faculty, subject=subject).exists()
         now = timezone.localtime(timezone.now())
         today_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}.get(now.weekday())
+
+        # For substitutes: find the substitution record directly (slot day may differ from today)
+        active_sub = Substitution.objects.filter(
+            timetable_slot__subject=subject,
+            substitute_faculty=user.faculty,
+            date=now.date(),
+            status='ACCEPTED',
+        ).select_related('timetable_slot').first()
+
+        is_sub = active_sub is not None
+
+        # Resolve the timetable slot: prefer the substitution's slot, else fall back to today's slot
         if not slot:
-            slot = Timetable.objects.filter(subject=subject, day_of_week=today_day).first()
-        is_sub = False
-        if slot:
-            is_sub = Substitution.objects.filter(
-                timetable_slot=slot, substitute_faculty=user.faculty, date=now.date()
-            ).exists()
+            if active_sub:
+                slot = active_sub.timetable_slot
+            else:
+                slot = Timetable.objects.filter(subject=subject, day_of_week=today_day).first()
+
         if not (is_assigned or is_sub):
             return False, "You are not assigned to this subject."
         # Time lock bypass only via explicit env var (never via DEBUG flag)

@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Student Dashboard - EduTrack{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block role_label_foot %}Student{% endblock %}
@@ -7,17 +7,17 @@
 
 {% block sidebar_links %}
 <p class="sb-nav-label">Menu</p>
-<a href="#dashboard"      data-section-target="dashboard"      class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
-<a href="#profile"        data-section-target="profile"        class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
-<a href="#attendance"     data-section-target="attendance"     class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
-<a href="#academic-track" data-section-target="academic-track" class="sb-link"><i class="fas fa-chart-line"></i> Academics &amp; Results</a>
-<a href="#course-structure" data-section-target="course-structure" class="sb-link"><i class="fas fa-list-ol"></i> Course Structure</a>
-<a href="#my-courses"      data-section-target="my-courses"      class="sb-link"><i class="fas fa-book-open"></i> My Courses</a>
-<a href="#timetable"      data-section-target="timetable"      class="sb-link"><i class="fas fa-clock"></i> Timetable</a>
-<a href="{% url 'student_elective_select' %}" class="sb-link"><i class="fas fa-layer-group"></i> Choose Electives</a>
-<a href="#fees"           data-section-target="fees"           class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
-<a href="#inbox"          data-section-target="inbox"          class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
-<a href="#support"        data-section-target="support"        class="sb-link"><i class="fas fa-headset"></i> Support</a>
+<a href="#dashboard"        data-section-target="dashboard"        class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
+<a href="#profile"          data-section-target="profile"          class="sb-link"><i class="fas fa-id-card"></i> Profile</a>
+<a href="#attendance"       data-section-target="attendance"       class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
+<a href="#academic-track"   data-section-target="academic-track"   class="sb-link"><i class="fas fa-chart-line"></i> Academics &amp; Results</a>
+<a href="#timetable"        data-section-target="timetable"        class="sb-link"><i class="fas fa-clock"></i> Timetable &amp; Courses</a>
+<a href="#course-reg"       data-section-target="course-reg"       class="sb-link"><i class="fas fa-layer-group"></i> Course Registration</a>
+<a href="#fees"             data-section-target="fees"             class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fees</a>
+<a href="#inbox"            data-section-target="inbox"            class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
+<a href="#hall-tickets"     data-section-target="hall-tickets"     class="sb-link"><i class="fas fa-id-card-clip"></i> Hall Tickets</a>
+<a href="#library"          data-section-target="library"          class="sb-link"><i class="fas fa-book-open-reader"></i> Library</a>
+<a href="#support"          data-section-target="support"          class="sb-link"><i class="fas fa-headset"></i> Support</a>
 {% endblock %}
 
 {% block extra_css %}
@@ -47,10 +47,29 @@
   .att-prog-fill{height:7px;border-radius:99px;transition:width .4s}
   .att-absence-row td{padding-top:0!important}
   .att-hidden{display:none!important}
-  /* Attendance view tabs */
-  .att-view-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
-  .att-view-tab{padding:7px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--muted);transition:all .15s}
+  /* Timetable / Course Structure tabs */
+  .att-view-tab{padding:9px 18px;font-size:12px;font-weight:700;border:none;border-right:1px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+  .att-view-tab:last-child{border-right:none}
   .att-view-tab.active{background:var(--teal);color:#fff}
+  .att-view-tab:hover:not(.active){background:var(--surface2)}
+  /* Attendance filter tabs */
+  .att-filter-tab{padding:8px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+  .att-filter-tab.active{background:var(--teal);color:#fff}
+  .att-filter-tab:first-child{border-radius:9px 0 0 9px}
+  .att-filter-tab:last-child{border-radius:0 9px 9px 0}
+  .att-quick-opt{display:block;width:100%;text-align:left;padding:8px 12px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--deep);border-radius:7px;transition:background .12s}
+  .att-quick-opt:hover,.att-quick-opt.active{background:var(--teal);color:#fff}
+  .att-cal-mini{font-size:11px;user-select:none}
+  .att-cal-mini table{border-collapse:collapse}
+  .att-cal-mini th{padding:3px 5px;font-size:10px;font-weight:700;color:var(--muted);text-align:center}
+  .att-cal-mini td{padding:3px 5px;text-align:center;cursor:pointer;border-radius:5px;min-width:24px;font-size:11px}
+  .att-cal-mini td:hover{background:#f0fdfa}
+  .att-cal-mini td.in-range{background:rgba(13,115,119,.1)}
+  .att-cal-mini td.range-start,.att-cal-mini td.range-end{background:var(--teal);color:#fff;font-weight:700}
+  .att-cal-mini td.other-month{color:#cbd5e1}
+  .att-cal-mini td.disabled{color:#e2e8f0;cursor:default}
+  .att-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:4px}
+  .att-cal-nav select{border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:11px;background:#fff}
   .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
   .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
   .tt-subj{font-size:13px;font-weight:600;color:var(--deep)}
@@ -268,274 +287,420 @@
 
 <section data-dashboard-pane="profile" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-id-card"></i> Student Profile</div>
-    <div class="section-meta">Keep your personal, academic, and emergency details updated.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <div class="d-title" style="margin:0"><i class="fas fa-id-card"></i> Student Profile</div>
+      <button onclick="toggleProfileEdit()" id="profile-edit-btn" class="mini-btn mini-btn-teal">
+        <i class="fas fa-pen"></i> Edit Profile
+      </button>
+    </div>
 
-    <!-- Photo + identity header -->
-    <div style="display:flex;align-items:center;gap:20px;padding:16px 0 20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
-      <div style="position:relative;flex-shrink:0">
+    <!-- VIEW MODE -->
+    <div id="profile-view">
+      <div style="display:flex;align-items:center;gap:18px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap">
         {% if profile and profile.profile_photo %}
-          <img src="{{ profile.profile_photo.url }}" alt="Profile Photo"
-               style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--teal);box-shadow:0 4px 14px rgba(13,115,119,.2)"/>
+          <img src="{{ profile.profile_photo.url }}" alt="Photo" style="width:76px;height:76px;border-radius:50%;object-fit:cover;border:3px solid var(--teal);flex-shrink:0"/>
         {% else %}
-          <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.2);box-shadow:0 4px 14px rgba(13,115,119,.15)">
+          <div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;flex-shrink:0">
             {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
           </div>
         {% endif %}
-        <a href="{% url 'student_profile_edit' %}" title="Change photo"
-           style="position:absolute;bottom:2px;right:2px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 6px rgba(0,0,0,.2);text-decoration:none">
-          <i class="fas fa-camera"></i>
-        </a>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:19px;font-weight:800;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:2px">{{ student.roll_number }}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ student.department.name }} &middot; Semester {{ student.current_semester }}</div>
+          {% if profile and profile.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ profile.phone_number }}</div>{% endif %}
+        </div>
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
-        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ student.roll_number }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ student.department.name }} &middot; Semester {{ student.current_semester }}</div>
-        {% if profile and profile.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ profile.phone_number }}</div>{% endif %}
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="{% url 'student_profile_edit' %}" class="mini-btn mini-btn-teal"><i class="fas fa-pen"></i> Edit Profile</a>
+      <div class="two-col">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Personal</div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">College Email</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email|default:"Not added" }}{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Personal Email</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Date of Birth</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Gender</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Blood Group</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Aadhaar</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} ****{% else %}Not added{% endif %} <span style="font-size:10px;color:var(--muted)">(admin only)</span></div></div></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Contact &amp; Family</div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Mobile</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.phone_number %}{{ profile.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Alternate Mobile</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.alternate_phone %}{{ profile.alternate_phone }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Address</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}) <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent and parent.phone_number %}{{ parent.phone_number }} <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</div></div></div>
+          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} &middot; {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+        </div>
       </div>
     </div>
 
-    <div class="two-col">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Personal</div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Email</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{{ request.user.email|default:"Not added" }}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Date of Birth</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Gender</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Blood Group</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Nationality</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.nationality %}{{ profile.nationality }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Aadhaar</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} ****{% else %}Not added{% endif %}</div></div></div>
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Contact & Family</div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Address</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent / Guardian</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}){% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent and parent.phone_number %}{{ parent.phone_number }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} &middot; {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
-        <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Category</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.category %}{{ profile.category }}{% else %}Not added{% endif %}</div></div></div>
-      </div>
+    <!-- EDIT MODE (inline, hidden by default) -->
+    <div id="profile-edit-form" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <form method="POST" enctype="multipart/form-data" action="{% url 'student_profile_edit' %}">
+        {% csrf_token %}
+        {% with s="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box" %}
+        {% with lbl="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px" %}
+
+        <!-- Photo -->
+        <div style="margin-bottom:14px">
+          <label style="{{ lbl }}">Profile Photo</label>
+          <input type="file" name="profile_photo" accept="image/*" style="{{ s }};padding:6px;background:#fff"/>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Leave blank to keep current.</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <label style="{{ lbl }}">First Name</label>
+            <input type="text" name="first_name" value="{{ request.user.first_name }}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Last Name</label>
+            <input type="text" name="last_name" value="{{ request.user.last_name }}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">College Email</label>
+            <input type="email" value="{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email }}{% endif %}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Institutional email â€” managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Personal Email</label>
+            <input type="email" value="{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}â€”{% endif %}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Father's Name</label>
+            <input type="text" value="{% if parent and parent.parent_type == 'FATHER' %}{{ parent.name }}{% else %}â€”{% endif %}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Mobile (10 digits) *</label>
+            <input type="tel" name="phone_number" value="{% if profile %}{{ profile.phone_number }}{% endif %}"
+                   required maxlength="10" pattern="[0-9]{10}" placeholder="10-digit number"
+                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="{{ s }}"/>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Alternate Mobile</label>
+            <input type="tel" name="alternate_phone" value="{% if profile %}{{ profile.alternate_phone }}{% endif %}"
+                   maxlength="10" pattern="[0-9]{10}" placeholder="Optional alternate number"
+                   oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="{{ s }}"/>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Date of Birth</label>
+            <input type="date" value="{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Gender</label>
+            <input type="text" value="{% if profile and profile.gender %}{{ profile.gender }}{% else %}â€”{% endif %}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div>
+            <label style="{{ lbl }}">Blood Group</label>
+            <input type="text" value="{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}â€”{% endif %}" readonly
+                   style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
+          </div>
+          <div><label style="{{ lbl }}">Nationality</label><input type="text" name="nationality" value="{% if profile %}{{ profile.nationality }}{% else %}Indian{% endif %}" maxlength="50" style="{{ s }}"/></div>
+        </div>
+
+        <!-- Address -->
+        <div style="padding-top:12px;border-top:1px solid #f3f4f6;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Address</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="grid-column:1/-1"><label style="{{ lbl }}">Street</label><textarea name="street" rows="2" style="{{ s }};resize:vertical">{% if address %}{{ address.street }}{% endif %}</textarea></div>
+            <div><label style="{{ lbl }}">City</label><input type="text" name="city" value="{% if address %}{{ address.city }}{% endif %}" style="{{ s }}"/></div>
+            <div><label style="{{ lbl }}">State</label><input type="text" name="state" value="{% if address %}{{ address.state }}{% endif %}" style="{{ s }}"/></div>
+            <div><label style="{{ lbl }}">Pincode</label><input type="text" name="pincode" value="{% if address %}{{ address.pincode }}{% endif %}" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)" style="{{ s }}"/></div>
+            <div><label style="{{ lbl }}">Country</label><input type="text" name="country" value="{% if address %}{{ address.country }}{% else %}India{% endif %}" style="{{ s }}"/></div>
+          </div>
+        </div>
+
+        <!-- Emergency Contact -->
+        <div style="padding-top:12px;border-top:1px solid #f3f4f6;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Emergency Contact</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div><label style="{{ lbl }}">Name *</label><input type="text" name="emergency_name" value="{% if emergency_contact %}{{ emergency_contact.name }}{% endif %}" required style="{{ s }}"/></div>
+            <div><label style="{{ lbl }}">Relation *</label><input type="text" name="emergency_relation" value="{% if emergency_contact %}{{ emergency_contact.relation }}{% endif %}" required placeholder="e.g. Father" style="{{ s }}"/></div>
+            <div><label style="{{ lbl }}">Phone *</label><input type="tel" name="emergency_phone_number" value="{% if emergency_contact %}{{ emergency_contact.phone_number }}{% endif %}" required maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="{{ s }}"/></div>
+          </div>
+        </div>
+
+        {% if parent %}
+        <!-- Parent email/occupation only (name/phone = admin only) -->
+        <div style="padding-top:12px;border-top:1px solid #f3f4f6;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Parent Details <span style="font-weight:400;text-transform:none;font-size:10px">(name &amp; phone managed by admin)</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label style="{{ lbl }}">Parent Email</label><input type="email" name="parent_email" value="{% if parent %}{{ parent.email }}{% endif %}" placeholder="Optional" style="{{ s }}"/></div>
+            <div><label style="{{ lbl }}">Parent Occupation</label><input type="text" name="parent_occupation" value="{% if parent %}{{ parent.occupation }}{% endif %}" placeholder="Optional" style="{{ s }}"/></div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% endwith %}
+        {% endwith %}
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Changes</button>
+          <button type="button" onclick="toggleProfileEdit()" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 </section>
 
 <section data-dashboard-pane="attendance" class="dashboard-pane">
 
-  <!-- View toggle tabs -->
+  <!-- Filter bar -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-    <div style="font-size:15px;font-weight:800;color:var(--deep)">Attendance</div>
-    <div class="att-view-tabs">
-      <button class="att-view-tab active" onclick="switchAttView('semester',this)">Semester</button>
-      <button class="att-view-tab" onclick="switchAttView('calendar',this)"><i class="fas fa-calendar"></i> Calendar</button>
+    <div style="font-size:16px;font-weight:800;color:var(--deep)">Attendance</div>
+    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:visible;background:#fff;position:relative">
+      <button class="att-filter-tab active" id="att-tab-semester" onclick="attSetFilter('semester',this)">Semester</button>
+      <button class="att-filter-tab" id="att-tab-today"     onclick="attSetFilter('today',this)">Today</button>
+      <button class="att-filter-tab" id="att-tab-yesterday" onclick="attSetFilter('yesterday',this)">Yesterday</button>
+      <button class="att-filter-tab" id="att-tab-calendar"  onclick="attSetFilter('calendar',this)"><i class="fas fa-calendar"></i> Calendar</button>
+      <!-- Calendar dropdown -->
+      <div id="att-cal-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.14);z-index:300;padding:16px;min-width:480px">
+        <div style="display:flex;gap:16px">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:120px">
+            <button class="att-quick-opt" onclick="attQuick('7d',this)">Last 7 Days</button>
+            <button class="att-quick-opt" onclick="attQuick('30d',this)">Last 30 Days</button>
+            <button class="att-quick-opt" onclick="attQuick('thismonth',this)">This Month</button>
+            <button class="att-quick-opt" onclick="attQuick('lastmonth',this)">Last Month</button>
+            <button class="att-quick-opt" id="att-custom-opt" onclick="attQuick('custom',this)">Custom Range</button>
+          </div>
+          <div style="display:flex;gap:12px" id="att-dual-cal">
+            <div id="att-cal-left"></div>
+            <div id="att-cal-right"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <span id="att-range-label" style="font-size:12px;color:var(--muted)"></span>
+          <div style="display:flex;gap:8px">
+            <button onclick="attCalClear()" style="padding:6px 14px;border-radius:7px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)">Clear</button>
+            <button onclick="attCalApply()" style="padding:6px 14px;border-radius:7px;border:none;background:var(--teal);color:#fff;font-size:12px;font-weight:700;cursor:pointer">Apply</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- -- SEMESTER VIEW -- -->
-  <div id="att-view-semester">
+  <!-- Semester selector -->
+  <div id="att-sem-selector" style="margin-bottom:16px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="sem-tab sem-tab-active" onclick="attSelectSem({{ student.current_semester }},this)">
+        Sem {{ student.current_semester }} <span style="font-size:10px;opacity:.7">(Current)</span>
+      </button>
+      {% for s in att_by_semester %}{% if s.semester != student.current_semester %}
+      <button class="sem-tab" onclick="attSelectSem({{ s.semester }},this)">
+        Sem {{ s.semester }}{% if s.pct %} <span style="font-size:10px;opacity:.7">&middot; {{ s.pct }}%</span>{% endif %}
+      </button>
+      {% endif %}{% endfor %}
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-info-circle"></i> Attendance resets each semester. Select a semester to view its records.</div>
+  </div>
 
-    <!-- Summary bar -->
-    <div class="att-summary-bar">
-      <div class="att-donut-wrap">
-        <svg viewBox="0 0 120 120" class="att-donut-svg">
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#fecaca" stroke-width="12"/>
-          {% if overall_attendance %}
-            {% widthratio overall_attendance 100 314 as arc %}
-            <circle cx="60" cy="60" r="50" fill="none"
-              stroke="{% if overall_attendance >= att_rule.effective_min_overall %}#0d7377{% else %}#ef4444{% endif %}"
-              stroke-width="12"
-              stroke-dasharray="{{ arc }} 314"
-              transform="rotate(-90 60 60)"
-              stroke-linecap="round"/>
-          {% endif %}
-        </svg>
-        <div class="att-donut-label">
-          <div class="att-donut-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}&mdash;{% endif %}</div>
-          <div class="att-donut-sub">Overall</div>
-        </div>
-      </div>
-      <div class="att-summary-stats">
-        <div class="att-stat-box">
-          <div class="att-stat-val">{{ attendance_data|length }}</div>
-          <div class="att-stat-lbl">Subjects</div>
-        </div>
-        <div class="att-stat-box">
-          <div class="att-stat-val">{{ attendance_data|length }}</div>
-          <div class="att-stat-lbl">Tracked</div>
-        </div>
-        {% if att_rule %}
-        <div class="att-stat-box">
-          <div class="att-stat-val" style="color:var(--teal)">{{ att_rule.effective_min_subject }}%</div>
-          <div class="att-stat-lbl">Required</div>
-        </div>
+  <!-- Summary bar -->
+  <div class="att-summary-bar">
+    <div class="att-donut-wrap">
+      <svg viewBox="0 0 120 120" class="att-donut-svg">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#fecaca" stroke-width="12"/>
+        {% if overall_attendance %}
+          {% widthratio overall_attendance 100 314 as arc %}
+          <circle cx="60" cy="60" r="50" fill="none"
+            stroke="{% if overall_attendance >= att_rule.effective_min_overall %}#0d7377{% else %}#ef4444{% endif %}"
+            stroke-width="12" stroke-dasharray="{{ arc }} 314"
+            transform="rotate(-90 60 60)" stroke-linecap="round"/>
         {% endif %}
-        {% if overall_attendance >= 75 %}
-        <div class="att-stat-box" style="background:rgba(16,185,129,.07);border-color:#10b981">
-          <div class="att-stat-val" style="color:#059669"><i class="fas fa-check-circle"></i></div>
-          <div class="att-stat-lbl">Eligible</div>
-        </div>
-        {% elif overall_attendance >= 65 %}
-        <div class="att-stat-box" style="background:rgba(230,168,23,.1);border-color:#b88510" title="Attendance is low. Please meet HOD.">
-          <div class="att-stat-val" style="color:#b88510"><i class="fas fa-exclamation-triangle"></i></div>
-          <div class="att-stat-lbl" style="font-size:8px;line-height:1">Meet HOD</div>
-        </div>
-        {% else %}
-        <div class="att-stat-box" style="background:rgba(239,68,68,.06);border-color:#dc2626">
-          <div class="att-stat-val" style="color:#dc2626"><i class="fas fa-times-circle"></i></div>
-          <div class="att-stat-lbl">Ineligible</div>
-        </div>
-        {% endif %}
-        <div class="att-stat-box" style="border:2px solid var(--teal);background:rgba(13,115,119,.05)">
-          <div class="att-stat-val" style="color:var(--teal)">{{ overall_attendance|default:"0" }}%</div>
-          <div class="att-stat-lbl" style="color:var(--teal);font-weight:800">Current</div>
-        </div>
-        {% for row in past_semesters_summary %}
-          {% if forloop.first %}
-          <div class="att-stat-box" style="border:2px solid #f59e0b;background:rgba(245,158,11,.08)">
-            <div class="att-stat-val" style="color:#b45309">{% if row.pct is not None %}{{ row.pct }}%{% else %}--{% endif %}</div>
-            <div class="att-stat-lbl" style="color:#b45309;font-weight:800">Sem {{ row.semester }}</div>
-          </div>
-          {% else %}
-          <div class="att-stat-box" style="border:1px dashed var(--border);opacity:.85">
-            <div class="att-stat-val" style="font-size:15px;color:var(--muted)">{% if row.pct is not None %}{{ row.pct }}%{% else %}--{% endif %}</div>
-            <div class="att-stat-lbl">Sem {{ row.semester }}</div>
-          </div>
-          {% endif %}
-        {% endfor %}
+      </svg>
+      <div class="att-donut-label">
+        <div class="att-donut-val" id="att-donut-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}&mdash;{% endif %}</div>
+        <div class="att-donut-sub" id="att-donut-sub">Overall</div>
       </div>
-      {% if eligibility and not eligibility.eligible %}
-      <div class="att-elig-warn">
-        <i class="fas fa-triangle-exclamation" style="color:#dc2626;font-size:15px;flex-shrink:0"></i>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:#991b1b">Ineligible for Exams</div>
-          {% for reason in eligibility.reasons %}<div style="font-size:11px;color:#b91c1c;margin-top:2px">{{ reason }}</div>{% endfor %}
-        </div>
-        {% if not eligibility.has_override %}
-        <a href="{% url 'student_exemption_apply' %}" class="att-elig-btn">Apply Exemption</a>
-        {% else %}
-        <span style="font-size:11px;font-weight:700;color:#059669;background:rgba(16,185,129,.1);padding:4px 10px;border-radius:99px">Override Approved</span>
-        {% endif %}
-      </div>
+    </div>
+    <div class="att-summary-stats">
+      <div class="att-stat-box"><div class="att-stat-val" id="att-stat-subjects">{{ attendance_data|length }}</div><div class="att-stat-lbl">Subjects</div></div>
+      <div class="att-stat-box"><div class="att-stat-val" id="att-stat-tracked">{{ tracked_subjects_count }}</div><div class="att-stat-lbl">Tracked</div></div>
+      {% if att_rule %}<div class="att-stat-box"><div class="att-stat-val" style="color:var(--teal)">{{ att_rule.effective_min_subject }}%</div><div class="att-stat-lbl">Required</div></div>{% endif %}
+      {% if overall_attendance >= 75 %}
+      <div class="att-stat-box" style="background:rgba(16,185,129,.07);border-color:#10b981"><div class="att-stat-val" style="color:#059669"><i class="fas fa-check-circle"></i></div><div class="att-stat-lbl">Eligible</div></div>
+      {% elif overall_attendance >= 65 %}
+      <div class="att-stat-box" style="background:rgba(230,168,23,.1);border-color:#b88510"><div class="att-stat-val" style="color:#b88510"><i class="fas fa-exclamation-triangle"></i></div><div class="att-stat-lbl" style="font-size:8px;line-height:1">Meet HOD</div></div>
+      {% else %}
+      <div class="att-stat-box" style="background:rgba(239,68,68,.06);border-color:#dc2626"><div class="att-stat-val" style="color:#dc2626"><i class="fas fa-times-circle"></i></div><div class="att-stat-lbl">Ineligible</div></div>
       {% endif %}
     </div>
+    {% if eligibility and not eligibility.eligible %}
+    <div class="att-elig-warn">
+      <i class="fas fa-triangle-exclamation" style="color:#dc2626;font-size:15px;flex-shrink:0"></i>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#991b1b">Ineligible for Exams</div>{% for reason in eligibility.reasons %}<div style="font-size:11px;color:#b91c1c;margin-top:2px">{{ reason }}</div>{% endfor %}</div>
+      {% if not eligibility.has_override %}<a href="{% url 'student_exemption_apply' %}" class="att-elig-btn">Apply Exemption</a>
+      {% else %}<span style="font-size:11px;font-weight:700;color:#059669;background:rgba(16,185,129,.1);padding:4px 10px;border-radius:99px">Override Approved</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
 
-    <!-- Legend + search -->
-    <div class="att-table-controls">
-      <div class="att-legend">
-        <span class="att-legend-dot" style="background:#ef4444"></span><span>Below {{ att_rule.effective_min_subject }}%</span>
-        <span class="att-legend-dot" style="background:#0d7377;margin-left:14px"></span><span>{{ att_rule.effective_min_subject }}% or above</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-size:12px;color:var(--muted)">Search:</label>
-        <input id="att-search" type="text" oninput="filterAttTable()" placeholder="Subject name or code&hellip;"
-          style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
+  <!-- Course-wise table (semester view) -->
+  <div id="att-course-card" class="d-card" style="padding:0;overflow:hidden">
+    <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--border)">
+      <div style="font-size:15px;font-weight:800;color:var(--deep)">Course wise percentage</div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted)">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#0d7377;display:inline-block"></span> Above {{ att_rule.effective_min_subject }}%</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block"></span> Below {{ att_rule.effective_min_subject }}%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--muted)">Search:</span>
+          <input id="att-search" type="text" oninput="filterAttTable()" placeholder="Subject name or code&hellip;" style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
+        </div>
       </div>
     </div>
-
-    <!-- Course-wise table -->
-    <div class="d-card" style="padding:0;overflow:hidden">
-      <div style="padding:16px 20px 10px;font-size:14px;font-weight:800;color:var(--deep)">Course wise percentage</div>
-      <div class="table-scroll">
-        <table class="att-course-table" id="att-course-table">
-          <thead>
-            <tr>
-              <th style="width:120px">Course code</th>
-              <th>Course name</th>
-              <th style="width:280px">Percentage</th>
-              <th style="width:80px;text-align:center">Present</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for a in attendance_data %}
-            <tr class="att-course-row" data-name="{{ a.subject.name|lower }}" data-code="{{ a.subject.code|lower }}">
-              <td style="font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
-              <td style="font-size:13px;color:var(--deep)"><a href="{% url 'subject_detail' a.subject.id %}" style="text-decoration:none;color:inherit;display:block">{{ a.subject.name }}</a></td>
-              <td>
-                {% if a.total > 0 %}
-                <div style="font-size:12px;font-weight:700;color:{% if a.pct >= a.threshold %}var(--deep){% else %}#dc2626{% endif %};margin-bottom:4px">{{ a.pct }}%</div>
-                <div class="att-prog-bg">
-                  <div class="att-prog-fill" style="width:{{ a.pct }}%;background:{% if a.pct >= a.threshold %}#0d7377{% else %}#ef4444{% endif %}"></div>
+    <div style="padding:10px 20px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);border-bottom:1px solid #f3f4f6">
+      <span>Show</span>
+      <select id="att-page-size" onchange="attPaginate()" style="border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;background:#fff">
+        <option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="999">All</option>
+      </select>
+      <span>entries</span>
+    </div>
+    <div class="table-scroll">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap" onclick="sortAttTable(0)">Course code <i class="fas fa-sort" style="font-size:10px;opacity:.5"></i></th>
+            <th style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);cursor:pointer" onclick="sortAttTable(1)">Course name <i class="fas fa-sort" style="font-size:10px;opacity:.5"></i></th>
+            <th style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);cursor:pointer;min-width:220px" onclick="sortAttTable(2)">Percentage <i class="fas fa-sort" style="font-size:10px;opacity:.5"></i></th>
+            <th style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);text-align:center;border-bottom:1px solid var(--border)">Present/Total</th>
+          </tr>
+        </thead>
+        <tbody id="att-tbody">
+          {% for a in attendance_data %}
+          <tr class="att-course-row" data-name="{{ a.subject.name|lower }}" data-code="{{ a.subject.code|lower }}" data-pct="{{ a.pct }}" data-sem="{{ student.current_semester }}" style="border-bottom:1px solid #f3f4f6">
+            <td style="padding:12px 16px;font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
+            <td style="padding:12px 16px;font-size:13px;color:var(--deep)">{{ a.subject.name }}</td>
+            <td style="padding:12px 16px">
+              {% if a.total > 0 %}
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;min-width:100px">
+                  <div style="height:8px;border-radius:99px;width:{{ a.pct }}%;background:{% if a.pct >= a.threshold %}#0d7377{% else %}#ef4444{% endif %};transition:width .4s"></div>
                 </div>
-                {% if a.can_miss is not None %}
-                  <div style="font-size:10px;color:#059669;margin-top:3px">Can miss {{ a.can_miss }} more</div>
-                {% elif a.classes_needed is not None %}
-                  <div style="font-size:10px;color:#dc2626;margin-top:3px"><i class="fas fa-triangle-exclamation"></i> Need {{ a.classes_needed }} more to reach {{ a.threshold }}%</div>
-                {% endif %}
-                {% else %}
-                <span style="font-size:12px;color:var(--muted)">No data</span>
-                {% endif %}
-              </td>
-              <td style="text-align:center;font-size:12px;font-weight:600;color:var(--muted)">{{ a.present }}/{{ a.total }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% if not attendance_data %}<div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>{% endif %}
+                <span style="font-size:12px;font-weight:700;color:{% if a.pct >= a.threshold %}var(--deep){% else %}#dc2626{% endif %};min-width:46px;text-align:right">{{ a.pct }}%</span>
+              </div>
+              {% if a.can_miss is not None %}<div style="font-size:10px;color:#059669;margin-top:3px"><i class="fas fa-check" style="font-size:9px"></i> Can miss {{ a.can_miss }} more class{{ a.can_miss|pluralize:"es" }}</div>
+              {% elif a.classes_needed is not None %}<div style="font-size:10px;color:#dc2626;margin-top:3px"><i class="fas fa-triangle-exclamation" style="font-size:9px"></i> Need {{ a.classes_needed }} more to reach {{ a.threshold }}%</div>{% endif %}
+              {% else %}<span style="font-size:12px;color:var(--muted)">No data</span>{% endif %}
+            </td>
+            <td style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:var(--muted)">{{ a.present }}/{{ a.total }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="padding:32px;text-align:center;color:var(--muted)"><i class="fas fa-calendar-xmark" style="display:block;font-size:24px;margin-bottom:8px"></i>No attendance data yet.</td></tr>
+          {% endfor %}
+          {% for s in att_by_semester %}{% if s.semester != student.current_semester %}
+          <tr class="att-course-row att-past-row" data-sem="{{ s.semester }}" data-name="semester {{ s.semester }}" data-code="" data-pct="{{ s.pct|default:0 }}" style="display:none;border-bottom:1px solid #f3f4f6">
+            <td style="padding:12px 16px;font-size:12px;font-weight:700;color:var(--deep)">Sem {{ s.semester }}</td>
+            <td style="padding:12px 16px;font-size:13px;color:var(--deep)">All subjects — Semester {{ s.semester }}</td>
+            <td style="padding:12px 16px">
+              {% if s.pct %}<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;min-width:100px"><div style="height:8px;border-radius:99px;width:{{ s.pct }}%;background:{% if s.pct >= 75 %}#0d7377{% else %}#ef4444{% endif %}"></div></div><span style="font-size:12px;font-weight:700;color:var(--deep);min-width:46px;text-align:right">{{ s.pct }}%</span></div>
+              {% else %}<span style="font-size:12px;color:var(--muted)">No data</span>{% endif %}
+            </td>
+            <td style="padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:var(--muted)">{{ s.present }}/{{ s.total }}</td>
+          </tr>
+          {% endif %}{% endfor %}
+        </tbody>
+      </table>
     </div>
+    <div style="padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid #f3f4f6">
+      <div id="att-info" style="font-size:12px;color:var(--muted)"></div>
+      <div id="att-pagination" style="display:flex;gap:4px"></div>
+    </div>
+  </div>
 
-  </div><!-- /semester view -->
-
-  <!-- -- CALENDAR / LOG VIEW -- -->
-  <div id="att-view-calendar" style="display:none">
+  <!-- Date-filtered log -->
+  <div id="att-date-log" style="display:none;margin-top:16px">
     <div class="d-card" style="padding:0;overflow:hidden">
-      <div style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-size:14px;font-weight:800;color:var(--deep)">Attendance Log</div>
-          <div class="att-view-tabs" style="margin-left:8px">
-            <button class="att-view-tab active" id="cal-filter-all" onclick="filterCalByDate('all',this)">All</button>
-            <button class="att-view-tab" id="cal-filter-today" onclick="filterCalByDate('today',this)">Today</button>
-            <button class="att-view-tab" id="cal-filter-yesterday" onclick="filterCalByDate('yesterday',this)">Yesterday</button>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <label style="font-size:12px;color:var(--muted)">Search:</label>
-          <input id="att-cal-search" type="text" oninput="filterCalTable()" placeholder="Subject or faculty&hellip;"
-            style="border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;width:180px">
-        </div>
+      <div style="padding:14px 20px;font-size:14px;font-weight:800;color:var(--deep);border-bottom:1px solid var(--border)">
+        Attendance Log <span id="att-log-range-label" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px"></span>
       </div>
-      <div class="table-scroll">
-        <table class="att-course-table" id="att-cal-table">
-          <thead>
-            <tr>
-              <th style="width:120px">Date</th>
-              <th>Course name</th>
-              <th>Faculty name</th>
-              <th style="width:100px">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for rec in all_att_records %}
-            <tr class="att-cal-row"
-              data-date="{{ rec.session.date|date:'Y-m-d' }}"
-              data-subj="{{ rec.session.subject.name|lower }}"
-              data-faculty="{{ rec.session.faculty.user.get_full_name|lower }}">
-              <td style="font-size:12px;font-weight:600;color:var(--deep);white-space:nowrap">{{ rec.session.date|date:"Y-m-d" }}</td>
-              <td style="font-size:13px;color:var(--deep)">{{ rec.session.subject.name }}</td>
-              <td style="font-size:12px;color:var(--muted)">{{ rec.session.faculty.user.get_full_name|default:rec.session.faculty.user.username }}</td>
-              <td>
-                {% if rec.status == 'PRESENT' %}<span style="color:#059669;font-weight:700;font-size:12px">Present</span>
-                {% elif rec.status == 'ABSENT' %}<span style="color:#dc2626;font-weight:700;font-size:12px">Absent</span>
-                {% else %}<span style="color:#d97706;font-weight:700;font-size:12px">Late</span>{% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);font-size:13px">No attendance records found.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <div id="att-log-body"></div>
     </div>
-  </div><!-- /calendar view -->
+  </div>
+
+  <!-- Embedded attendance records for JS filtering -->
+  <script id="att-records-data" type="application/json">
+  [{% for rec in all_att_records %}{"date":"{{ rec.session.date|date:'Y-m-d' }}","subject":"{{ rec.session.subject.name|escapejs }}","code":"{{ rec.session.subject.code|escapejs }}","status":"{{ rec.status }}","sem":{{ rec.session.subject.semester }}}{% if not forloop.last %},{% endif %}{% endfor %}]
+  </script>
 
 </section>
-
 <section data-dashboard-pane="academic-track" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-chart-line"></i> Academics &amp; Results</div>
     <div class="section-meta">Official semester results, credit progress, academic standing, and feedback in one place.</div>
     <div class="action-row">
-      <a href="{% url 'student_transcript_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-scroll"></i> Download Transcript</a>
+      <a href="{% url 'student_transcript_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-scroll"></i> Full Transcript</a>
+      {% if result_breakdown %}
+      <div style="position:relative;display:inline-block">
+        <button onclick="toggleSemTranscriptMenu()" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border);cursor:pointer">
+          <i class="fas fa-download"></i> Semester Transcript <i class="fas fa-chevron-down" style="font-size:10px;margin-left:4px"></i>
+        </button>
+        <div id="sem-transcript-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;min-width:160px;padding:6px 0">
+          {% for item in result_breakdown %}
+          <a href="{% url 'student_transcript_sem_pdf' item.semester %}"
+             style="display:block;padding:8px 16px;font-size:13px;font-weight:600;color:var(--deep);text-decoration:none;white-space:nowrap"
+             onmouseover="this.style.background='#f0fdfa'" onmouseout="this.style.background=''">
+            <i class="fas fa-file-pdf" style="color:var(--teal);margin-right:6px"></i> Semester {{ item.semester }}
+            {% if item.result %}<span style="font-size:11px;color:var(--muted);margin-left:4px">{{ item.result.gpa }} SGPA</span>{% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <button onclick="toggleBacklogs()" class="mini-btn" id="backlog-toggle-btn"
+              data-label="{% if backlog_count > 0 %}<i class='fas fa-triangle-exclamation'></i> Show Backlogs ({{ backlog_count }}){% else %}<i class='fas fa-triangle-exclamation'></i> No Active Backlogs{% endif %}"
+              style="background:{% if backlog_count > 0 %}rgba(239,68,68,.12);color:#dc2626{% else %}rgba(100,116,139,.1);color:var(--muted){% endif %};border:none;cursor:pointer">
+        <i class="fas fa-triangle-exclamation"></i>
+        {% if backlog_count > 0 %}Show Backlogs ({{ backlog_count }}){% else %}No Active Backlogs{% endif %}
+      </button>
+    </div>
+
+    <div id="backlog-panel" style="display:none;margin-bottom:18px">
+      <div style="background:{% if backlog_count > 0 %}rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.2){% else %}var(--surface2);border:1px solid var(--border){% endif %};border-radius:12px;padding:16px">
+        {% if backlog_count > 0 %}
+        <div style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:12px"><i class="fas fa-triangle-exclamation"></i> Active Backlogs</div>
+        {% if supply_backlog_grouped %}
+          {% for sem, marks in supply_backlog_grouped %}
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Semester {{ sem }}</div>
+            {% for m in marks %}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border:1px solid rgba(239,68,68,.15);border-radius:8px;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ m.subject.name }}</div>
+                <div style="font-size:11px;color:var(--muted)">{{ m.subject.code }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:12px;font-weight:700;color:#dc2626">{{ m.marks_obtained|floatformat:0 }}/{{ m.max_marks|floatformat:0 }}</span>
+                <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(239,68,68,.12);color:#dc2626">FAIL</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        {% else %}
+        <div style="font-size:13px;color:var(--muted)">No backlog details available.</div>
+        {% endif %}
+        {% else %}
+        <div style="text-align:center;padding:12px 0">
+          <i class="fas fa-circle-check" style="font-size:28px;color:var(--teal);display:block;margin-bottom:8px"></i>
+          <div style="font-size:13px;font-weight:700;color:var(--teal)">No active backlogs</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">All subjects cleared. Keep it up!</div>
+        </div>
+        {% endif %}
+      </div>
     </div>
     {% if result_breakdown %}
     <!-- Semester tabs &mdash; oldest to newest -->
@@ -770,55 +935,139 @@
     </div>
   </div>
 
-  <!-- Full week matrix -->
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Timetable</div>
-    <div class="section-meta">Click any subject chip to view details. Today's column is highlighted.</div>
-    {% if week_timetable_matrix %}
-    <div class="week-matrix-wrap">
-      <table class="week-matrix">
-        <thead>
-          <tr>
-            <th style="text-align:left;min-width:100px">Period</th>
-            {% for day_code, day_label, slots in week_timetable_list %}
-            <th class="{% if day_code == today_day %}today-head{% endif %}">
-              {{ day_label }}
-              {% if day_code == today_day %}<span style="display:block;font-size:9px;font-weight:700;opacity:.9;margin-top:2px">Today</span>{% endif %}
-            </th>
+  <!-- Tabs -->
+  <div style="display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;margin-bottom:18px">
+    <button class="att-view-tab active" id="tt-tab-timetable" onclick="switchTTTab('timetable',this)"><i class="fas fa-calendar-week"></i> Timetable</button>
+    <button class="att-view-tab" id="tt-tab-courses" onclick="switchTTTab('courses',this)"><i class="fas fa-list-ol"></i> Course Structure</button>
+  </div>
+
+  <!-- Timetable pane -->
+  <div id="tt-pane-timetable">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-calendar-week"></i> Full Week Timetable &mdash; Sem {{ student.current_semester }}</div>
+      <div class="section-meta">Click any subject chip to view details. Today's column is highlighted.</div>
+      {% if week_timetable_matrix %}
+      <div class="week-matrix-wrap">
+        <table class="week-matrix">
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:100px">Period</th>
+              {% for day_code, day_label, slots in week_timetable_list %}
+              <th class="{% if day_code == today_day %}today-head{% endif %}">
+                {{ day_label }}
+                {% if day_code == today_day %}<span style="display:block;font-size:9px;font-weight:700;opacity:.9;margin-top:2px">Today</span>{% endif %}
+              </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in week_timetable_matrix %}
+            <tr class="{% if row.is_break_row %}break-row{% endif %}">
+              <td class="time-col">{{ row.label }}</td>
+              {% for cell in row.cells %}
+              <td class="{% if cell.day_code == today_day %}today-cell{% endif %}">
+                {% if cell.entries %}
+                  {% for entry in cell.entries %}
+                  <div class="week-chip" role="button" tabindex="0"
+                    onclick="openTTModal({{ entry.subject.id }},'{{ entry.subject.name|escapejs }}','{{ entry.subject.code|escapejs }}',{{ entry.subject.credits }},{{ entry.subject.lecture_hours }},{{ entry.subject.tutorial_hours }},{{ entry.subject.practical_hours }},'{{ entry.subject.get_category_display|escapejs }}','{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username|escapejs }}','{{ entry.faculty.designation|escapejs }}','{{ entry.classroom.room_number|escapejs }}','{{ entry.classroom.building|escapejs }}')"
+                    onkeydown="if(event.key==='Enter')this.click()">
+                    <div class="week-chip-subj">{{ entry.subject.name }}</div>
+                    <div class="week-chip-meta">{{ entry.subject.code }}{% if entry.section %} &middot; Sec {{ entry.section }}{% endif %}</div>
+                    <div class="week-chip-meta">{{ entry.classroom.room_number }} &middot; {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
+                  </div>
+                  {% endfor %}
+                {% elif cell.break_label %}
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0"><i class="fas fa-coffee" style="margin-right:4px"></i>{{ cell.break_label }}</div>
+                {% else %}
+                  <div style="font-size:13px;color:#cbd5e1;text-align:center">&mdash;</div>
+                {% endif %}
+              </td>
+              {% endfor %}
+            </tr>
             {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in week_timetable_matrix %}
-          <tr class="{% if row.is_break_row %}break-row{% endif %}">
-            <td class="time-col">{{ row.label }}</td>
-            {% for cell in row.cells %}
-            <td class="{% if cell.day_code == today_day %}today-cell{% endif %}">
-              {% if cell.entries %}
-                {% for entry in cell.entries %}
-                <div class="week-chip" role="button" tabindex="0"
-                  onclick="openTTModal({{ entry.subject.id }},'{{ entry.subject.name|escapejs }}','{{ entry.subject.code|escapejs }}',{{ entry.subject.credits }},{{ entry.subject.lecture_hours }},{{ entry.subject.tutorial_hours }},{{ entry.subject.practical_hours }},'{{ entry.subject.get_category_display|escapejs }}','{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username|escapejs }}','{{ entry.faculty.designation|escapejs }}','{{ entry.classroom.room_number|escapejs }}','{{ entry.classroom.building|escapejs }}')"
-                  onkeydown="if(event.key==='Enter')this.click()">
-                  <div class="week-chip-subj">{{ entry.subject.name }}</div>
-                  <div class="week-chip-meta">{{ entry.subject.code }}{% if entry.section %} &middot; Sec {{ entry.section }}{% endif %}</div>
-                  <div class="week-chip-meta">{{ entry.classroom.room_number }} &middot; {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
-                </div>
-                {% endfor %}
-              {% elif cell.break_label %}
-                <div style="font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0"><i class="fas fa-coffee" style="margin-right:4px"></i>{{ cell.break_label }}</div>
-              {% else %}
-                <div style="font-size:13px;color:#cbd5e1;text-align:center">&mdash;</div>
-              {% endif %}
-            </td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-calendar-xmark"></i>No timetable data available for your semester.</div>
+      {% endif %}
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-calendar-xmark"></i>No timetable data available for your semester.</div>
-    {% endif %}
+  </div>
+
+  <!-- Course Structure pane -->
+  <div id="tt-pane-courses" style="display:none">
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-list-ol"></i> Semester {{ student.current_semester }} &mdash; Course Structure</div>
+      <div class="section-meta">{{ student.department.name }} &middot; All subjects this semester with L-T-P-C breakdown</div>
+      {% if course_subjects %}
+      <div class="table-scroll">
+        <table class="dtable" style="min-width:680px">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Course Code</th>
+              <th>Course Title</th>
+              <th style="text-align:center">Category</th>
+              <th style="text-align:center" title="Lecture hours/week">L</th>
+              <th style="text-align:center" title="Tutorial hours/week">T</th>
+              <th style="text-align:center" title="Practical hours/week">P</th>
+              <th style="text-align:center" title="Credits">C</th>
+              <th>Faculty</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for subj in course_subjects %}
+            <tr>
+              <td style="color:var(--muted);font-size:12px">{{ forloop.counter }}</td>
+              <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px;white-space:nowrap">{{ subj.code }}</span></td>
+              <td style="font-weight:600;color:var(--deep)">{{ subj.name }}</td>
+              <td style="text-align:center">
+                <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;
+                  background:{% if subj.category == 'PC' %}rgba(13,115,119,.1);color:var(--teal)
+                  {% elif subj.category == 'PE' %}rgba(99,102,241,.1);color:#6366f1
+                  {% elif subj.category == 'OE' %}rgba(230,168,23,.1);color:#b88510
+                  {% elif subj.category == 'MC' %}rgba(239,68,68,.08);color:var(--red)
+                  {% elif subj.category == 'PW' %}rgba(16,185,129,.1);color:#059669
+                  {% elif subj.category == 'AC' %}rgba(100,116,139,.1);color:#475569
+                  {% else %}rgba(100,116,139,.08);color:var(--muted){% endif %}">
+                  {{ subj.category }}
+                </span>
+              </td>
+              <td style="text-align:center;font-weight:600;color:var(--deep)">{{ subj.lecture_hours }}</td>
+              <td style="text-align:center;color:var(--muted)">{{ subj.tutorial_hours }}</td>
+              <td style="text-align:center;color:var(--muted)">{{ subj.practical_hours }}</td>
+              <td style="text-align:center;font-weight:800;color:var(--teal)">{{ subj.credits }}</td>
+              <td style="color:var(--muted);font-size:12px">
+                {% for fs in subj.facultysubject_set.all %}{{ fs.faculty.user.get_full_name|default:fs.faculty.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}&mdash;{% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f8fafc;border-top:2px solid var(--border)">
+              <td colspan="7" style="font-size:12px;font-weight:700;color:var(--muted);text-align:right;padding:10px 12px">Total Credits this Semester</td>
+              <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:var(--teal);padding:10px 12px">{{ total_semester_credits }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
+        <span style="font-weight:700;color:var(--deep)">Legend:</span>
+        <span><strong>L</strong> = Lecture</span><span>&middot;</span>
+        <span><strong>T</strong> = Tutorial</span><span>&middot;</span>
+        <span><strong>P</strong> = Practical</span><span>&middot;</span>
+        <span><strong>C</strong> = Credits</span><span>&middot;</span>
+        <span><strong style="color:var(--teal)">PC</strong> = Program Core</span><span>&middot;</span>
+        <span><strong style="color:#6366f1">PE</strong> = Program Elective</span><span>&middot;</span>
+        <span><strong style="color:#b88510">OE</strong> = Open Elective</span><span>&middot;</span>
+        <span><strong style="color:#059669">PW</strong> = Project Work</span><span>&middot;</span>
+        <span><strong style="color:var(--red)">MC</strong> = Mandatory Course</span>
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-list-ol"></i>No subjects found for this semester.</div>
+      {% endif %}
+    </div>
   </div>
 
 </section>
@@ -869,8 +1118,219 @@
     {% endif %}
 
     <div class="action-row">
-      <a href="{% url 'student_fee_payment' %}" class="mini-btn mini-btn-gold"><i class="fas fa-credit-card"></i> Pay Fees</a>
-      <a href="{% url 'student_supply_exam_register' %}" class="mini-btn mini-btn-deep"><i class="fas fa-pen-to-square"></i> Supply Exam</a>
+      <button onclick="toggleFeePayPanel()" id="fee-pay-btn" class="mini-btn mini-btn-gold" style="border:none;cursor:pointer">
+        <i class="fas fa-credit-card"></i> Pay Fees
+      </button>
+      <button onclick="toggleFeeSupplyPanel()" id="fee-supply-btn" class="mini-btn mini-btn-deep" style="border:none;cursor:pointer">
+        <i class="fas fa-pen-to-square"></i> Supply Exam
+      </button>
+    </div>
+
+    {# ── Inline Pay Fees Panel ── #}
+    <div id="fee-pay-panel" style="display:none;margin-top:16px;padding:20px;background:#fff;border:1.5px solid var(--teal);border-radius:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:800;color:var(--deep)"><i class="fas fa-credit-card" style="color:var(--teal)"></i> Pay Fees</div>
+        <button onclick="toggleFeePayPanel()" style="border:none;background:none;cursor:pointer;font-size:18px;color:var(--muted)">&times;</button>
+      </div>
+
+      {% if fee %}
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <div style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Total Fee</div>
+          <div style="font-size:18px;font-weight:800;color:var(--deep)">Rs {{ fee.total_amount|floatformat:0 }}</div>
+        </div>
+        <div style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Paid</div>
+          <div style="font-size:18px;font-weight:800;color:var(--teal)">Rs {{ fee.paid_amount|floatformat:0 }}</div>
+        </div>
+        <div style="padding:12px;border:1px solid rgba(239,68,68,.2);border-radius:10px;background:rgba(239,68,68,.04);text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Balance Due</div>
+          <div style="font-size:18px;font-weight:800;color:#dc2626">Rs {{ balance_due|floatformat:0 }}</div>
+        </div>
+      </div>
+
+      {% if balance_due == 0 and not fee_components_display %}
+      <div style="padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534;font-weight:600;text-align:center">
+        <i class="fas fa-check-circle"></i> All semester fees paid.
+      </div>
+
+      {% elif razorpay_enabled %}
+      <!-- Fee component selection -->
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Select What to Pay</div>
+      <div style="display:grid;gap:8px;margin-bottom:14px" id="dash-fee-components">
+
+        {% if balance_due > 0 %}
+        <label style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1.5px solid var(--teal);border-radius:10px;cursor:pointer;background:#f0fdfa" id="dash_comp_TUITION">
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="radio" name="dash_fee_component" value="TUITION" data-type="partial" data-amount="{{ balance_due }}" onchange="dashSelectComp(this)" checked style="accent-color:var(--teal);width:15px;height:15px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--deep)">Tuition Fee</div>
+              <div style="font-size:11px;color:var(--muted)">Balance: Rs {{ balance_due|floatformat:0 }}</div>
+            </div>
+          </div>
+          <span style="font-size:13px;font-weight:800;color:var(--teal)">Rs {{ balance_due|floatformat:0 }}</span>
+        </label>
+        {% endif %}
+
+        {% for key, label, amount in fee_components_display %}
+        {% if key == 'EXAM' %}
+        {% if 'EXAM' in paid_fee_types %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1.5px solid #bbf7d0;border-radius:10px;background:#f0fdf4;opacity:.8">
+          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-check-circle" style="color:#16a34a"></i><div style="font-size:13px;font-weight:600;color:#065f46">Exam Fee <span style="font-size:11px;font-weight:400">— Paid</span></div></div>
+          <span style="font-size:11px;font-weight:700;color:#16a34a;background:#dcfce7;padding:2px 8px;border-radius:99px">PAID</span>
+        </div>
+        {% else %}
+        <label style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="dash_comp_EXAM">
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="radio" name="dash_fee_component" value="EXAM" data-type="fixed" data-amount="{{ amount }}" onchange="dashSelectComp(this)" style="accent-color:var(--teal);width:15px;height:15px">
+            <div><div style="font-size:13px;font-weight:600;color:var(--deep)">Exam Fee</div><div style="font-size:11px;color:var(--muted)">Fixed — Rs {{ amount|floatformat:0 }}</div></div>
+          </div>
+          <span style="font-size:13px;font-weight:800;color:var(--teal)">Rs {{ amount|floatformat:0 }}</span>
+        </label>
+        {% endif %}
+        {% endif %}
+        {% if key == 'LIBRARY' %}
+        <div>
+          <label style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="dash_comp_LIBRARY">
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="radio" name="dash_fee_component" value="LIBRARY" data-type="library" data-amount="{{ amount }}" onchange="dashSelectComp(this)" style="accent-color:var(--teal);width:15px;height:15px">
+              <div><div style="font-size:13px;font-weight:600;color:var(--deep)">Library Fee</div><div style="font-size:11px;color:var(--muted)">Membership, fines &amp; charges</div></div>
+            </div>
+            <span style="font-size:12px;font-weight:700;color:var(--muted)">Editable</span>
+          </label>
+          <div id="dash_desc_LIBRARY" style="display:none;padding:10px 14px;background:#f8fafc;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px">
+            <select id="dash_reason_LIBRARY" onchange="dashUpdateLibrary()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+              <option value="">— Select reason —</option>
+              <option value="Annual Membership" data-amount="{{ amount }}">Annual Membership (Rs {{ amount|floatformat:0 }})</option>
+              <option value="Book Lost Fine" data-amount="500">Book Lost Fine (Rs 500)</option>
+              <option value="Late Return Fine" data-amount="50">Late Return Fine (Rs 50)</option>
+              <option value="Book Damage Fine" data-amount="200">Book Damage Fine (Rs 200)</option>
+              <option value="Duplicate Library Card" data-amount="100">Duplicate Library Card (Rs 100)</option>
+              <option value="Other Library Charge" data-amount="0">Other (enter amount)</option>
+            </select>
+            <input type="number" id="dash_library_amount" min="1" placeholder="Amount (Rs)" oninput="dashUpdateLibraryAmt()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+          </div>
+        </div>
+        {% endif %}
+        {% if key == 'SPORTS' %}
+        <label style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="dash_comp_SPORTS">
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="radio" name="dash_fee_component" value="SPORTS" data-type="fixed" data-amount="{{ amount }}" onchange="dashSelectComp(this)" style="accent-color:var(--teal);width:15px;height:15px">
+            <div><div style="font-size:13px;font-weight:600;color:var(--deep)">Sports &amp; Cultural Fee</div><div style="font-size:11px;color:var(--muted)">Fixed — Rs {{ amount|floatformat:0 }}</div></div>
+          </div>
+          <span style="font-size:13px;font-weight:800;color:var(--teal)">Rs {{ amount|floatformat:0 }}</span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Amount + pay button -->
+      <div style="background:#f0fdfa;border:1px solid rgba(13,115,119,.2);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:11px;color:var(--muted)" id="dash-sel-label">Tuition Fee</div>
+            <div style="font-size:20px;font-weight:900;color:var(--teal)" id="dash-amt-display">Rs {{ balance_due|floatformat:0 }}</div>
+          </div>
+          <input type="number" id="dash-pay-amount" step="1" min="1" placeholder="Amount"
+                 style="padding:9px 12px;border:1.5px solid var(--teal);border-radius:8px;font-size:14px;font-weight:700;width:140px">
+        </div>
+      </div>
+      <div id="dash-pay-error" style="color:#dc2626;font-size:12px;margin-bottom:8px;display:none"></div>
+      <button id="dash-rzp-btn" onclick="dashPay()" style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;cursor:pointer">
+        <i class="fas fa-credit-card"></i> Pay with Razorpay
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center"><i class="fas fa-lock"></i> UPI, Cards, Net Banking &amp; Wallets — secured by Razorpay</div>
+
+      <form id="dash-rzp-verify-form" method="POST" action="{% url 'razorpay_verify_payment' %}" style="display:none">
+        {% csrf_token %}
+        <input type="hidden" name="razorpay_order_id" id="dash-rzp-order-id">
+        <input type="hidden" name="razorpay_payment_id" id="dash-rzp-payment-id">
+        <input type="hidden" name="razorpay_signature" id="dash-rzp-signature">
+      </form>
+
+      {% else %}
+      <!-- Manual payment fallback -->
+      <form method="POST" action="{% url 'student_fee_payment' %}">
+        {% csrf_token %}<input type="hidden" name="manual_payment" value="1">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">Amount (Rs)</label>
+            <input type="number" step="0.01" min="1" max="{{ balance_due }}" name="amount" required style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">Payment Method</label>
+            <select name="payment_method" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px;background:#fff">
+              <option>Cash Counter</option><option>UPI</option><option>NEFT</option><option>DD</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" style="width:100%;padding:11px;border:none;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-check"></i> Record Payment</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <div class="empty"><i class="fas fa-receipt"></i> No fee record found. Contact admin.</div>
+      {% endif %}
+    </div>
+
+    {# â”€â”€ Inline Supply Exam Panel â”€â”€ #}
+    <div id="fee-supply-panel" style="display:none;margin-top:16px;padding:16px;background:rgba(239,68,68,.04);border:1.5px solid rgba(239,68,68,.2);border-radius:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:12px">
+        <i class="fas fa-file-circle-exclamation" style="color:var(--red)"></i> Supply / Backlog Exam Registration
+      </div>
+      {% if supply_existing_reg and supply_existing_reg.status == 'PAID' %}
+        <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-weight:600;margin-bottom:10px">
+          <i class="fas fa-check-circle"></i> Already registered for <strong>{{ supply_existing_reg.exam.name }}</strong>
+        </div>
+        {% for subj in supply_existing_reg.subjects.all %}
+        <div style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:7px;margin-bottom:4px;font-size:12px;font-weight:600">
+          <span style="color:var(--teal)">{{ subj.code }}</span> &mdash; {{ subj.name }} <span style="color:var(--muted)">Sem {{ subj.semester }}</span>
+        </div>
+        {% endfor %}
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">Total paid: Rs {{ supply_existing_reg.total_fee|floatformat:0 }}</div>
+      {% elif supply_latest_exam and supply_backlog_grouped %}
+        <div style="font-size:12px;color:#713f12;background:#fef9c3;padding:8px 12px;border-radius:7px;margin-bottom:12px">
+          <i class="fas fa-info-circle"></i> <strong>{{ supply_latest_exam.name }}</strong> &mdash; Rs {{ supply_fee_per_subject|floatformat:0 }} per subject
+        </div>
+        <form method="POST" action="{% url 'student_supply_exam_register' %}" id="fee-supply-form">
+          {% csrf_token %}
+          {% for sem, marks in supply_backlog_grouped %}
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Semester {{ sem }}</div>
+            {% for m in marks %}
+            <label style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;background:#fff;margin-bottom:5px" id="fee_supply_lbl_{{ m.subject.pk }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <input type="checkbox" name="subjects" value="{{ m.subject.pk }}"
+                       onchange="feeSupplyRecalc()"
+                       style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0">
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ m.subject.code }} &mdash; {{ m.subject.name }}</div>
+                  <div style="font-size:10px;color:#dc2626">{{ m.marks_obtained|floatformat:0 }}/{{ m.max_marks|floatformat:0 }} &middot; Pass: {% widthratio m.max_marks 100 40 %}</div>
+                </div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:var(--teal);flex-shrink:0">Rs {{ supply_fee_per_subject|floatformat:0 }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endfor %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:9px;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--muted)"><span id="fee_supply_count">0</span> subject(s) &times; Rs {{ supply_fee_per_subject|floatformat:0 }}</div>
+            <span style="font-size:18px;font-weight:900;color:var(--teal)" id="fee_supply_total">Rs 0</span>
+          </div>
+          <button type="submit" id="fee_supply_submit" disabled
+                  style="background:var(--red);color:#fff;width:100%;font-size:13px;padding:11px;border:none;border-radius:9px;cursor:pointer;font-weight:700;font-family:'Inter',sans-serif">
+            <i class="fas fa-arrow-right"></i> Proceed to Payment
+          </button>
+        </form>
+      {% else %}
+        <div style="text-align:center;padding:20px 0">
+          <i class="fas fa-circle-check" style="font-size:28px;color:var(--teal);display:block;margin-bottom:8px"></i>
+          <div style="font-size:13px;font-weight:700;color:var(--teal)">No backlogs to register for</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">
+            {% if not supply_latest_exam %}No supply exam scheduled yet.{% else %}All subjects cleared â€” no supply exam needed.{% endif %}
+          </div>
+        </div>
+      {% endif %}
     </div>
     {% else %}
     <div class="empty"><i class="fas fa-receipt"></i>No fee records found. Contact admin.</div>
@@ -1001,6 +1461,138 @@
   </div>
 </section>
 
+<section data-dashboard-pane="hall-tickets" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-id-card-clip"></i> Hall Tickets</div>
+    <div class="section-meta">Your exam hall tickets issued by the college. Download your hall ticket for upcoming exams.</div>
+
+    {% if student_hall_tickets %}
+    <div class="table-scroll" style="margin-bottom:20px">
+      <table class="dtable">
+        <thead>
+          <tr>
+            <th>Name of the Examination</th>
+            <th>Branch</th>
+            <th>Semester</th>
+            <th>Examination</th>
+            <th>Month &amp; Year</th>
+            <th style="text-align:center">Status</th>
+            <th style="text-align:center">Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ht in student_hall_tickets %}
+          <tr>
+            <td style="font-weight:600;color:var(--deep)">{{ ht.exam.name }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ student.department.code }}</td>
+            <td style="text-align:center;font-weight:600">{{ ht.exam.semester }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ ht.exam.name }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ ht.exam.start_date|date:"M Y" }}</td>
+            <td style="text-align:center">
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+                background:{% if ht.status == 'ISSUED' %}rgba(13,115,119,.12);color:var(--teal)
+                {% elif ht.status == 'DETAINED' %}rgba(239,68,68,.12);color:#dc2626
+                {% elif ht.status == 'WITHHELD' %}rgba(230,168,23,.12);color:#b88510
+                {% else %}rgba(100,116,139,.1);color:var(--muted){% endif %}">
+                {{ ht.get_status_display }}
+              </span>
+            </td>
+            <td style="text-align:center">
+              {% if ht.status == 'ISSUED' %}
+              <a href="{% url 'student_hall_ticket_pdf' ht.pk %}" target="_blank"
+                 style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(13,115,119,.1);color:var(--teal);text-decoration:none"
+                 title="Download Hall Ticket">
+                <i class="fas fa-eye"></i>
+              </a>
+              {% else %}
+              <span style="color:var(--muted);font-size:12px">&mdash;</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:10px"><i class="fas fa-circle-info" style="color:var(--teal)"></i> Instructions to be followed before downloading the hall ticket</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <p style="margin-bottom:8px">The following penalties are imposed for students who indulge in malpractice during examinations.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code A:</strong> If a student is found in possession of any study material, mobile phone or smart devices during exams â€” the student will receive an "F" grade in the respective subject.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code B:</strong> If found for a second time â€” all subjects in that semester will be awarded "F" grade.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code C:</strong> If found for a third time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after six months from the last date of the examination of that semester.</p>
+        <p style="margin-bottom:0"><strong style="color:var(--deep)">Code D:</strong> If found for a fourth time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after one year from the last date of the examination of that semester.</p>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="empty" style="margin-bottom:20px"><i class="fas fa-id-card-clip"></i> No hall tickets issued yet. Hall tickets are generated by your college admin or HOD before exams.</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:10px"><i class="fas fa-circle-info" style="color:var(--teal)"></i> Instructions to be followed before downloading the hall ticket</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <p style="margin-bottom:8px">The following penalties are imposed for students who indulge in malpractice during examinations.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code A:</strong> If a student is found in possession of any study material, mobile phone or smart devices during exams â€” the student will receive an "F" grade in the respective subject.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code B:</strong> If found for a second time â€” all subjects in that semester will be awarded "F" grade.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code C:</strong> If found for a third time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after six months from the last date of the examination of that semester.</p>
+        <p style="margin-bottom:0"><strong style="color:var(--deep)">Code D:</strong> If found for a fourth time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after one year from the last date of the examination of that semester.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section data-dashboard-pane="library" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-book-open-reader"></i> Library</div>
+    <div class="section-meta">Your library membership, borrowed books, fines, and dues.</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
+      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--teal)"><i class="fas fa-book" style="font-size:22px"></i></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Books Borrowed</div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--gold)"><i class="fas fa-clock" style="font-size:22px"></i></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Due Returns</div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--red)"><i class="fas fa-indian-rupee-sign" style="font-size:20px"></i></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Pending Fines</div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--teal)"><i class="fas fa-id-card" style="font-size:20px"></i></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Membership</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:12px;padding:20px;text-align:center">
+      <i class="fas fa-book-open-reader" style="font-size:32px;color:var(--teal);display:block;margin-bottom:10px"></i>
+      <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:6px">Library Management System</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Access the full library portal to search books, view your borrowing history, check due dates, and pay fines.
+      </div>
+      <a href="{% url 'student_library' %}" class="mini-btn mini-btn-teal" style="display:inline-flex">
+        <i class="fas fa-arrow-right"></i> Open Library Portal
+      </a>
+    </div>
+
+    <div style="margin-top:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Quick Actions</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="{% url 'student_library' %}?tab=borrow" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border)">
+          <i class="fas fa-book-bookmark"></i> My Borrowed Books
+        </a>
+        <a href="{% url 'student_library' %}?tab=search" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border)">
+          <i class="fas fa-magnifying-glass"></i> Search Catalogue
+        </a>
+        <a href="{% url 'student_library' %}?tab=fines" class="mini-btn" style="background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2)">
+          <i class="fas fa-indian-rupee-sign"></i> Pay Fines
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section data-dashboard-pane="support" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-headset"></i> Help Desk</div>
@@ -1082,89 +1674,165 @@
 </section>
 
 <!-- COURSE STRUCTURE -->
-<section data-dashboard-pane="course-structure" class="dashboard-pane">
+<!-- COURSE REGISTRATION -->
+<section data-dashboard-pane="course-reg" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-list-ol"></i> Semester {{ student.current_semester }} &mdash; Course Structure</div>
-    <div class="section-meta">{{ student.department.name }} &middot; All subjects this semester with L-T-P-C breakdown</div>
-    {% if course_subjects %}
-    {% with total_credits=0 %}
-    <div class="table-scroll">
-      <table class="dtable" style="min-width:680px">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Course Code</th>
-            <th>Course Title</th>
-            <th style="text-align:center">Category</th>
-            <th style="text-align:center" title="Lecture hours/week">L</th>
-            <th style="text-align:center" title="Tutorial hours/week">T</th>
-            <th style="text-align:center" title="Practical hours/week">P</th>
-            <th style="text-align:center" title="Credits">C</th>
-            <th>Faculty</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for subj in course_subjects %}
-          <tr>
-            <td style="color:var(--muted);font-size:12px">{{ forloop.counter }}</td>
-            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px;white-space:nowrap">{{ subj.code }}</span></td>
-            <td style="font-weight:600;color:var(--deep)">{{ subj.name }}</td>
-            <td style="text-align:center">
-              <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;
-                background:{% if subj.category == 'PC' %}rgba(13,115,119,.1);color:var(--teal)
-                {% elif subj.category == 'PE' %}rgba(99,102,241,.1);color:#6366f1
-                {% elif subj.category == 'OE' %}rgba(230,168,23,.1);color:#b88510
-                {% elif subj.category == 'MC' %}rgba(239,68,68,.08);color:var(--red)
-                {% elif subj.category == 'PW' %}rgba(16,185,129,.1);color:#059669
-                {% elif subj.category == 'AC' %}rgba(100,116,139,.1);color:#475569
-                {% else %}rgba(100,116,139,.08);color:var(--muted){% endif %}">
-                {{ subj.category }}
-              </span>
-            </td>
-            <td style="text-align:center;font-weight:600;color:var(--deep)">{{ subj.lecture_hours }}</td>
-            <td style="text-align:center;color:var(--muted)">{{ subj.tutorial_hours }}</td>
-            <td style="text-align:center;color:var(--muted)">{{ subj.practical_hours }}</td>
-            <td style="text-align:center;font-weight:800;color:var(--teal)">{{ subj.credits }}</td>
-            <td style="color:var(--muted);font-size:12px">
-              {% for fs in subj.facultysubject_set.all %}{{ fs.faculty.user.get_full_name|default:fs.faculty.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}&mdash;{% endfor %}
-            </td>
-          </tr>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div class="d-title" style="margin:0"><i class="fas fa-layer-group"></i> Course Registration &mdash; Semester {{ course_reg_semester }}</div>
+      {% if backlog_count > 0 %}
+      <button onclick="toggleSupplyPanel()" id="supply-toggle-btn"
+              style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;font-size:12px;font-weight:700;background:rgba(239,68,68,.08);color:var(--red);border:1.5px solid rgba(239,68,68,.25);cursor:pointer;font-family:'Inter',sans-serif">
+        <i class="fas fa-file-circle-exclamation"></i> Backlogs ({{ backlog_count }}) &mdash; Apply for Supply
+      </button>
+      {% endif %}
+    </div>
+    <div class="section-meta">All subjects for Semester {{ course_reg_semester }}. Fixed courses (PC/MC/BS) are auto-enrolled. Select your electives below.</div>
+
+    {# SUPPLY EXAM PANEL (collapsible) #}
+    {% if backlog_count > 0 %}
+    <div id="supply-panel" style="display:none;margin-bottom:20px;padding:16px;background:rgba(239,68,68,.04);border:1.5px solid rgba(239,68,68,.2);border-radius:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:12px"><i class="fas fa-file-circle-exclamation" style="color:var(--red)"></i> Supply / Backlog Exam Registration</div>
+      {% if supply_existing_reg and supply_existing_reg.status == 'PAID' %}
+        <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-weight:600;margin-bottom:10px">
+          <i class="fas fa-check-circle"></i> Already registered for <strong>{{ supply_existing_reg.exam.name }}</strong>
+        </div>
+        {% for subj in supply_existing_reg.subjects.all %}
+        <div style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:7px;margin-bottom:4px;font-size:12px;font-weight:600">
+          <span style="color:var(--teal)">{{ subj.code }}</span> &mdash; {{ subj.name }} <span style="color:var(--muted)">Sem {{ subj.semester }}</span>
+        </div>
+        {% endfor %}
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">Total paid: Rs {{ supply_existing_reg.total_fee|floatformat:0 }}</div>
+      {% elif supply_latest_exam and supply_backlog_grouped %}
+        <div style="font-size:12px;color:#713f12;background:#fef9c3;padding:8px 12px;border-radius:7px;margin-bottom:12px">
+          <i class="fas fa-info-circle"></i> <strong>{{ supply_latest_exam.name }}</strong> &mdash; Rs {{ supply_fee_per_subject|floatformat:0 }} per subject
+        </div>
+        <form method="POST" action="{% url 'student_supply_exam_register' %}" id="supply-form">
+          {% csrf_token %}
+          {% for sem, marks in supply_backlog_grouped %}
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Semester {{ sem }}</div>
+            {% for m in marks %}
+            <label style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;background:#fff;margin-bottom:5px" id="supply_lbl_{{ m.subject.pk }}" data-sem="{{ sem }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <input type="checkbox" name="subjects" value="{{ m.subject.pk }}" data-sem="{{ sem }}"
+                       onchange="supplyRecalc();supplyHighlight(this)"
+                       style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0">
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ m.subject.code }} &mdash; {{ m.subject.name }}</div>
+                  <div style="font-size:10px;color:#dc2626">{{ m.marks_obtained|floatformat:0 }}/{{ m.max_marks|floatformat:0 }} &middot; Pass: {% widthratio m.max_marks 100 40 %}</div>
+                </div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:var(--teal);flex-shrink:0">Rs {{ supply_fee_per_subject|floatformat:0 }}</span>
+            </label>
+            {% endfor %}
+          </div>
           {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr style="background:#f8fafc;border-top:2px solid var(--border)">
-            <td colspan="7" style="font-size:12px;font-weight:700;color:var(--muted);text-align:right;padding:10px 12px">Total Credits this Semester</td>
-            <td style="text-align:center;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:var(--teal);padding:10px 12px">
-              {% with ns=0 %}{% for subj in course_subjects %}{% with ns=ns|add:subj.credits %}{% endwith %}{% endfor %}{{ course_subjects|length }}{% endwith %}
-            </td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:9px;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--muted)"><span id="supply_count">0</span> subject(s) &times; Rs {{ supply_fee_per_subject|floatformat:0 }}</div>
+            <span style="font-size:18px;font-weight:900;color:var(--teal)" id="supply_total">Rs 0</span>
+          </div>
+          <button type="submit" class="qa-btn" id="supply_submit" disabled
+                  style="background:var(--red);color:#fff;width:100%;font-size:13px;padding:11px">
+            <i class="fas fa-arrow-right"></i> Proceed to Payment
+          </button>
+        </form>
+      {% else %}
+        <div style="font-size:13px;color:var(--muted);text-align:center;padding:16px">No upcoming supply exam scheduled. Contact the exam department.</div>
+      {% endif %}
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
-      <span style="font-weight:700;color:var(--deep)">Legend:</span>
-      <span><strong>L</strong> = Lecture</span>
-      <span>&middot;</span>
-      <span><strong>T</strong> = Tutorial</span>
-      <span>&middot;</span>
-      <span><strong>P</strong> = Practical</span>
-      <span>&middot;</span>
-      <span><strong>C</strong> = Credits</span>
-      <span>&middot;</span>
-      <span><strong style="color:var(--teal)">PC</strong> = Program Core</span>
-      <span>&middot;</span>
-      <span><strong style="color:#6366f1">PE</strong> = Program Elective</span>
-      <span>&middot;</span>
-      <span><strong style="color:#b88510">OE</strong> = Open Elective</span>
-      <span>&middot;</span>
-      <span><strong style="color:#059669">PW</strong> = Project Work</span>
-      <span>&middot;</span>
-      <span><strong style="color:var(--red)">MC</strong> = Mandatory Course</span>
+    {% endif %}
+
+    {# COURSE REGISTRATION WINDOW #}
+    {% if not course_reg_open %}
+    <div style="text-align:center;padding:36px;background:var(--surface2);border-radius:12px">
+      <i class="fas fa-hourglass-half" style="font-size:32px;color:var(--muted);display:block;margin-bottom:12px"></i>
+      <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:6px">Registration Not Open</div>
+      <div style="font-size:13px;color:var(--muted)">The college admin will open course registration when it's time. You'll see all subjects here once it's active.</div>
     </div>
-    {% endwith %}
+
     {% else %}
-    <div class="empty"><i class="fas fa-list-ol"></i>No subjects found for this semester.</div>
+    {% if all_reg_subjects %}
+    <div style="margin-bottom:18px">
+      {% regroup all_reg_subjects by get_category_display as subjects_by_cat %}
+      {% for cat_group in subjects_by_cat %}
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin:0 0 8px;padding:4px 0;border-bottom:2px solid var(--border);
+          color:{% if cat_group.grouper == 'Program Core' %}var(--teal){% elif cat_group.grouper == 'Program Elective' %}#6366f1{% elif cat_group.grouper == 'Open Elective' %}#f59e0b{% elif cat_group.grouper == 'Mandatory Course' %}#dc2626{% else %}var(--muted){% endif %}">
+          {{ cat_group.grouper }}
+          {% if cat_group.list.0.category == 'PE' or cat_group.list.0.category == 'OE' %}
+          <span style="font-weight:400;font-size:10px;text-transform:none;color:var(--muted)"> &mdash; choose one from the options below</span>
+          {% else %}
+          <span style="font-weight:400;font-size:10px;text-transform:none;color:var(--muted)"> &mdash; auto-enrolled</span>
+          {% endif %}
+        </div>
+        {% for subj in cat_group.list %}
+        {% if subj.category == 'PE' or subj.category == 'OE' %}
+        {# Elective â€” find pool and show select button #}
+        {% with found_pool=None %}
+        {% for item in pool_data %}
+        {% for ps in item.pool.subjects.all %}{% if ps.pk == subj.pk %}
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1.5px solid {% if item.selection and item.selection.subject_id == subj.pk %}var(--teal){% else %}var(--border){% endif %};border-radius:10px;margin-bottom:6px;background:{% if item.selection and item.selection.subject_id == subj.pk %}#f0fdfa{% else %}#fff{% endif %}">
+          <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:rgba(99,102,241,.1);color:#6366f1;flex-shrink:0;white-space:nowrap">{{ subj.category }}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ subj.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ subj.code }} &middot; {{ subj.credits }}C &middot; {{ subj.lecture_hours }}L-{{ subj.tutorial_hours }}T-{{ subj.practical_hours }}P &middot; {{ item.pool.slot_name }}</div>
+          </div>
+          {% if item.selection and item.selection.subject_id == subj.pk %}
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;flex-shrink:0;
+              {% if item.selection.status == 'CONFIRMED' %}background:#d1fae5;color:#065f46{% else %}background:#fef3c7;color:#92400e{% endif %}">
+              {% if item.selection.status == 'CONFIRMED' %}<i class="fas fa-check"></i> Confirmed{% else %}<i class="fas fa-clock"></i> Pending{% endif %}
+            </span>
+          {% else %}
+            <form method="POST" action="{% url 'student_elective_select' %}" style="margin:0;flex-shrink:0">
+              {% csrf_token %}
+              <input type="hidden" name="pool_id" value="{{ item.pool.pk }}">
+              <input type="hidden" name="subject_id" value="{{ subj.pk }}">
+              <button type="submit" style="padding:5px 12px;border-radius:8px;font-size:11px;font-weight:700;background:var(--teal);color:#fff;border:none;cursor:pointer;font-family:'Inter',sans-serif">Select</button>
+            </form>
+          {% endif %}
+        </div>
+        {% endif %}{% endfor %}
+        {% endfor %}
+        {% endwith %}
+        {% else %}
+        {# Fixed subject #}
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
+          <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:rgba(13,115,119,.1);color:var(--teal);flex-shrink:0;white-space:nowrap">{{ subj.category }}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ subj.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ subj.code }} &middot; {{ subj.credits }}C &middot; {{ subj.lecture_hours }}L-{{ subj.tutorial_hours }}T-{{ subj.practical_hours }}P</div>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:#059669;background:#d1fae5;padding:3px 9px;border-radius:99px;flex-shrink:0;white-space:nowrap"><i class="fas fa-check"></i> Auto-enrolled</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if my_selections %}
+    <div style="padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">My Elective Selections</div>
+      {% for sel in my_selections %}
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sel.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ sel.pool.slot_name }} &middot; {{ sel.subject.code }}</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+          {% if sel.status == 'CONFIRMED' %}background:#d1fae5;color:#065f46
+          {% elif sel.status == 'REJECTED' %}background:#fee2e2;color:#991b1b
+          {% else %}background:#fef3c7;color:#92400e{% endif %}">
+          {{ sel.get_status_display }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty"><i class="fas fa-list-ol"></i>No subjects found for Semester {{ course_reg_semester }}.</div>
+    {% endif %}
     {% endif %}
   </div>
 </section>
@@ -1441,6 +2109,331 @@ function switchInbox(key, btn) {
   btn.classList.add('inbox-tab-active');
 }
 
+function toggleBacklogs() {
+  var panel = document.getElementById('backlog-panel');
+  var btn = document.getElementById('backlog-toggle-btn');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (!open) {
+    btn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Backlogs';
+  } else {
+    btn.innerHTML = btn.dataset.label;
+  }
+}
+
+function switchTTTab(tab, btn) {
+  document.getElementById('tt-pane-timetable').style.display = tab === 'timetable' ? '' : 'none';
+  document.getElementById('tt-pane-courses').style.display = tab === 'courses' ? '' : 'none';
+  document.querySelectorAll('#tt-tab-timetable, #tt-tab-courses').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function toggleSemTranscriptMenu() {
+  var m = document.getElementById('sem-transcript-menu');
+  if (!m) return;
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(e) {
+  var m = document.getElementById('sem-transcript-menu');
+  if (m && !m.parentElement.contains(e.target)) m.style.display = 'none';
+});
+
+// â”€â”€ Attendance table pagination + sort â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Attendance filter: Today / Yesterday / Calendar / Semester ───────────────
+var attActiveFilter = 'semester';
+var attActiveSem = {{ student.current_semester }};
+var attRangeStart = null;
+var attRangeEnd = null;
+var attCalPickStart = null;
+var attCalPickEnd = null;
+var attCalLeftYear, attCalLeftMonth, attCalRightYear, attCalRightMonth;
+
+var attRecords = (function(){
+  try { return JSON.parse(document.getElementById('att-records-data').textContent); }
+  catch(e){ return []; }
+})();
+
+function attSetFilter(mode, btn) {
+  attActiveFilter = mode;
+  document.querySelectorAll('.att-filter-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  var dd = document.getElementById('att-cal-dropdown');
+  var semSel = document.getElementById('att-sem-selector');
+  var courseCard = document.getElementById('att-course-card');
+  var dateLog = document.getElementById('att-date-log');
+  dd.style.display = 'none';
+  if (mode === 'semester') {
+    semSel.style.display = '';
+    courseCard.style.display = '';
+    dateLog.style.display = 'none';
+    attSelectSem(attActiveSem, null);
+  } else if (mode === 'calendar') {
+    semSel.style.display = 'none';
+    courseCard.style.display = 'none';
+    dateLog.style.display = '';
+    dd.style.display = '';
+    var now = new Date();
+    attCalLeftYear = now.getFullYear(); attCalLeftMonth = now.getMonth() - 1;
+    if (attCalLeftMonth < 0) { attCalLeftMonth = 11; attCalLeftYear--; }
+    attCalRightYear = now.getFullYear(); attCalRightMonth = now.getMonth();
+    attRenderCal('att-cal-left', attCalLeftYear, attCalLeftMonth);
+    attRenderCal('att-cal-right', attCalRightYear, attCalRightMonth);
+    attQuick('7d', document.querySelector('.att-quick-opt'));
+  } else {
+    semSel.style.display = 'none';
+    courseCard.style.display = 'none';
+    dateLog.style.display = '';
+    var today = new Date(); today.setHours(0,0,0,0);
+    if (mode === 'today') {
+      attRangeStart = attRangeEnd = today;
+    } else {
+      var y = new Date(today); y.setDate(y.getDate()-1);
+      attRangeStart = attRangeEnd = y;
+    }
+    attRenderLog();
+  }
+}
+
+function attSelectSem(sem, btn) {
+  attActiveSem = sem;
+  document.querySelectorAll('[id^="att-sem-btn-"]').forEach(function(b){ b.classList.remove('sem-tab-active'); });
+  var target = document.getElementById('att-sem-btn-' + sem);
+  if (target) target.classList.add('sem-tab-active');
+  document.querySelectorAll('#att-tbody .att-course-row').forEach(function(r){
+    var rowSem = parseInt(r.dataset.sem || 0);
+    r.style.display = (rowSem === sem) ? '' : 'none';
+  });
+  attCurrentPage = 1;
+  attPaginate();
+}
+
+function attQuick(preset, btn) {
+  document.querySelectorAll('.att-quick-opt').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var today = new Date(); today.setHours(0,0,0,0);
+  attCalPickStart = null; attCalPickEnd = null;
+  if (preset === '7d') {
+    attRangeEnd = new Date(today);
+    attRangeStart = new Date(today); attRangeStart.setDate(attRangeStart.getDate()-6);
+  } else if (preset === '30d') {
+    attRangeEnd = new Date(today);
+    attRangeStart = new Date(today); attRangeStart.setDate(attRangeStart.getDate()-29);
+  } else if (preset === 'thismonth') {
+    attRangeStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    attRangeEnd = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  } else if (preset === 'lastmonth') {
+    attRangeStart = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    attRangeEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  } else {
+    attRangeStart = null; attRangeEnd = null;
+    // custom range — ensure calendars are initialized
+    if (!attCalLeftYear) {
+      var now = new Date();
+      attCalLeftYear = now.getFullYear(); attCalLeftMonth = now.getMonth() - 1;
+      if (attCalLeftMonth < 0) { attCalLeftMonth = 11; attCalLeftYear--; }
+      attCalRightYear = now.getFullYear(); attCalRightMonth = now.getMonth();
+    }
+  }
+  attUpdateRangeLabel();
+  if (document.getElementById('att-cal-left')) {
+    attRenderCal('att-cal-left', attCalLeftYear, attCalLeftMonth);
+    attRenderCal('att-cal-right', attCalRightYear, attCalRightMonth);
+  }
+}
+
+function attFmtDate(d) {
+  if (!d) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function attFmtDisplay(d) {
+  if (!d) return '';
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(d.getDate()).padStart(2,'0') + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+function attUpdateRangeLabel() {
+  var lbl = document.getElementById('att-range-label');
+  if (!lbl) return;
+  lbl.textContent = (attRangeStart && attRangeEnd) ? attFmtDisplay(attRangeStart) + ' — ' + attFmtDisplay(attRangeEnd) : '';
+}
+
+function attRenderCal(elId, year, month) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var isLeft = elId === 'att-cal-left';
+  var html = '<div class="att-cal-mini"><div class="att-cal-nav">';
+  html += '<button onclick="attCalNav(\''+elId+'\',-1)" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--teal);padding:0 4px">&lsaquo;</button>';
+  html += '<div style="display:flex;gap:4px">';
+  html += '<select class="att-cal-nav" onchange="attCalSetMonth(\''+elId+'\',this.value,'+year+')">';
+  for (var m=0;m<12;m++) html += '<option value="'+m+'"'+(m===month?' selected':'')+'>'+months[m]+'</option>';
+  html += '</select>';
+  html += '<select class="att-cal-nav" onchange="attCalSetMonth(\''+elId+'\','+month+',this.value)">';
+  for (var y2=year-5;y2<=year+5;y2++) html += '<option value="'+y2+'"'+(y2===year?' selected':'')+'>'+y2+'</option>';
+  html += '</select></div>';
+  html += '<button onclick="attCalNav(\''+elId+'\',1)" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--teal);padding:0 4px">&rsaquo;</button>';
+  html += '</div><table><thead><tr>';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(function(d){ html += '<th>'+d+'</th>'; });
+  html += '</tr></thead><tbody>';
+  var first = new Date(year, month, 1).getDay();
+  var days = new Date(year, month+1, 0).getDate();
+  var prevDays = new Date(year, month, 0).getDate();
+  var cell = 0;
+  html += '<tr>';
+  for (var i=0;i<first;i++) { html += '<td class="other-month">'+(prevDays-first+1+i)+'</td>'; cell++; }
+  for (var d=1;d<=days;d++) {
+    if (cell % 7 === 0 && cell > 0) html += '</tr><tr>';
+    var dateStr = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var dt = new Date(year, month, d);
+    var cls = '';
+    if (attRangeStart && attRangeEnd) {
+      if (dt >= attRangeStart && dt <= attRangeEnd) cls = 'in-range';
+      if (attFmtDate(dt) === attFmtDate(attRangeStart)) cls = 'range-start';
+      if (attFmtDate(dt) === attFmtDate(attRangeEnd)) cls = 'range-end';
+    } else if (attCalPickStart && !attCalPickEnd && attFmtDate(dt) === attFmtDate(attCalPickStart)) {
+      cls = 'range-start';
+    }
+    html += '<td class="'+cls+'" onclick="attCalClick(\''+dateStr+'\')">'+d+'</td>';
+    cell++;
+  }
+  var rem = cell % 7;
+  if (rem > 0) for (var n=1;n<=7-rem;n++) html += '<td class="other-month">'+n+'</td>';
+  html += '</tr></tbody></table></div>';
+  el.innerHTML = html;
+  if (isLeft) { attCalLeftYear = year; attCalLeftMonth = month; }
+  else { attCalRightYear = year; attCalRightMonth = month; }
+}
+
+function attCalNav(elId, dir) {
+  var isLeft = elId === 'att-cal-left';
+  var y = isLeft ? attCalLeftYear : attCalRightYear;
+  var m = isLeft ? attCalLeftMonth : attCalRightMonth;
+  m += dir;
+  if (m > 11) { m = 0; y++; } else if (m < 0) { m = 11; y--; }
+  attRenderCal(elId, y, m);
+}
+function attCalSetMonth(elId, month, year) { attRenderCal(elId, parseInt(year), parseInt(month)); }
+function attCalClick(dateStr) {
+  var dt = new Date(dateStr + 'T00:00:00');
+  if (!attCalPickStart || (attCalPickStart && attCalPickEnd)) {
+    attCalPickStart = dt; attCalPickEnd = null;
+    attRangeStart = null; attRangeEnd = null;
+  } else {
+    if (dt < attCalPickStart) { attCalPickEnd = attCalPickStart; attCalPickStart = dt; }
+    else attCalPickEnd = dt;
+    attRangeStart = attCalPickStart; attRangeEnd = attCalPickEnd;
+    attUpdateRangeLabel();
+  }
+  attRenderCal('att-cal-left', attCalLeftYear, attCalLeftMonth);
+  attRenderCal('att-cal-right', attCalRightYear, attCalRightMonth);
+}
+function attCalClear() {
+  attRangeStart = null; attRangeEnd = null; attCalPickStart = null; attCalPickEnd = null;
+  attUpdateRangeLabel();
+  attRenderCal('att-cal-left', attCalLeftYear, attCalLeftMonth);
+  attRenderCal('att-cal-right', attCalRightYear, attCalRightMonth);
+}
+function attCalApply() {
+  document.getElementById('att-cal-dropdown').style.display = 'none';
+  attRenderLog();
+}
+function attRenderLog() {
+  var logBody = document.getElementById('att-log-body');
+  var logLabel = document.getElementById('att-log-range-label');
+  if (!logBody) return;
+  var startStr = attRangeStart ? attFmtDate(attRangeStart) : null;
+  var endStr   = attRangeEnd   ? attFmtDate(attRangeEnd)   : null;
+  if (logLabel) logLabel.textContent = (startStr && endStr) ? attFmtDisplay(attRangeStart) + ' — ' + attFmtDisplay(attRangeEnd) : '';
+  var filtered = attRecords.filter(function(r){
+    if (!startStr) return true;
+    return r.date >= startStr && r.date <= (endStr || startStr);
+  });
+  if (filtered.length === 0) {
+    logBody.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)"><i class="fas fa-calendar-xmark" style="display:block;font-size:24px;margin-bottom:8px"></i>No records for this period.</div>';
+    return;
+  }
+  var html = '';
+  filtered.forEach(function(r){
+    var ok = r.status === 'PRESENT';
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid #f3f4f6">';
+    html += '<span style="font-size:11px;font-weight:700;color:var(--muted);min-width:90px">'+r.date+'</span>';
+    html += '<span style="font-size:13px;font-weight:600;color:var(--deep);flex:1">'+r.subject+' <span style="font-size:11px;color:var(--muted)">('+r.code+')</span></span>';
+    html += '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:'+(ok?'rgba(13,115,119,.1);color:var(--teal)':'rgba(239,68,68,.1);color:#dc2626')+'">'+r.status+'</span>';
+    html += '</div>';
+  });
+  logBody.innerHTML = html;
+}
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('att-cal-dropdown');
+  var calBtn = document.getElementById('att-tab-calendar');
+  if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && calBtn && !calBtn.contains(e.target))
+    dd.style.display = 'none';
+});
+
+// ── Attendance table pagination + sort ───────────────────────────────────────
+var attSortCol = -1;
+var attSortAsc = true;
+
+function attPaginate() {
+  var rows = Array.from(document.querySelectorAll('#att-tbody .att-course-row:not([style*="display: none"])'));
+  var pageSize = parseInt(document.getElementById('att-page-size').value) || 10;
+  var total = rows.length;
+  var pages = Math.ceil(total / pageSize) || 1;
+  if (attCurrentPage > pages) attCurrentPage = 1;
+  rows.forEach(function(r, i) {
+    r.style.display = (i >= (attCurrentPage-1)*pageSize && i < attCurrentPage*pageSize) ? '' : 'none';
+  });
+  var start = total === 0 ? 0 : (attCurrentPage-1)*pageSize + 1;
+  var end = Math.min(attCurrentPage*pageSize, total);
+  var info = document.getElementById('att-info');
+  if (info) info.textContent = 'Showing ' + start + ' to ' + end + ' of ' + total + ' entries';
+  var pg = document.getElementById('att-pagination');
+  if (!pg) return;
+  pg.innerHTML = '';
+  function mkBtn(label, page, active, disabled) {
+    var b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:' + (active ? 'var(--teal)' : '#fff') + ';color:' + (active ? '#fff' : 'var(--deep)') + ';' + (disabled ? 'opacity:.4;cursor:default' : '');
+    if (!disabled) b.onclick = function(){ attCurrentPage = page; attPaginate(); };
+    return b;
+  }
+  pg.appendChild(mkBtn('Previous', attCurrentPage-1, false, attCurrentPage===1));
+  for (var p = 1; p <= pages; p++) pg.appendChild(mkBtn(p, p, p===attCurrentPage, false));
+  pg.appendChild(mkBtn('Next', attCurrentPage+1, false, attCurrentPage===pages));
+}
+
+function filterAttTable() {
+  var q = (document.getElementById('att-search').value || '').toLowerCase();
+  document.querySelectorAll('#att-tbody .att-course-row').forEach(function(r) {
+    var match = !q || r.dataset.name.includes(q) || r.dataset.code.includes(q);
+    r.style.display = match ? '' : 'none';
+  });
+  attCurrentPage = 1;
+  attPaginate();
+}
+
+function sortAttTable(col) {
+  if (attSortCol === col) attSortAsc = !attSortAsc;
+  else { attSortCol = col; attSortAsc = true; }
+  var tbody = document.getElementById('att-tbody');
+  var rows = Array.from(tbody.querySelectorAll('.att-course-row'));
+  rows.sort(function(a, b) {
+    var av = col === 2 ? parseFloat(a.dataset.pct||0) : a.cells[col].textContent.trim().toLowerCase();
+    var bv = col === 2 ? parseFloat(b.dataset.pct||0) : b.cells[col].textContent.trim().toLowerCase();
+    if (col === 2) return attSortAsc ? av - bv : bv - av;
+    return attSortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(function(r){ tbody.appendChild(r); });
+  attCurrentPage = 1;
+  attPaginate();
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  // init attendance: show current semester rows, hide past
+  attSelectSem({{ student.current_semester }}, null);
+  attPaginate();
+});
+
 function showSemPane(id) {
   document.querySelectorAll('.sem-pane').forEach(function(p){ p.classList.remove('sem-pane-active'); });
   document.querySelectorAll('.sem-tab').forEach(function(t){ t.classList.remove('sem-tab-active'); });
@@ -1524,4 +2517,183 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeTTMo
 document.getElementById('tt-modal-overlay').addEventListener('click', function(e){
   if(e.target === this) closeTTModal();
 });
+
+// â”€â”€ Supply panel toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function toggleSupplyPanel() {
+  var panel = document.getElementById('supply-panel');
+  var btn   = document.getElementById('supply-toggle-btn');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (btn) btn.style.background = open ? 'rgba(239,68,68,.08)' : 'rgba(239,68,68,.18)';
+}
+
+// â”€â”€ Profile edit toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function toggleProfileEdit() {
+  var view = document.getElementById('profile-view');
+  var form = document.getElementById('profile-edit-form');
+  var btn  = document.getElementById('profile-edit-btn');
+  if (!view || !form) return;
+  var editing = form.style.display !== 'none';
+  view.style.display = editing ? '' : 'none';
+  form.style.display = editing ? 'none' : 'block';
+  btn.innerHTML = editing
+    ? '<i class="fas fa-pen"></i> Edit Profile'
+    : '<i class="fas fa-times"></i> Cancel Edit';
+}
+
+// â”€â”€ Supply exam inline form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+var supplyFeePerSubject = {{ supply_fee_per_subject|default:0 }};
+function supplyRecalc() {
+  var checked = document.querySelectorAll('#supply-form input[name="subjects"]:checked').length;
+  var total = checked * supplyFeePerSubject;
+  var el = document.getElementById('supply_total');
+  if (el) el.textContent = 'Rs ' + total.toLocaleString('en-IN');
+  var c1 = document.getElementById('supply_count');
+  var c2 = document.getElementById('supply_count2');
+  if (c1) c1.textContent = checked;
+  if (c2) c2.textContent = checked;
+  var btn = document.getElementById('supply_submit');
+  if (btn) btn.disabled = (checked === 0);
+}
+
+// â”€â”€ Fee section supply panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function toggleFeePayPanel() {
+  var panel = document.getElementById('fee-pay-panel');
+  var btn = document.getElementById('fee-pay-btn');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  btn.innerHTML = open ? '<i class="fas fa-credit-card"></i> Pay Fees' : '<i class="fas fa-times"></i> Close';
+  if (!open) {
+    // init Razorpay script if needed
+    if (!document.getElementById('rzp-script') && {{ razorpay_enabled|yesno:"true,false" }}) {
+      var s = document.createElement('script'); s.id = 'rzp-script';
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js'; document.head.appendChild(s);
+    }
+    var first = document.querySelector('input[name="dash_fee_component"]:checked');
+    if (!first) first = document.querySelector('input[name="dash_fee_component"]');
+    if (first) dashSelectComp(first);
+  }
+}
+
+var dashSelType = 'partial', dashSelKey = 'TUITION', dashSelAmt = {{ balance_due|default:0 }};
+var dashTuitionBal = {{ balance_due|default:0 }};
+
+function dashSelectComp(radio) {
+  dashSelKey  = radio.value;
+  dashSelType = radio.dataset.type;
+  dashSelAmt  = parseFloat(radio.dataset.amount) || 0;
+  document.querySelectorAll('[id^="dash_comp_"]').forEach(function(el){
+    el.style.border = '1.5px solid var(--border)'; el.style.background = '#fff';
+  });
+  var lbl = document.getElementById('dash_comp_' + dashSelKey);
+  if (lbl) { lbl.style.border = '1.5px solid var(--teal)'; lbl.style.background = '#f0fdfa'; }
+  ['LIBRARY'].forEach(function(k){
+    var d = document.getElementById('dash_desc_' + k);
+    if (d) d.style.display = (dashSelKey === k) ? 'block' : 'none';
+  });
+  var amtInput = document.getElementById('dash-pay-amount');
+  var display  = document.getElementById('dash-amt-display');
+  var selLbl   = document.getElementById('dash-sel-label');
+  if (dashSelType === 'partial') {
+    selLbl.textContent = 'Tuition Fee Balance';
+    display.textContent = 'Rs ' + dashTuitionBal.toLocaleString('en-IN');
+    amtInput.value = dashTuitionBal; amtInput.max = dashTuitionBal; amtInput.style.display = '';
+  } else if (dashSelType === 'fixed') {
+    selLbl.textContent = radio.closest('label').querySelector('div > div:first-child').textContent.trim();
+    display.textContent = 'Rs ' + dashSelAmt.toLocaleString('en-IN');
+    amtInput.value = dashSelAmt; amtInput.style.display = 'none';
+  } else if (dashSelType === 'library') {
+    selLbl.textContent = 'Library Fee';
+    display.textContent = 'Rs —'; amtInput.value = ''; amtInput.style.display = 'none';
+  }
+}
+function dashUpdateLibrary() {
+  var sel = document.getElementById('dash_reason_LIBRARY');
+  var opt = sel.options[sel.selectedIndex];
+  var amt = parseFloat(opt.dataset.amount) || 0;
+  var inp = document.getElementById('dash_library_amount');
+  if (amt > 0) inp.value = amt; else inp.value = '';
+  dashUpdateLibraryAmt();
+}
+function dashUpdateLibraryAmt() {
+  var v = document.getElementById('dash_library_amount').value;
+  document.getElementById('dash-pay-amount').value = v;
+  document.getElementById('dash-amt-display').textContent = v ? 'Rs ' + parseFloat(v).toLocaleString('en-IN') : 'Rs —';
+}
+function dashPay() {
+  var amount = document.getElementById('dash-pay-amount').value;
+  var errBox = document.getElementById('dash-pay-error');
+  errBox.style.display = 'none';
+  if (dashSelKey === 'LIBRARY') {
+    var reason = document.getElementById('dash_reason_LIBRARY').value;
+    if (!reason) { errBox.textContent = 'Select a reason for library fee.'; errBox.style.display = 'block'; return; }
+    amount = document.getElementById('dash_library_amount').value;
+  }
+  if (!amount || parseFloat(amount) <= 0) { errBox.textContent = 'Enter a valid amount.'; errBox.style.display = 'block'; return; }
+  if (dashSelType === 'partial' && parseFloat(amount) > dashTuitionBal) {
+    errBox.textContent = 'Amount exceeds balance Rs ' + dashTuitionBal.toLocaleString('en-IN') + '.'; errBox.style.display = 'block'; return;
+  }
+  var note = dashSelKey === 'LIBRARY' ? (document.getElementById('dash_reason_LIBRARY').value || '') : '';
+  fetch("{% url 'razorpay_create_order' %}", {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}'},
+    body: new URLSearchParams({amount: amount, fee_type: dashSelKey, note: note})
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if (data.error) { errBox.textContent = data.error; errBox.style.display = 'block'; return; }
+    var rzp = new Razorpay({
+      key: data.key, amount: data.amount, currency: data.currency,
+      name: '{{ student.department.college.name|default:"EduTrack"|escapejs }}',
+      description: dashSelKey + (note ? ' - ' + note : ''),
+      order_id: data.order_id,
+      prefill: {name: data.student_name, email: data.student_email},
+      theme: {color: '#0d7377'},
+      handler: function(response){
+        document.getElementById('dash-rzp-order-id').value   = response.razorpay_order_id;
+        document.getElementById('dash-rzp-payment-id').value = response.razorpay_payment_id;
+        document.getElementById('dash-rzp-signature').value  = response.razorpay_signature;
+        document.getElementById('dash-rzp-verify-form').submit();
+      },
+      modal: {ondismiss: function(){ window.location.href = "{% url 'razorpay_payment_failed' %}?order_id=" + data.order_id; }}
+    });
+    rzp.open();
+  }).catch(function(){ errBox.textContent = 'Network error. Try again.'; errBox.style.display = 'block'; });
+}
+
+function toggleFeeSupplyPanel() {
+  var panel = document.getElementById('fee-supply-panel');
+  var btn   = document.getElementById('fee-supply-btn');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (btn) btn.innerHTML = open
+    ? '<i class="fas fa-pen-to-square"></i> Supply Exam'
+    : '<i class="fas fa-times"></i> Close';
+}
+function feeSupplyRecalc() {
+  var checked = document.querySelectorAll('#fee-supply-form input[name="subjects"]:checked').length;
+  var total = checked * supplyFeePerSubject;
+  var el = document.getElementById('fee_supply_total');
+  if (el) el.textContent = 'Rs ' + total.toLocaleString('en-IN');
+  var cnt = document.getElementById('fee_supply_count');
+  if (cnt) cnt.textContent = checked;
+  var btn = document.getElementById('fee_supply_submit');
+  if (btn) btn.disabled = (checked === 0);
+}
+function supplyHighlight(cb) {
+  var lbl = document.getElementById('supply_lbl_' + cb.value);
+  if (lbl) {
+    lbl.style.border = cb.checked ? '1.5px solid var(--teal)' : '1.5px solid var(--border)';
+    lbl.style.background = cb.checked ? '#f0fdfa' : '#fff';
+  }
+}
+function supplySelectSem(sem) {
+  document.querySelectorAll('#supply-form input[name="subjects"][data-sem="' + sem + '"]').forEach(function(cb) {
+    cb.checked = true;
+    supplyHighlight(cb);
+  });
+  supplyRecalc();
+}
 {% endblock %}
+

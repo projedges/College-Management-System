@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Sum, Q, Count, F, ExpressionWrapper, FloatField, Avg
+from django.db.models.functions import TruncWeek, Cast
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -2046,13 +2047,50 @@ def hod_dashboard(request):
         'sem_breakdown': sem_breakdown,
         'approval_stats': approval_stats,
         'branding': _get_college_branding(dept.college),
-        'hod_faculty': Faculty.objects.filter(user=user).first(),
-        'hod_teaching_subjects': list(
-            FacultySubject.objects.filter(
-                faculty__user=user
-            ).select_related('subject').order_by('subject__semester', 'subject__name')
-        ) if Faculty.objects.filter(user=user).exists() else [],
     }
+
+    # Teaching context — only when HOD also takes classes
+    hod_faculty = Faculty.objects.filter(user=user).first()
+    hod_teaching_subjects = []
+    hod_today_timetable = []
+    hod_marked_subject_ids = set()
+    hod_sub_quota = None
+
+    if hod.can_take_classes and hod_faculty:
+        hod_teaching_subjects = list(
+            FacultySubject.objects.filter(faculty=hod_faculty)
+            .select_related('subject').order_by('subject__semester', 'subject__name')
+        )
+        hod_marked_subject_ids = set(AttendanceSession.objects.filter(
+            faculty=hod_faculty, date=timezone.localdate()
+        ).values_list('subject_id', flat=True))
+
+        hod_raw_tt = Timetable.objects.filter(
+            Q(faculty=hod_faculty, day_of_week=today_day) |
+            Q(substitutions__substitute_faculty=hod_faculty,
+              substitutions__date=timezone.localdate(),
+              substitutions__status='ACCEPTED'),
+        ).select_related('subject', 'classroom').order_by('start_time').distinct()
+        hod_today_timetable = _merge_timetable_section_rows(list(hod_raw_tt))
+
+        from datetime import date as _date_hod
+        _today = timezone.localdate()
+        _sem_start_month = 7 if _today.month >= 7 else 1
+        _sem_start = _date_hod(_today.year, _sem_start_month, 1)
+        _feature_cfg = CollegeFeatureConfig.objects.filter(college=dept.college).first()
+        _sub_max = _feature_cfg.max_substitutions if _feature_cfg else 10
+        _subs_used = Substitution.objects.filter(
+            original_faculty=hod_faculty, date__gte=_sem_start, status='ACCEPTED'
+        ).count()
+        hod_sub_quota = {'used': _subs_used, 'max': _sub_max, 'remaining': max(_sub_max - _subs_used, 0)}
+
+    context.update({
+        'hod_faculty': hod_faculty,
+        'hod_teaching_subjects': hod_teaching_subjects,
+        'hod_today_timetable': hod_today_timetable,
+        'hod_marked_subject_ids': hod_marked_subject_ids,
+        'hod_sub_quota': hod_sub_quota,
+    })
     return render(request, 'dashboards/hod.html', context)
 
 
@@ -2111,9 +2149,27 @@ def faculty_assign_substitution(request):
     if request.method != 'POST':
         return redirect(f"{reverse('faculty_dashboard')}#substitution")
 
-    slot_id       = request.POST.get('timetable_slot')
+    # Check substitution quota
+    college = faculty.department.college
+    feature_cfg = CollegeFeatureConfig.objects.filter(college=college).first()
+    sub_max = feature_cfg.max_substitutions if feature_cfg else 10
+    from datetime import date as _date2
+    today2 = timezone.localdate()
+    sem_start_month = 7 if today2.month >= 7 else 1
+    sem_start2 = _date2(today2.year, sem_start_month, 1)
+    subs_used = Substitution.objects.filter(
+        original_faculty=faculty,
+        date__gte=sem_start2,
+        status='ACCEPTED',
+    ).count()
+    if subs_used >= sub_max:
+        messages.error(request, f'You have reached your substitution limit ({sub_max}) for this semester.')
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    slot_id        = request.POST.get('timetable_slot')
     sub_faculty_id = request.POST.get('substitute_faculty')
-    date_str      = request.POST.get('date', '').strip()
+    date_str       = request.POST.get('date', '').strip()
+    note           = request.POST.get('note', '').strip()
 
     slot = get_object_or_404(Timetable, pk=slot_id, faculty=faculty)
 
@@ -2126,6 +2182,26 @@ def faculty_assign_substitution(request):
         messages.error(request, 'Cannot assign substitution for a past date.')
         return redirect(f"{reverse('faculty_dashboard')}#substitution")
 
+    # Enforce semester date range
+    from datetime import date as _date3
+    _today3 = timezone.localdate()
+    _sem_start_month3 = 7 if _today3.month >= 7 else 1
+    _sem_start3 = _date3(_today3.year, _sem_start_month3, 1)
+    _sem_end_month3 = _sem_start_month3 + 5
+    _sem_end_year3 = _today3.year + (_sem_end_month3 - 1) // 12
+    _sem_end_month3 = ((_sem_end_month3 - 1) % 12) + 1
+    _sem_end3 = _date3(_sem_end_year3, _sem_end_month3, 1)
+    if not (_sem_start3 <= sub_date <= _sem_end3):
+        messages.error(request, 'Substitution date must be within the current semester.')
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
+    # Enforce date falls on the slot's day of week
+    day_code = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT'}.get(sub_date.weekday(), '')
+    if day_code != slot.day_of_week:
+        day_names = {'MON':'Monday','TUE':'Tuesday','WED':'Wednesday','THU':'Thursday','FRI':'Friday','SAT':'Saturday'}
+        messages.error(request, f'This slot is on {day_names.get(slot.day_of_week, slot.day_of_week)}s. Please pick a {day_names.get(slot.day_of_week, slot.day_of_week)} date.')
+        return redirect(f"{reverse('faculty_dashboard')}#substitution")
+
     sub_faculty = get_object_or_404(Faculty, pk=sub_faculty_id, department=faculty.department)
 
     if sub_faculty.id == faculty.id:
@@ -2133,7 +2209,6 @@ def faculty_assign_substitution(request):
         return redirect(f"{reverse('faculty_dashboard')}#substitution")
 
     # Verify the chosen faculty is actually free at that time on that date
-    day_code = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT'}.get(sub_date.weekday(), '')
     clash = Timetable.objects.filter(
         faculty=sub_faculty,
         day_of_week=day_code,
@@ -2160,8 +2235,11 @@ def faculty_assign_substitution(request):
             'rejection_reason': '',
             'responded_at': None,
             'topic_covered': '',
+            'note': note,
         }
     )
+
+    note_snippet = f' Note: "{note}"' if note else ''
 
     # Notify the substitute faculty
     Notification.objects.create(
@@ -2170,10 +2248,25 @@ def faculty_assign_substitution(request):
             f'Substitution Request: {request.user.get_full_name() or request.user.username} '
             f'has requested you to cover {slot.subject.name} ({slot.subject.code}) '
             f'on {sub_date.strftime("%d %b %Y")} '
-            f'({slot.start_time.strftime("%I:%M %p")}–{slot.end_time.strftime("%I:%M %p")}). '
-            f'Please accept or reject from your dashboard.'
+            f'({slot.start_time.strftime("%I:%M %p")}–{slot.end_time.strftime("%I:%M %p")}).'
+            f'{note_snippet} Please accept or reject from your dashboard.'
         )
     )
+
+    # Notify the HOD of the department
+    hod = HOD.objects.filter(department=faculty.department, is_active=True).first()
+    if hod:
+        Notification.objects.create(
+            user=hod.user,
+            message=(
+                f'Substitution: {request.user.get_full_name() or request.user.username} '
+                f'has requested {sub_faculty.user.get_full_name()} to cover '
+                f'{slot.subject.name} ({slot.subject.code}) '
+                f'on {sub_date.strftime("%d %b %Y")} '
+                f'({slot.start_time.strftime("%I:%M %p")}–{slot.end_time.strftime("%I:%M %p")}).'
+                f'{note_snippet}'
+            )
+        )
 
     messages.success(
         request,
@@ -2358,23 +2451,66 @@ def faculty_substitution_free_faculty(request):
     busy_ids |= busy_sub_ids
 
     # Everyone NOT busy is free
+    # ── Load balancing: count sessions each free faculty has on check_date ────
+    free_faculty_ids = [f.pk for f in dept_faculty if f.pk not in busy_ids]
+    sessions_today_map = {}
+    if free_faculty_ids:
+        sess_counts = AttendanceSession.objects.filter(
+            faculty_id__in=free_faculty_ids,
+            date=check_date,
+        ).values('faculty_id').annotate(cnt=Count('id'))
+        sessions_today_map = {r['faculty_id']: r['cnt'] for r in sess_counts}
+        # Also count substitution duties on that date
+        sub_counts = Substitution.objects.filter(
+            substitute_faculty_id__in=free_faculty_ids,
+            date=check_date,
+            status='ACCEPTED',
+        ).values('substitute_faculty_id').annotate(cnt=Count('id'))
+        for r in sub_counts:
+            sessions_today_map[r['substitute_faculty_id']] = sessions_today_map.get(r['substitute_faculty_id'], 0) + r['cnt']
+
     free_faculty = [
         {
             'id': f.pk,
             'name': f.user.get_full_name() or f.user.username,
             'employee_id': f.employee_id or '',
+            'sessions_today': sessions_today_map.get(f.pk, 0),
         }
         for f in dept_faculty
         if f.pk not in busy_ids
     ]
 
-    return JsonResponse({
+    # ── Conflict check for a specific faculty (check_id param) ───────────────
+    check_id = request.GET.get('check_id')
+    conflict_msg = None
+    if check_id:
+        try:
+            check_fac = Faculty.objects.get(pk=check_id, department=faculty.department)
+            # Check if they already have a pending/accepted substitution that day
+            existing_sub = Substitution.objects.filter(
+                substitute_faculty=check_fac,
+                date=check_date,
+                status__in=['PENDING', 'ACCEPTED'],
+            ).select_related('timetable_slot__subject').first()
+            if existing_sub:
+                conflict_msg = (
+                    f'{check_fac.user.get_full_name()} already has a substitution duty '
+                    f'for {existing_sub.timetable_slot.subject.name} on this date.'
+                )
+        except Faculty.DoesNotExist:
+            pass
+
+    response_data = {
         'faculty': free_faculty,
         'day': day_code,
         'slot_day_index': slot_day_index,
         'sem_start': sem_start.isoformat(),
         'sem_end': sem_end.isoformat(),
-    })
+    }
+    if conflict_msg:
+        response_data['conflict'] = conflict_msg
+
+    return JsonResponse(response_data)
 
 
 @login_required
@@ -2682,8 +2818,8 @@ def faculty_dashboard(request):
     day_map = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}
     today_day = day_map.get(today.weekday(), '')
     raw_timetable = Timetable.objects.filter(
-        Q(faculty=faculty) | Q(substitutions__substitute_faculty=faculty, substitutions__date=today),
-        day_of_week=today_day
+        Q(faculty=faculty, day_of_week=today_day) |
+        Q(substitutions__substitute_faculty=faculty, substitutions__date=today, substitutions__status='ACCEPTED'),
     ).select_related('subject', 'classroom').order_by('start_time').distinct()
     today_timetable = _merge_timetable_section_rows(list(raw_timetable))
     today_sessions = today_timetable
@@ -2737,7 +2873,7 @@ def faculty_dashboard(request):
     # Leave applications
     leave_history = LeaveApplication.objects.filter(faculty=faculty).order_by('-from_date')[:8]
 
-    announcements = _scope_announcements_for_college(faculty.department.college).order_by('-created_at')[:5]
+    announcements = _scope_announcements_for_college(faculty.department.college).order_by('-created_at').select_related('created_by')[:10]
 
     # Today's breaks for faculty's college
     faculty_today_breaks = list(TimetableBreak.objects.filter(
@@ -2851,6 +2987,231 @@ def faculty_dashboard(request):
         ).exclude(pk=faculty.pk).select_related('user').order_by('user__first_name'),
         'all_week_slots': list(all_week_slots),
     }
+
+    # ── Leave & Substitution quotas ───────────────────────────────────────────
+    feature_cfg = CollegeFeatureConfig.objects.filter(college=college).first()
+    current_year = today.year
+    # Count approved/pending leaves this year by type
+    leaves_this_year = LeaveApplication.objects.filter(
+        faculty=faculty,
+        from_date__year=current_year,
+        status__in=['APPROVED', 'PENDING'],
+    )
+    def _leave_days(qs, leave_type):
+        total = 0
+        for l in qs.filter(leave_type=leave_type):
+            total += max((l.to_date - l.from_date).days + 1, 1)
+        return total
+
+    leave_quota = {
+        'CL':  {'used': _leave_days(leaves_this_year, 'CL'),  'max': feature_cfg.max_casual_leaves  if feature_cfg else 12},
+        'ML':  {'used': _leave_days(leaves_this_year, 'ML'),  'max': feature_cfg.max_medical_leaves if feature_cfg else 10},
+        'EL':  {'used': _leave_days(leaves_this_year, 'EL'),  'max': feature_cfg.max_earned_leaves  if feature_cfg else 15},
+        'OD':  {'used': _leave_days(leaves_this_year, 'OD'),  'max': feature_cfg.max_od_leaves      if feature_cfg else 20},
+    }
+    for k, v in leave_quota.items():
+        v['remaining'] = max(v['max'] - v['used'], 0)
+
+    # Substitutions this semester — only count ACCEPTED (approved) ones
+    from datetime import date as _date
+    sem_start_month = 7 if today.month >= 7 else 1
+    sem_start = _date(today.year, sem_start_month, 1)
+    subs_used = Substitution.objects.filter(
+        original_faculty=faculty,
+        date__gte=sem_start,
+        status='ACCEPTED',
+    ).count()
+    sub_max = feature_cfg.max_substitutions if feature_cfg else 10
+    sub_quota = {'used': subs_used, 'max': sub_max, 'remaining': max(sub_max - subs_used, 0)}
+
+    context['leave_quota'] = leave_quota
+    context['sub_quota'] = sub_quota
+
+    # ── Pre-compute substitution data: for each slot, who is free ────────────
+    import json as _json
+    dept_faculty_qs = Faculty.objects.filter(
+        department=faculty.department, is_deleted=False
+    ).exclude(pk=faculty.pk).select_related('user').order_by('user__first_name')
+    dept_faculty_all = list(dept_faculty_qs)
+    dept_faculty_ids = [f.pk for f in dept_faculty_all]
+
+    # For each slot, find faculty who have a conflicting timetable slot
+    slot_busy_map = {}  # slot_pk -> set of busy faculty_ids
+    if dept_faculty_ids and all_week_slots:
+        for slot in all_week_slots:
+            busy = set(
+                Timetable.objects.filter(
+                    faculty_id__in=dept_faculty_ids,
+                    day_of_week=slot.day_of_week,
+                    start_time__lt=slot.end_time,
+                    end_time__gt=slot.start_time,
+                ).values_list('faculty_id', flat=True)
+            )
+            slot_busy_map[slot.pk] = busy
+
+    # Build JSON: {slot_pk: {faculty: [...], day: 'MON', sem_start: 'YYYY-MM-DD', sem_end: 'YYYY-MM-DD'}}
+    from datetime import date as _date_sub
+    _sub_today = timezone.localdate()
+    _sub_sem_start_month = 7 if _sub_today.month >= 7 else 1
+    _sub_sem_start = _date_sub(_sub_today.year, _sub_sem_start_month, 1)
+    _sub_sem_end_month = _sub_sem_start_month + 5
+    _sub_sem_end_year = _sub_today.year + (_sub_sem_end_month - 1) // 12
+    _sub_sem_end_month = ((_sub_sem_end_month - 1) % 12) + 1
+    _sub_sem_end = _date_sub(_sub_sem_end_year, _sub_sem_end_month, 1)
+
+    sub_faculty_data = {}
+    for slot in all_week_slots:
+        busy = slot_busy_map.get(slot.pk, set())
+        free = [
+            {
+                'id': f.pk,
+                'name': f.user.get_full_name() or f.user.username,
+                'employee_id': f.employee_id or '',
+            }
+            for f in dept_faculty_all
+            if f.pk not in busy
+        ]
+        # Use timetable version dates if available
+        if hasattr(slot, 'version') and slot.version and getattr(slot.version, 'valid_from', None) and getattr(slot.version, 'valid_to', None):
+            sem_start_str = slot.version.valid_from.isoformat()
+            sem_end_str   = slot.version.valid_to.isoformat()
+        else:
+            sem_start_str = _sub_sem_start.isoformat()
+            sem_end_str   = _sub_sem_end.isoformat()
+        sub_faculty_data[str(slot.pk)] = {
+            'faculty': free,
+            'day': slot.day_of_week,
+            'sem_start': sem_start_str,
+            'sem_end': sem_end_str,
+        }
+
+    context['sub_faculty_json'] = _json.dumps(sub_faculty_data)
+
+    # ── Analytics: student-level visibility ──────────────────────────────────
+    # Per-student attendance across all faculty's subjects
+    student_att_detail = Attendance.objects.filter(
+        session__subject_id__in=subject_ids
+    ).values('student_id', 'session__subject_id').annotate(
+        total=Count('id'),
+        present=Count('id', filter=Q(status='PRESENT'))
+    )
+    # Build per-student summary: {student_id: {subject_id: {total, present, pct}}}
+    stu_subj_map = {}
+    for row in student_att_detail:
+        sid = row['student_id']
+        subj = row['session__subject_id']
+        pct = round(row['present'] / row['total'] * 100, 1) if row['total'] > 0 else 0
+        stu_subj_map.setdefault(sid, {})[subj] = {'total': row['total'], 'present': row['present'], 'pct': pct}
+
+    # Get all students across faculty's subjects
+    all_students_qs = Student.objects.filter(
+        department=faculty.department,
+        current_semester__in=list({s.semester for s in subjects}),
+        status='ACTIVE', is_deleted=False,
+    ).select_related('user').order_by('roll_number')
+
+    # Marks for performance analysis
+    marks_qs = Marks.objects.filter(
+        subject_id__in=subject_ids
+    ).values('student_id', 'subject_id', 'marks_obtained', 'max_marks')
+    stu_marks_map = {}
+    for m in marks_qs:
+        sid = m['student_id']
+        pct = round(m['marks_obtained'] / m['max_marks'] * 100, 1) if m['max_marks'] > 0 else 0
+        stu_marks_map.setdefault(sid, []).append({'subject_id': m['subject_id'], 'pct': pct, 'marks': m['marks_obtained'], 'max': m['max_marks']})
+
+    # Recently absent (last 7 days)
+    week_ago = today - timedelta(days=7)
+    recent_absent_qs = Attendance.objects.filter(
+        session__subject_id__in=subject_ids,
+        session__date__gte=week_ago,
+        status='ABSENT',
+    ).select_related('student__user', 'session__subject').order_by('-session__date')[:50]
+
+    # Build student analytics rows
+    analytics_students = []
+    for student in all_students_qs[:100]:
+        subj_data = stu_subj_map.get(student.id, {})
+        if not subj_data:
+            continue
+        # Overall attendance across faculty's subjects
+        total_p = sum(v['present'] for v in subj_data.values())
+        total_t = sum(v['total'] for v in subj_data.values())
+        overall_pct = round(total_p / total_t * 100, 1) if total_t > 0 else 0
+        # Marks average
+        marks_data = stu_marks_map.get(student.id, [])
+        avg_marks_pct = round(sum(m['pct'] for m in marks_data) / len(marks_data), 1) if marks_data else None
+        # At-risk: attendance < 75 OR marks avg < 40
+        is_at_risk = overall_pct < 75 or (avg_marks_pct is not None and avg_marks_pct < 40)
+        analytics_students.append({
+            'student': student,
+            'overall_pct': overall_pct,
+            'avg_marks_pct': avg_marks_pct,
+            'is_at_risk': is_at_risk,
+            'subj_count': len(subj_data),
+        })
+
+    # Top performers: sort by marks desc, then attendance
+    top_performers = sorted(
+        [s for s in analytics_students if s['avg_marks_pct'] is not None],
+        key=lambda x: (x['avg_marks_pct'], x['overall_pct']), reverse=True
+    )[:10]
+    # At-risk students
+    at_risk_students = sorted(
+        [s for s in analytics_students if s['is_at_risk']],
+        key=lambda x: x['overall_pct']
+    )[:20]
+
+    # Subject comparison: avg marks % per subject
+    subj_marks_agg = Marks.objects.filter(subject_id__in=subject_ids).values('subject_id').annotate(
+        avg_pct=Avg(Cast('marks_obtained', FloatField()) * 100.0 / Cast('max_marks', FloatField())),
+        count=Count('id')
+    )
+    subj_marks_map = {r['subject_id']: {'avg_pct': round(r['avg_pct'] or 0, 1), 'count': r['count']} for r in subj_marks_agg}
+
+    # Attendance trend: last 8 weeks per subject
+    eight_weeks_ago = today - timedelta(weeks=8)
+    weekly_att = Attendance.objects.filter(
+        session__subject_id__in=subject_ids,
+        session__date__gte=eight_weeks_ago,
+    ).annotate(
+        week=TruncWeek('session__date')
+    ).values('week', 'session__subject_id').annotate(
+        total=Count('id'),
+        present=Count('id', filter=Q(status='PRESENT'))
+    ).order_by('week')
+
+    # Build weekly trend per subject
+    att_trend_by_subj = {}
+    for row in weekly_att:
+        subj_id = row['session__subject_id']
+        pct = round(row['present'] / row['total'] * 100, 1) if row['total'] > 0 else 0
+        att_trend_by_subj.setdefault(subj_id, []).append({
+            'week': row['week'].strftime('%d %b') if row['week'] else '',
+            'pct': pct,
+        })
+
+    # Build analytics subject list
+    analytics_subjects = []
+    for subj in subjects:
+        marks_info = subj_marks_map.get(subj.id, {'avg_pct': 0, 'count': 0})
+        agg = att_map.get(subj.id, {'total': 0, 'present': 0})
+        att_pct = round(agg['present'] / agg['total'] * 100, 1) if agg['total'] > 0 else 0
+        analytics_subjects.append({
+            'subject': subj,
+            'att_pct': att_pct,
+            'avg_marks_pct': marks_info['avg_pct'],
+            'marks_count': marks_info['count'],
+            'defaulters': defaulters_map.get(subj.id, 0),
+            'enrolled': enrolled_counts.get((subj.department_id, subj.semester), 0),
+            'trend': att_trend_by_subj.get(subj.id, []),
+        })
+
+    context['top_performers'] = top_performers
+    context['at_risk_students'] = at_risk_students
+    context['recent_absent'] = list(recent_absent_qs)
+    context['analytics_subjects'] = analytics_subjects
+
     return render(request, 'dashboards/faculty.html', context)
 
 
@@ -2917,23 +3278,23 @@ def faculty_mark_attendance(request, subject_id):
     allowed, msg = _check_attendance_permission(request.user, subject)
     if not allowed:
         messages.error(request, msg)
-        return redirect('dashboard')
+        return redirect('faculty_dashboard')
     if msg:
         messages.info(request, msg)
 
     students = _get_section_students(faculty, subject)
     today = timezone.localdate()
-    day_code = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT'}.get(today.weekday(), '')
 
-    # Check for accepted substitution today
+    # Check for accepted substitution today — look up by subject+faculty+date directly
+    # (do NOT filter by day_of_week; the sub slot may be from a different weekday)
     active_sub = None
     if faculty:
-        slot = Timetable.objects.filter(subject=subject, day_of_week=day_code).first()
-        if slot:
-            active_sub = Substitution.objects.filter(
-                timetable_slot=slot, substitute_faculty=faculty,
-                date=today, status='ACCEPTED',
-            ).first()
+        active_sub = Substitution.objects.filter(
+            timetable_slot__subject=subject,
+            substitute_faculty=faculty,
+            date=today,
+            status='ACCEPTED',
+        ).select_related('timetable_slot').first()
 
     # Existing session for today (pre-fill topic + attendance)
     existing_session = AttendanceSession.objects.filter(subject=subject, date=today).first()
@@ -3651,6 +4012,14 @@ def faculty_quiz_edit(request, pk):
             QuizQuestion.objects.filter(pk=request.POST.get('q_id'), quiz=quiz).delete()
             messages.success(request, 'Question removed.')
 
+        elif action == 'upload_csv':
+            csv_file = request.FILES.get('csv_file')
+            if csv_file:
+                _import_quiz_questions_from_csv(quiz, csv_file)
+                messages.success(request, f'Questions imported from CSV into "{quiz.title}".')
+            else:
+                messages.error(request, 'Please select a CSV file.')
+
         elif action == 'toggle_active':
             if not quiz.questions.exists():
                 messages.error(request, 'Add at least one question before activating.')
@@ -3911,7 +4280,27 @@ def faculty_leave_apply(request):
                 from datetime import date as _date
                 fd = datetime.fromisoformat(from_date).date()
                 td = datetime.fromisoformat(to_date).date()
-                if fd < timezone.now().date():
+                days_requested = max((td - fd).days + 1, 1)
+                # Check quota
+                college_l = faculty.department.college
+                fcfg = CollegeFeatureConfig.objects.filter(college=college_l).first()
+                quota_map = {
+                    'CL': fcfg.max_casual_leaves  if fcfg else 12,
+                    'ML': fcfg.max_medical_leaves if fcfg else 10,
+                    'EL': fcfg.max_earned_leaves  if fcfg else 15,
+                    'OD': fcfg.max_od_leaves      if fcfg else 20,
+                }
+                max_days = quota_map.get(leave_type, 12)
+                used_days = sum(
+                    max((l.to_date - l.from_date).days + 1, 1)
+                    for l in LeaveApplication.objects.filter(
+                        faculty=faculty, leave_type=leave_type,
+                        from_date__year=fd.year, status__in=['APPROVED', 'PENDING']
+                    )
+                )
+                if used_days + days_requested > max_days:
+                    messages.error(request, f'Leave quota exceeded. You have {max(max_days - used_days, 0)} {leave_type} days remaining.')
+                elif fd < timezone.now().date():
                     messages.error(request, 'Cannot apply for leave in the past.')
                 elif LeaveApplication.objects.filter(
                     faculty=faculty,
@@ -4074,6 +4463,8 @@ def student_dashboard(request):
         overall_total += total
 
     overall_attendance = round((overall_present / overall_total * 100), 1) if overall_total > 0 else None
+    # Count only subjects that have at least one session recorded
+    tracked_subjects_count = sum(1 for a in attendance_data if a['total'] > 0)
 
     # Compute eligibility using rule engine (shown in student dashboard)
     eligibility = _compute_eligibility(student, student.current_semester, college)
@@ -4367,6 +4758,27 @@ def student_dashboard(request):
         .values_list('payment_type', flat=True)
     ) if fee else set()
 
+    # Fee components for inline payment panel in dashboard
+    from django.conf import settings as _ds
+    _razorpay_enabled = bool(getattr(_ds, 'RAZORPAY_KEY_ID', '') and getattr(_ds, 'RAZORPAY_KEY_SECRET', ''))
+    _razorpay_key_id  = getattr(_ds, 'RAZORPAY_KEY_ID', '')
+    _fee_structure = FeeStructure.objects.filter(
+        department=student.department,
+        semester=fee.semester or student.current_semester
+    ).first() if fee else None
+    _fee_breakdown_map = {}
+    if _fee_structure:
+        for bd in _fee_structure.breakdowns.all():
+            _fee_breakdown_map[bd.category] = bd.amount
+    _DEFAULT_AMOUNTS = {'TUITION': fee.total_amount if fee else 0, 'EXAM': 1500.0, 'LIBRARY': 500.0, 'SPORTS': 500.0, 'MISC': 0.0}
+    _merged = {**_DEFAULT_AMOUNTS, **_fee_breakdown_map}
+    _LABELS = {'TUITION': 'Tuition Fee', 'EXAM': 'Exam Fee', 'LIBRARY': 'Library Fee', 'SPORTS': 'Sports & Cultural Fee', 'MISC': 'Miscellaneous'}
+    fee_components_display = [
+        (k, _LABELS[k], _merged.get(k, 0))
+        for k in _LABELS
+        if k != 'TUITION' and _merged.get(k, 0) > 0
+    ]
+
     # Academic track — CGPA per semester
     semester_results = results.order_by('semester')
 
@@ -4459,6 +4871,7 @@ def student_dashboard(request):
         'emergency_contact': emergency_contact,
         'attendance_data': attendance_data,
         'overall_attendance': overall_attendance,
+        'tracked_subjects_count': tracked_subjects_count,
         'results': results,
         'result_breakdown': result_breakdown,
         'latest_result': latest_result,
@@ -4510,13 +4923,105 @@ def student_dashboard(request):
         'all_fees': all_fees,
         'total_fees_due': total_fees_due,
         'paid_fee_types': paid_fee_types,
+        'fee_components_display': fee_components_display,
+        'razorpay_enabled': _razorpay_enabled,
+        'razorpay_key_id': _razorpay_key_id,
         'my_courses': my_courses,
     }
+
+    # ── Course Registration (Electives) ──────────────────────────────────────
+    feature_cfg = CollegeFeatureConfig.objects.filter(college=college).first()
+    feature_disabled = feature_cfg and not feature_cfg.enable_electives
+
+    # Course registration window — admin-controlled
+    course_reg_open = bool(feature_cfg and feature_cfg.course_registration_open)
+    course_reg_semester = feature_cfg.course_registration_semester if feature_cfg else None
+
+    if not feature_disabled:
+        open_pools = ElectivePool.objects.filter(
+            department=student.department,
+            semester=student.current_semester,
+            status='OPEN',
+        ).prefetch_related('subjects')
+        my_sel_qs = ElectiveSelection.objects.filter(
+            student=student, pool__in=open_pools
+        ).select_related('subject', 'pool')
+        sel_by_pool = {s.pool_id: s for s in my_sel_qs}
+        pool_data = [{'pool': p, 'selection': sel_by_pool.get(p.pk)} for p in open_pools]
+        my_selections = list(my_sel_qs)
+    else:
+        pool_data = []
+        my_selections = []
+
+    # All subjects for the registration semester (for the full course list view)
+    reg_sem = course_reg_semester or student.current_semester
+    all_reg_subjects = Subject.objects.filter(
+        department=student.department,
+        semester=reg_sem,
+    ).order_by('category', 'name') if course_reg_open else []
+
+    context['pool_data'] = pool_data
+    context['my_selections'] = my_selections
+    context['feature_disabled'] = feature_disabled
+    context['course_reg_open'] = course_reg_open
+    context['course_reg_semester'] = reg_sem
+    context['all_reg_subjects'] = all_reg_subjects
+
+    # ── Supply Exam ───────────────────────────────────────────────────────────
+    # Only show supply/backlog exams — exclude the student's current semester end exam
+    # A supply exam is one whose semester < student's current semester (backlog semesters)
+    supply_latest_exam = Exam.objects.filter(
+        college=college,
+        semester__lt=student.current_semester,  # only past semesters = supply/backlog
+    ).order_by('-end_date').first()
+    supply_fee_per_subject = _get_supply_fee_per_subject(college, student.department, student.current_semester)
+
+    # Build backlog grouped by semester (same logic as student_supply_exam_register)
+    all_marks_qs = Marks.objects.filter(
+        student=student, subject__department=student.department
+    ).select_related('subject', 'exam').order_by('subject__semester', 'subject__name')
+    best_mark_per_subject = {}
+    for m in all_marks_qs:
+        sid = m.subject_id
+        if sid not in best_mark_per_subject or m.marks_obtained > best_mark_per_subject[sid].marks_obtained:
+            best_mark_per_subject[sid] = m
+    failed_by_semester = {}
+    for sid, m in best_mark_per_subject.items():
+        if m.marks_obtained < m.max_marks * 0.4:
+            failed_by_semester.setdefault(m.subject.semester, []).append(m)
+    supply_backlog_grouped = [(sem, failed_by_semester[sem]) for sem in sorted(failed_by_semester.keys())]
+
+    supply_existing_reg = None
+    if supply_latest_exam:
+        supply_existing_reg = SupplyExamRegistration.objects.filter(
+            student=student, exam=supply_latest_exam
+        ).first()
+
+    context['supply_latest_exam'] = supply_latest_exam
+    context['supply_fee_per_subject'] = supply_fee_per_subject
+    context['supply_backlog_grouped'] = supply_backlog_grouped
+    context['supply_existing_reg'] = supply_existing_reg
+
+    # ── Hall Tickets ──────────────────────────────────────────────────────────
+    student_hall_tickets = HallTicket.objects.filter(
+        student=student
+    ).select_related('exam').order_by('-exam__start_date')
+    context['student_hall_tickets'] = student_hall_tickets
+    context['total_semester_credits'] = sum(s.credits or 0 for s in course_subjects)
+
     return render(request, 'dashboards/student.html', context)
 
 
 @login_required
 def student_profile_edit(request):
+    """
+    Student profile edit — inline form posted from the dashboard #profile section.
+    Rules:
+      - Editable: first_name, last_name, email, phone_number (max 10 digits),
+                  date_of_birth, gender, blood_group, nationality, profile_photo,
+                  address fields, emergency contact
+      - Read-only (admin only): aadhaar_number, parent phone, parent name, parent type
+    """
     try:
         student = Student.objects.select_related('user', 'department').get(user=request.user)
     except Student.DoesNotExist:
@@ -4531,27 +5036,43 @@ def student_profile_edit(request):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                request.user.first_name = request.POST.get('first_name', '').strip()
-                request.user.last_name = request.POST.get('last_name', '').strip()
-                request.user.email = request.POST.get('email', '').strip()
+                # ── User fields — first_name/last_name are read-only for student ─
+                # Only phone is editable from user-facing fields
                 request.user.save()
 
+                # ── Phone validation (max 10 digits) ──────────────────────────
+                phone = request.POST.get('phone_number', '').strip()
+                digits_only = ''.join(c for c in phone if c.isdigit())
+                if len(digits_only) > 10:
+                    messages.error(request, 'Phone number must be at most 10 digits.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
+
+                alt_phone = request.POST.get('alternate_phone', '').strip()
+                alt_digits = ''.join(c for c in alt_phone if c.isdigit())
+                if len(alt_digits) > 10:
+                    messages.error(request, 'Alternate phone must be at most 10 digits.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
+
+                # ── Profile — keep all admin-managed fields from existing record ─
+                existing_aadhaar = profile.aadhaar_number if profile else ''
                 profile_data = {
-                    'first_name': request.user.first_name,
-                    'last_name': request.user.last_name,
-                    'date_of_birth': request.POST.get('date_of_birth'),
-                    'gender': request.POST.get('gender'),
-                    'phone_number': request.POST.get('phone_number', '').strip(),
-                    'aadhaar_number': request.POST.get('aadhaar_number', '').strip(),
-                    'inter_college_name': request.POST.get('inter_college_name', '').strip(),
-                    'inter_passed_year': _safe_int(request.POST.get('inter_passed_year')),
-                    'inter_percentage': _safe_float(request.POST.get('inter_percentage')),
-                    'school_name': request.POST.get('school_name', '').strip(),
-                    'school_passed_year': _safe_int(request.POST.get('school_passed_year')),
-                    'school_percentage': _safe_float(request.POST.get('school_percentage')),
-                    'blood_group': request.POST.get('blood_group', '').strip() or None,
-                    'nationality': request.POST.get('nationality', '').strip() or 'Indian',
-                    'category': request.POST.get('category', '').strip() or None,
+                    'date_of_birth': profile.date_of_birth if profile else None,  # read-only
+                    'gender':        profile.gender if profile else '',            # read-only
+                    'phone_number':  phone,
+                    'alternate_phone': alt_phone,
+                    'aadhaar_number': existing_aadhaar,
+                    'blood_group':   profile.blood_group if profile else None,     # read-only
+                    'nationality':   request.POST.get('nationality', '').strip() or 'Indian',
+                    # keep education history unchanged
+                    'inter_college_name':  profile.inter_college_name  if profile else '',
+                    'inter_passed_year':   profile.inter_passed_year   if profile else 0,
+                    'inter_percentage':    profile.inter_percentage     if profile else 0,
+                    'school_name':         profile.school_name          if profile else '',
+                    'school_passed_year':  profile.school_passed_year   if profile else 0,
+                    'school_percentage':   profile.school_percentage     if profile else 0,
+                    'category':            profile.category             if profile else None,
+                    'college_email':       profile.college_email        if profile else None,  # read-only
+                    'personal_email':      profile.personal_email       if profile else None,  # read-only
                 }
                 if profile is None:
                     profile = StudentProfile.objects.create(user=request.user, **profile_data)
@@ -4559,15 +5080,16 @@ def student_profile_edit(request):
                     for field, value in profile_data.items():
                         setattr(profile, field, value)
                     profile.save()
-                
+
                 if request.FILES.get('profile_photo'):
                     profile.profile_photo = request.FILES['profile_photo']
                     profile.save(update_fields=['profile_photo'])
 
+                # ── Address ───────────────────────────────────────────────────
                 address_data = {
-                    'street': request.POST.get('street', '').strip(),
-                    'city': request.POST.get('city', '').strip(),
-                    'state': request.POST.get('state', '').strip(),
+                    'street':  request.POST.get('street', '').strip(),
+                    'city':    request.POST.get('city', '').strip(),
+                    'state':   request.POST.get('state', '').strip(),
                     'pincode': request.POST.get('pincode', '').strip(),
                     'country': request.POST.get('country', '').strip() or 'India',
                 }
@@ -4578,23 +5100,17 @@ def student_profile_edit(request):
                         setattr(address, field, value)
                     address.save()
 
-                parent_data = {
-                    'parent_type': request.POST.get('parent_type', '').strip() or 'FATHER',
-                    'name': request.POST.get('parent_name', '').strip(),
-                    'phone_number': request.POST.get('parent_phone_number', '').strip(),
-                    'email': request.POST.get('parent_email', '').strip() or None,
-                    'occupation': request.POST.get('parent_occupation', '').strip() or None,
-                }
-                if parent is None:
-                    Parent.objects.create(user=request.user, **parent_data)
-                else:
-                    for field, value in parent_data.items():
-                        setattr(parent, field, value)
-                    parent.save()
+                # ── Parent — name/phone/type are READ-ONLY for student ─────────
+                # Only update email and occupation (non-sensitive fields)
+                if parent:
+                    parent.email      = request.POST.get('parent_email', '').strip() or None
+                    parent.occupation = request.POST.get('parent_occupation', '').strip() or None
+                    parent.save(update_fields=['email', 'occupation'])
 
+                # ── Emergency contact ─────────────────────────────────────────
                 emergency_data = {
-                    'name': request.POST.get('emergency_name', '').strip(),
-                    'relation': request.POST.get('emergency_relation', '').strip(),
+                    'name':         request.POST.get('emergency_name', '').strip(),
+                    'relation':     request.POST.get('emergency_relation', '').strip(),
                     'phone_number': request.POST.get('emergency_phone_number', '').strip(),
                 }
                 if emergency_contact is None:
@@ -4605,9 +5121,10 @@ def student_profile_edit(request):
                     emergency_contact.save()
 
             messages.success(request, 'Profile updated successfully.')
-            return redirect(f"{reverse('student_dashboard')}#profile")
         except Exception as e:
-            messages.error(request, f"Error updating profile: {str(e)}")
+            messages.error(request, f'Error updating profile: {str(e)}')
+
+        return redirect(f"{reverse('student_dashboard')}#profile")
 
     context = {
         'student': student,
@@ -6748,16 +7265,28 @@ def admin_hod_add(request):
         return redirect('dashboard')
     departments = _scope_departments(request).order_by('name')
     if request.method == 'POST':
-        first_name   = request.POST.get('first_name', '').strip()
-        last_name    = request.POST.get('last_name', '').strip()
-        username     = request.POST.get('username', '').strip()
-        email        = request.POST.get('email', '').strip()
-        password     = request.POST.get('password', '')
-        employee_id  = request.POST.get('employee_id', '').strip()
-        dept_id      = request.POST.get('department')
-        qualification= request.POST.get('qualification', '').strip()
-        experience   = request.POST.get('experience_years', 0)
-        phone        = request.POST.get('phone_number', '').strip()
+        first_name    = request.POST.get('first_name', '').strip()
+        last_name     = request.POST.get('last_name', '').strip()
+        username      = request.POST.get('username', '').strip()
+        email         = request.POST.get('email', '').strip()
+        password      = request.POST.get('password', '')
+        employee_id   = request.POST.get('employee_id', '').strip()
+        dept_id       = request.POST.get('department')
+        qualification = request.POST.get('qualification', '').strip()
+        experience    = request.POST.get('experience_years', 0)
+        phone         = request.POST.get('phone_number', '').strip()
+        designation   = request.POST.get('designation', 'Head of Department').strip()
+        specialization= request.POST.get('specialization', '').strip()
+        joined_date_str = request.POST.get('joined_date', '').strip()
+        can_take_classes = request.POST.get('can_take_classes') == 'on'
+
+        joined_date = None
+        if joined_date_str:
+            try:
+                from datetime import date as _d
+                joined_date = datetime.fromisoformat(joined_date_str).date()
+            except (ValueError, TypeError):
+                pass
 
         if not dept_id:
             messages.error(request, 'Select a department.')
@@ -6775,16 +7304,36 @@ def admin_hod_add(request):
                 first_name=first_name, last_name=last_name
             )
             UserRole.objects.create(user=user, role=2, college=department.college)
-            HOD.objects.create(
+            hod = HOD.objects.create(
                 user=user, employee_id=employee_id, department=department,
                 qualification=qualification, experience_years=_safe_int(experience),
-                phone_number=phone, is_active=True
+                phone_number=phone, is_active=True,
+                designation=designation, specialization=specialization,
+                joined_date=joined_date, can_take_classes=can_take_classes,
             )
+            # If HOD also teaches, auto-create a Faculty record so they can be assigned subjects/timetable
+            if can_take_classes:
+                Faculty.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'employee_id': employee_id,
+                        'department': department,
+                        'designation': designation,
+                        'qualification': qualification,
+                        'experience_years': _safe_int(experience),
+                        'phone_number': phone,
+                        'joined_date': joined_date,
+                    }
+                )
+                # Give them faculty role too (role=3) — keep HOD role as primary
+                UserRole.objects.filter(user=user).update(role=2)  # HOD role stays
+
             if password_generated:
                 messages.success(request, f'HOD {first_name} {last_name} added. Temporary password: {password_value}')
             else:
                 messages.success(request, f'HOD {first_name} {last_name} added.')
             return redirect('/dashboard/admin/#faculty')
+    return render(request, 'admin_panel/hod_form.html', {'departments': departments})
     return render(request, 'admin_panel/hod_form.html', {'departments': departments})
 
 
@@ -7001,8 +7550,10 @@ def admin_elective_pools(request):
     pools = ElectivePool.objects.filter(
         regulation__college=college
     ).select_related('regulation', 'department').prefetch_related('subjects').order_by('-created_at')
+    feature_cfg, _ = CollegeFeatureConfig.objects.get_or_create(college=college)
     return render(request, 'admin_panel/elective_pools.html', {
         'pools': pools, 'college': college,
+        'feature_cfg': feature_cfg,
         'branding': _get_college_branding(college),
     })
 
@@ -7063,6 +7614,35 @@ def admin_elective_pool_toggle(request, pk):
         messages.success(request, f'Pool "{pool.slot_name}" reopened.')
     pool.save(update_fields=['status'])
     return redirect('admin_elective_pools')
+
+
+@login_required
+def admin_course_registration_toggle(request):
+    """
+    Admin opens/closes the course registration window for a specific semester.
+    POST params: action (open|close), semester (int)
+    """
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    cfg, _ = CollegeFeatureConfig.objects.get_or_create(college=college)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        semester = _safe_int(request.POST.get('semester'), 0)
+        if action == 'open' and semester > 0:
+            cfg.course_registration_open = True
+            cfg.course_registration_semester = semester
+            cfg.save(update_fields=['course_registration_open', 'course_registration_semester'])
+            messages.success(request, f'Course registration opened for Semester {semester}. Students can now register.')
+        elif action == 'close':
+            cfg.course_registration_open = False
+            cfg.save(update_fields=['course_registration_open'])
+            messages.success(request, 'Course registration window closed.')
+        else:
+            messages.error(request, 'Invalid action or semester.')
+
+    return redirect(request.POST.get('next', 'admin_elective_pools'))
 
 
 @login_required
@@ -10655,3 +11235,564 @@ def student_semester_transcript_download(request, transcript_id):
     response = HttpResponse(transcript.pdf_file.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{transcript.pdf_file.name.rsplit("/", 1)[-1]}"'
     return response
+
+
+@login_required
+def student_hall_ticket_pdf(request, ht_id):
+    """Render a printable hall ticket for the student."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+    ht = get_object_or_404(HallTicket, pk=ht_id)
+
+    # Only the student themselves (or admin/HOD) can download
+    try:
+        student = Student.objects.select_related('department__college', 'user').get(user=request.user)
+    except Student.DoesNotExist:
+        student = None
+
+    if student and ht.student != student:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    if ht.status != 'ISSUED':
+        messages.error(request, 'Hall ticket is not yet issued for this exam.')
+        return redirect('student_dashboard')
+
+    college = ht.student.department.college
+    branding = _get_college_branding(college)
+    PRIMARY = colors.HexColor(branding.primary_color if branding else '#0d7377')
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            leftMargin=20*mm, rightMargin=20*mm,
+                            topMargin=15*mm, bottomMargin=15*mm)
+
+    styles_h1 = ParagraphStyle('h1', fontSize=16, fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=4)
+    styles_h2 = ParagraphStyle('h2', fontSize=12, fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=2)
+    styles_sub = ParagraphStyle('sub', fontSize=9, fontName='Helvetica', alignment=TA_CENTER, spaceAfter=10, textColor=colors.grey)
+    styles_label = ParagraphStyle('lbl', fontSize=9, fontName='Helvetica-Bold', alignment=TA_LEFT)
+    styles_val = ParagraphStyle('val', fontSize=9, fontName='Helvetica', alignment=TA_LEFT)
+    styles_note = ParagraphStyle('note', fontSize=8, fontName='Helvetica', alignment=TA_LEFT, leading=13, textColor=colors.grey)
+
+    story = []
+    story.append(Paragraph(college.name, styles_h1))
+    story.append(Paragraph('HALL TICKET', styles_h2))
+    story.append(Paragraph(f'{ht.exam.name} &mdash; Semester {ht.exam.semester}', styles_sub))
+    story.append(HRFlowable(width='100%', thickness=1.5, color=PRIMARY, spaceAfter=10))
+
+    # Student info table
+    info_data = [
+        [Paragraph('Name', styles_label), Paragraph(ht.student.user.get_full_name() or ht.student.user.username, styles_val),
+         Paragraph('Roll Number', styles_label), Paragraph(ht.student.roll_number, styles_val)],
+        [Paragraph('Branch', styles_label), Paragraph(ht.student.department.name, styles_val),
+         Paragraph('Semester', styles_label), Paragraph(str(ht.exam.semester), styles_val)],
+        [Paragraph('Examination', styles_label), Paragraph(ht.exam.name, styles_val),
+         Paragraph('Month & Year', styles_label), Paragraph(ht.exam.start_date.strftime('%b %Y') if ht.exam.start_date else '—', styles_val)],
+        [Paragraph('Room No.', styles_label), Paragraph(ht.room_number or '—', styles_val),
+         Paragraph('Seat No.', styles_label), Paragraph(ht.seat_number or '—', styles_val)],
+    ]
+    info_table = Table(info_data, colWidths=[35*mm, 60*mm, 35*mm, 40*mm])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#e2e8f0')),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 10*mm))
+
+    # Subjects
+    story.append(Paragraph('<b>Subjects</b>', ParagraphStyle('sh', fontSize=10, fontName='Helvetica-Bold', spaceAfter=6)))
+    subjects = Subject.objects.filter(
+        department=ht.student.department,
+        semester=ht.exam.semester,
+    ).order_by('name')
+    subj_data = [['#', 'Subject Code', 'Subject Name', 'Credits']]
+    for i, s in enumerate(subjects, 1):
+        subj_data.append([str(i), s.code, s.name, str(s.credits or '—')])
+    subj_data.append(['', '', f'Total: {len(subjects)} subjects', ''])
+    subj_table = Table(subj_data, colWidths=[10*mm, 30*mm, 100*mm, 20*mm])
+    subj_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f8fafc')]),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#e2e8f0')),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    story.append(subj_table)
+    story.append(Spacer(1, 8*mm))
+
+    # Instructions
+    story.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#e2e8f0'), spaceAfter=6))
+    story.append(Paragraph('<b>Instructions to be followed before the examination:</b>', styles_note))
+    instructions = [
+        'Code A: Possession of study material/mobile phone — "F" grade in the respective subject.',
+        'Code B: Second offence — "F" grade in all subjects of that semester.',
+        'Code C: Third offence — "F" grade in all subjects; allowed to appear after 6 months.',
+        'Code D: Fourth offence — "F" grade in all subjects; allowed to appear after 1 year.',
+    ]
+    for inst in instructions:
+        story.append(Paragraph(f'• {inst}', styles_note))
+
+    doc.build(story)
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="hall-ticket-{ht.student.roll_number}-{ht.exam.pk}.pdf"'
+    return response
+
+
+# ── ADMIN HALL TICKET MANAGEMENT ─────────────────────────────────────────────
+
+@login_required
+def admin_hall_tickets(request):
+    """College admin view to manage hall ticket generation across all exams."""
+    if not _admin_guard(request):
+        return redirect('dashboard')
+
+    college = _get_admin_college(request)
+    exams = Exam.objects.filter(college=college).order_by('-start_date')
+    dept_filter = request.GET.get('dept')
+    departments = Department.objects.filter(college=college, is_deleted=False).order_by('name')
+
+    # Handle exemption approval/rejection from admin
+    if request.method == 'POST':
+        ov_id = request.POST.get('override_id')
+        action = request.POST.get('action')
+        note = request.POST.get('review_note', '').strip()
+        if ov_id and action in ('APPROVED', 'REJECTED'):
+            ov = get_object_or_404(EligibilityOverride, pk=ov_id, exam__college=college)
+            ov.status = action
+            ov.reviewed_by = request.user
+            ov.review_note = note
+            ov.save()
+            if action == 'APPROVED':
+                HallTicket.objects.filter(student=ov.student, exam=ov.exam).update(
+                    status='ISSUED', issued_at=timezone.now()
+                )
+            messages.success(request, f'Exemption {action.lower()} for {ov.student.roll_number}.')
+        return redirect('admin_hall_tickets')
+
+    # Summary per exam
+    exam_summaries = []
+    for exam in exams:
+        ht_qs = HallTicket.objects.filter(exam=exam)
+        if dept_filter:
+            ht_qs = ht_qs.filter(student__department_id=dept_filter)
+        exam_summaries.append({
+            'exam': exam,
+            'total': ht_qs.count(),
+            'issued': ht_qs.filter(status='ISSUED').count(),
+            'detained': ht_qs.filter(status='DETAINED').count(),
+            'withheld': ht_qs.filter(status='WITHHELD').count(),
+        })
+
+    # Pending exemption requests from HODs
+    pending_overrides = EligibilityOverride.objects.filter(
+        exam__college=college, status='PENDING'
+    ).select_related('student__user', 'student__department', 'exam', 'requested_by').order_by('-created_at')
+
+    return render(request, 'admin_panel/hall_tickets.html', {
+        'exam_summaries': exam_summaries,
+        'departments': departments,
+        'dept_filter': dept_filter,
+        'branding': _get_college_branding(college),
+        'college': college,
+        'pending_overrides': pending_overrides,
+    })
+
+
+@login_required
+def hod_hall_tickets(request):
+    """HOD view to manage hall tickets for their department's students."""
+    try:
+        hod = HOD.objects.select_related('department__college').get(user=request.user)
+    except HOD.DoesNotExist:
+        messages.error(request, 'HOD profile not found.')
+        return redirect('dashboard')
+
+    dept = hod.department
+    college = dept.college
+    exams = Exam.objects.filter(college=college).order_by('-start_date')
+
+    exam_summaries = []
+    for exam in exams:
+        ht_qs = HallTicket.objects.filter(exam=exam, student__department=dept)
+        exam_summaries.append({
+            'exam': exam,
+            'total': ht_qs.count(),
+            'issued': ht_qs.filter(status='ISSUED').count(),
+            'detained': ht_qs.filter(status='DETAINED').count(),
+            'withheld': ht_qs.filter(status='WITHHELD').count(),
+        })
+
+    return render(request, 'admin_panel/hall_tickets.html', {
+        'exam_summaries': exam_summaries,
+        'departments': [],
+        'dept_filter': None,
+        'branding': _get_college_branding(college),
+        'college': college,
+        'hod_dept': dept,
+    })
+
+
+@login_required
+def hod_exam_hall_tickets(request, exam_id):
+    """
+    HOD generates/views hall tickets for their department's students in a specific exam.
+    Detained students can be granted exemptions — these go to college admin for approval.
+    Once admin approves, HOD can regenerate to issue the hall ticket.
+    """
+    try:
+        hod = HOD.objects.select_related('department__college').get(user=request.user)
+    except HOD.DoesNotExist:
+        messages.error(request, 'HOD profile not found.')
+        return redirect('dashboard')
+
+    dept = hod.department
+    college = dept.college
+    exam = get_object_or_404(Exam, pk=exam_id, college=college)
+
+    students_qs = Student.objects.filter(
+        department=dept,
+        current_semester=exam.semester,
+        status='ACTIVE',
+    ).select_related('user').order_by('roll_number')
+
+    existing_ht = {ht.student_id: ht for ht in HallTicket.objects.filter(exam=exam, student__department=dept)}
+    existing_overrides = {ov.student_id: ov for ov in EligibilityOverride.objects.filter(exam=exam, student__department=dept)}
+
+    att_agg = Attendance.objects.filter(
+        student__in=students_qs,
+        session__subject__semester=exam.semester,
+    ).values('student_id').annotate(
+        total=Count('id'),
+        present=Count('id', filter=Q(status='PRESENT'))
+    )
+    att_map = {row['student_id']: row for row in att_agg}
+
+    fee_dues = set(
+        Fee.objects.filter(student__in=students_qs, status__in=['PENDING', 'PARTIAL'])
+        .values_list('student_id', flat=True)
+    )
+
+    exam_rule = _get_attendance_rule(college, dept, exam.semester)
+    threshold = exam_rule.effective_min_overall
+
+    rows = []
+    for student in students_qs:
+        att = att_map.get(student.id, {'total': 0, 'present': 0})
+        pct = round(att['present'] / att['total'] * 100, 1) if att['total'] > 0 else 0
+        has_dues = student.id in fee_dues
+        att_fail = att['total'] >= exam_rule.min_sessions_for_check and pct < threshold
+        override = existing_overrides.get(student.id)
+        has_approved_override = override and override.status == 'APPROVED'
+        if has_approved_override:
+            auto_status = 'ELIGIBLE'
+        elif att_fail:
+            auto_status = 'DETAINED'
+        elif has_dues:
+            auto_status = 'WITHHELD'
+        else:
+            auto_status = 'ELIGIBLE'
+        rows.append({
+            'student': student, 'att_pct': pct, 'has_dues': has_dues,
+            'hall_ticket': existing_ht.get(student.id),
+            'threshold': threshold, 'auto_status': auto_status,
+            'override': override,
+        })
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'generate':
+            # Generate hall tickets for this dept's students
+            created = updated = 0
+            classrooms = list(Classroom.objects.filter(college=college).order_by('room_number'))
+            seat_map = {}
+            seat_num = 1
+            room_idx = 0
+            eligible_rows = [r for r in rows if r['auto_status'] == 'ELIGIBLE']
+            for r in eligible_rows:
+                if room_idx >= len(classrooms):
+                    break
+                room = classrooms[room_idx]
+                capacity = room.capacity or 30
+                row_letter = chr(65 + ((seat_num - 1) // 10))
+                seat_in_row = ((seat_num - 1) % 10) + 1
+                seat_map[r['student'].id] = (room.room_number, f'{row_letter}{seat_in_row}', row_letter)
+                seat_num += 1
+                if seat_num > capacity:
+                    room_idx += 1
+                    seat_num = 1
+
+            for r in rows:
+                status = 'ISSUED' if r['auto_status'] == 'ELIGIBLE' else (
+                    'DETAINED' if r['auto_status'] == 'DETAINED' else 'WITHHELD'
+                )
+                room_no, seat_no, row_no = seat_map.get(r['student'].id, ('', '', ''))
+                ht, was_created = HallTicket.objects.update_or_create(
+                    student=r['student'], exam=exam,
+                    defaults={
+                        'status': status, 'attendance_pct': r['att_pct'],
+                        'has_fee_dues': r['has_dues'],
+                        'issued_at': timezone.now() if status == 'ISSUED' else None,
+                        'generated_by': request.user,
+                        'room_number': room_no, 'seat_number': seat_no, 'row_number': row_no,
+                    }
+                )
+                if was_created:
+                    created += 1
+                else:
+                    updated += 1
+            messages.success(request, f'Hall tickets generated: {created} new, {updated} updated.')
+            return redirect('hod_exam_hall_tickets', exam_id=exam.pk)
+
+        elif action == 'request_exemption':
+            # HOD submits exemption request for a detained student — goes to admin for approval
+            student_id = request.POST.get('student_id')
+            reason = request.POST.get('reason', '').strip()
+            student_obj = get_object_or_404(Student, pk=student_id, department=dept)
+            if not reason:
+                messages.error(request, 'Please provide a reason for the exemption.')
+            elif EligibilityOverride.objects.filter(student=student_obj, exam=exam).exists():
+                messages.warning(request, f'Exemption already submitted for {student_obj.roll_number}.')
+            else:
+                att = att_map.get(student_obj.id, {'total': 0, 'present': 0})
+                pct = round(att['present'] / att['total'] * 100, 1) if att['total'] > 0 else 0
+                EligibilityOverride.objects.create(
+                    student=student_obj, exam=exam,
+                    requested_by=request.user,
+                    reason=f'[HOD Exemption] {reason}',
+                    attendance_pct_at_request=pct,
+                    status='PENDING',
+                )
+                messages.success(request, f'Exemption request submitted for {student_obj.roll_number}. Awaiting college admin approval.')
+            return redirect('hod_exam_hall_tickets', exam_id=exam.pk)
+
+    return render(request, 'hod/exam_hall_tickets.html', {
+        'hod': hod, 'dept': dept, 'exam': exam, 'rows': rows,
+        'threshold': threshold,
+        'branding': _get_college_branding(college),
+    })
+
+
+
+@login_required
+def student_transcript_sem_pdf(request, semester):
+    """Generate a single-semester transcript PDF for the student."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+    try:
+        student = Student.objects.select_related('department__college', 'user').get(user=request.user)
+    except Student.DoesNotExist:
+        messages.error(request, 'Student profile not found.')
+        return redirect('student_dashboard')
+
+    college = student.department.college
+    branding = _get_college_branding(college)
+    PRIMARY = colors.HexColor(branding.primary_color if branding else '#0d7377')
+    DEEP = colors.HexColor('#071e26')
+    MUTED = colors.HexColor('#64748b')
+    LIGHT = colors.HexColor('#f0fdfa')
+    BORDER = colors.HexColor('#cbd5e1')
+    WHITE = colors.white
+
+    result = Result.objects.filter(student=student, semester=semester).first()
+    sem_marks = (
+        Marks.objects.filter(student=student, subject__semester=semester)
+        .select_related('subject', 'exam')
+        .order_by('subject__name')
+    )
+
+    try:
+        profile = student.user.studentprofile
+    except Exception:
+        profile = None
+
+    LABEL = ParagraphStyle('lbl', fontName='Helvetica-Bold', fontSize=8, textColor=DEEP, leading=11)
+    VALUE = ParagraphStyle('val', fontName='Helvetica', fontSize=8, textColor=DEEP, leading=11)
+    HDR   = ParagraphStyle('hdr', fontName='Helvetica-Bold', fontSize=8, textColor=WHITE, leading=11)
+    CELL  = ParagraphStyle('cel', fontName='Helvetica', fontSize=8, textColor=DEEP, leading=11)
+
+    buf = BytesIO()
+    PAGE_W = 180 * mm
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=15*mm, rightMargin=15*mm,
+                            topMargin=12*mm, bottomMargin=14*mm)
+    story = []
+
+    # Header
+    hdr_tbl = Table([[
+        Paragraph(f'<b>{college.name}</b>', ParagraphStyle('h', fontName='Helvetica-Bold', fontSize=14, textColor=WHITE, leading=18)),
+        Paragraph(f'<b>SEMESTER {semester} TRANSCRIPT</b>', ParagraphStyle('h2', fontName='Helvetica-Bold', fontSize=11, textColor=WHITE, leading=14, alignment=TA_RIGHT)),
+    ]], colWidths=[PAGE_W * 0.62, PAGE_W * 0.38])
+    hdr_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0,0),(-1,-1), PRIMARY),
+        ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0),(-1,-1), 12), ('BOTTOMPADDING', (0,0),(-1,-1), 12),
+        ('LEFTPADDING', (0,0),(0,-1), 14), ('RIGHTPADDING', (1,0),(1,-1), 14),
+    ]))
+    story.append(hdr_tbl)
+    story.append(Spacer(1, 5*mm))
+
+    # Student info
+    dob_str = profile.date_of_birth.strftime('%d %b %Y') if profile and profile.date_of_birth else '—'
+    info_rows = [
+        [Paragraph('Student Name', LABEL), Paragraph(student.user.get_full_name() or student.user.username, VALUE),
+         Paragraph('Roll Number', LABEL), Paragraph(student.roll_number, VALUE)],
+        [Paragraph('Department', LABEL), Paragraph(student.department.name, VALUE),
+         Paragraph('Semester', LABEL), Paragraph(str(semester), VALUE)],
+        [Paragraph('Date of Birth', LABEL), Paragraph(dob_str, VALUE),
+         Paragraph('Admission Year', LABEL), Paragraph(str(student.admission_year), VALUE)],
+    ]
+    info_tbl = Table(info_rows, colWidths=[32*mm, 58*mm, 34*mm, 56*mm])
+    info_tbl.setStyle(TableStyle([
+        ('ROWBACKGROUNDS', (0,0),(-1,-1), [WHITE, LIGHT]),
+        ('GRID', (0,0),(-1,-1), 0.3, BORDER),
+        ('TOPPADDING', (0,0),(-1,-1), 5), ('BOTTOMPADDING', (0,0),(-1,-1), 5),
+        ('LEFTPADDING', (0,0),(-1,-1), 7), ('RIGHTPADDING', (0,0),(-1,-1), 7),
+        ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
+    ]))
+    story.append(info_tbl)
+    story.append(Spacer(1, 4*mm))
+    story.append(HRFlowable(width='100%', thickness=1, color=PRIMARY, spaceAfter=4*mm))
+
+    # Result summary
+    if result:
+        summary_data = [[
+            Paragraph('<b>SGPA</b>', HDR), Paragraph('<b>Percentage</b>', HDR),
+            Paragraph('<b>Total Marks</b>', HDR), Paragraph('<b>Result</b>', HDR),
+        ], [
+            Paragraph(f'{result.gpa}', ParagraphStyle('v', fontName='Helvetica-Bold', fontSize=12, textColor=PRIMARY, leading=14)),
+            Paragraph(f'{result.percentage:.1f}%', ParagraphStyle('v', fontName='Helvetica-Bold', fontSize=12, textColor=DEEP, leading=14)),
+            Paragraph(f'{result.total_marks:.0f}', ParagraphStyle('v', fontName='Helvetica-Bold', fontSize=12, textColor=DEEP, leading=14)),
+            Paragraph('PASS' if result.percentage >= 40 else 'FAIL',
+                      ParagraphStyle('v', fontName='Helvetica-Bold', fontSize=12,
+                                     textColor=colors.HexColor('#059669') if result.percentage >= 40 else colors.HexColor('#dc2626'), leading=14)),
+        ]]
+        sum_tbl = Table(summary_data, colWidths=[PAGE_W/4]*4)
+        sum_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), PRIMARY),
+            ('BACKGROUND', (0,1),(-1,1), LIGHT),
+            ('GRID', (0,0),(-1,-1), 0.3, BORDER),
+            ('ALIGN', (0,0),(-1,-1), 'CENTER'),
+            ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0),(-1,-1), 8), ('BOTTOMPADDING', (0,0),(-1,-1), 8),
+        ]))
+        story.append(sum_tbl)
+        story.append(Spacer(1, 5*mm))
+
+    # Marks table
+    if sem_marks:
+        story.append(Paragraph(f'<b>Subject-wise Marks — Semester {semester}</b>',
+                                ParagraphStyle('sh', fontName='Helvetica-Bold', fontSize=10, textColor=DEEP, spaceAfter=6)))
+        COL_W = [65*mm, 20*mm, 18*mm, 18*mm, 15*mm, 14*mm, 14*mm, 16*mm]
+        hdr_row = [Paragraph(h, HDR) for h in ['Subject', 'Code', 'Credits', 'Marks', 'Max', '%', 'Grade', 'GP']]
+        data = [hdr_row]
+        for m in sem_marks:
+            pct = round(m.marks_obtained / m.max_marks * 100, 1) if m.max_marks > 0 else 0
+            data.append([
+                Paragraph(m.subject.name, CELL),
+                Paragraph(m.subject.code, CELL),
+                Paragraph(str(m.subject.credits or '—'), CELL),
+                Paragraph(f'{m.marks_obtained:.0f}', CELL),
+                Paragraph(f'{m.max_marks:.0f}', CELL),
+                Paragraph(f'{pct}%', CELL),
+                Paragraph(m.grade or '—', CELL),
+                Paragraph(f'{m.grade_point:.1f}' if m.grade_point else '—', CELL),
+            ])
+        marks_tbl = Table(data, colWidths=COL_W)
+        marks_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,0), PRIMARY),
+            ('ROWBACKGROUNDS', (0,1),(-1,-1), [WHITE, LIGHT]),
+            ('GRID', (0,0),(-1,-1), 0.3, BORDER),
+            ('TOPPADDING', (0,0),(-1,-1), 5), ('BOTTOMPADDING', (0,0),(-1,-1), 5),
+            ('LEFTPADDING', (0,0),(-1,-1), 6), ('RIGHTPADDING', (0,0),(-1,-1), 6),
+            ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
+        ]))
+        story.append(marks_tbl)
+    else:
+        story.append(Paragraph('No marks recorded for this semester.', VALUE))
+
+    story.append(Spacer(1, 8*mm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=BORDER, spaceAfter=4*mm))
+    story.append(Paragraph(f'Generated on {timezone.now().strftime("%d %b %Y")} &mdash; {college.name}',
+                            ParagraphStyle('ft', fontName='Helvetica', fontSize=7, textColor=MUTED, alignment=TA_CENTER)))
+
+    doc.build(story)
+    buf.seek(0)
+    response = HttpResponse(buf.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="transcript-sem{semester}-{student.roll_number}.pdf"'
+    return response
+
+
+@login_required
+def student_library(request):
+    """Student library portal — stub view, ready for full library module integration."""
+    try:
+        student = Student.objects.select_related('department__college', 'user').get(user=request.user)
+    except Student.DoesNotExist:
+        messages.error(request, 'Student profile not found.')
+        return redirect('home')
+
+    tab = request.GET.get('tab', 'borrow')
+    college = student.department.college
+    branding = _get_college_branding(college)
+
+    return render(request, 'student/library.html', {
+        'student': student,
+        'tab': tab,
+        'branding': branding,
+        'college': college,
+    })
+
+
+@login_required
+def admin_leave_quotas(request):
+    """Admin sets leave and substitution quotas for faculty."""
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    cfg, _ = CollegeFeatureConfig.objects.get_or_create(college=college)
+
+    if request.method == 'POST':
+        cfg.max_casual_leaves  = _safe_int(request.POST.get('max_casual_leaves'),  12)
+        cfg.max_medical_leaves = _safe_int(request.POST.get('max_medical_leaves'), 10)
+        cfg.max_earned_leaves  = _safe_int(request.POST.get('max_earned_leaves'),  15)
+        cfg.max_od_leaves      = _safe_int(request.POST.get('max_od_leaves'),      20)
+        cfg.max_substitutions  = _safe_int(request.POST.get('max_substitutions'),  10)
+        cfg.save(update_fields=['max_casual_leaves','max_medical_leaves','max_earned_leaves','max_od_leaves','max_substitutions'])
+        messages.success(request, 'Leave and substitution quotas updated.')
+        return redirect('admin_leave_quotas')
+
+    return render(request, 'admin_panel/leave_quotas.html', {
+        'cfg': cfg, 'college': college,
+        'branding': _get_college_branding(college),
+        'leave_fields': [
+            ('max_casual_leaves',  'Casual Leave (CL)',  cfg.max_casual_leaves),
+            ('max_medical_leaves', 'Medical Leave (ML)', cfg.max_medical_leaves),
+            ('max_earned_leaves',  'Earned Leave (EL)',  cfg.max_earned_leaves),
+            ('max_od_leaves',      'On Duty (OD)',       cfg.max_od_leaves),
+        ],
+    })

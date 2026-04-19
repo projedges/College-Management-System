@@ -128,6 +128,7 @@ class StudentProfile(models.Model):
 
     # Contact
     phone_number = models.CharField(max_length=15)
+    alternate_phone = models.CharField(max_length=15, blank=True, default='', help_text='Alternate/secondary mobile number')
 
     # Government ID
     aadhaar_number = models.CharField(max_length=20, unique=True)
@@ -145,6 +146,10 @@ class StudentProfile(models.Model):
     blood_group = models.CharField(max_length=5, null=True, blank=True)
     nationality = models.CharField(max_length=50, default='Indian')
     category = models.CharField(max_length=20, null=True, blank=True)
+
+    # Email IDs
+    college_email = models.EmailField(null=True, blank=True, help_text='Institutional email assigned by college (read-only for student)')
+    personal_email = models.EmailField(null=True, blank=True, help_text='Student personal email (read-only for student)')
 
     profile_photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
 
@@ -528,6 +533,26 @@ class HOD(models.Model):
     qualification = models.CharField(max_length=100)
     experience_years = models.IntegerField()
 
+    # Professional details (mirrors Faculty)
+    designation = models.CharField(
+        max_length=100, default='Head of Department',
+        help_text='e.g. Professor & Head, Associate Professor & Head'
+    )
+    specialization = models.CharField(
+        max_length=200, blank=True, default='',
+        help_text='Research/teaching specialization areas'
+    )
+    joined_date = models.DateField(null=True, blank=True)
+    profile_photo = models.ImageField(
+        upload_to='profiles/', null=True, blank=True
+    )
+
+    # Teaching role — many HODs also take classes like regular faculty
+    can_take_classes = models.BooleanField(
+        default=False,
+        help_text='Enable if this HOD also teaches subjects like a faculty member'
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -539,6 +564,14 @@ class HOD(models.Model):
 
     def __str__(self):
         return f"HOD - {self.user.username}"
+
+    @property
+    def faculty_profile(self):
+        """Returns linked Faculty record if HOD also teaches, else None."""
+        try:
+            return self.user.faculty
+        except Exception:
+            return None
     
 
 class Principal(models.Model):
@@ -1381,6 +1414,9 @@ class Substitution(models.Model):
     # Topic the substitute must enter before marking attendance
     topic_covered      = models.CharField(max_length=300, blank=True, default='',
                                           help_text='Topic covered — required before marking attendance')
+    # Optional note from the requesting faculty explaining why they need a substitute
+    note               = models.CharField(max_length=500, blank=True, default='',
+                                          help_text='Optional reason/note shown to the substitute faculty')
     created_at         = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -2899,6 +2935,21 @@ class CollegeFeatureConfig(models.Model):
         choices=[('MANUAL', 'Manual (admin confirms)'), ('AUTO_CGPA', 'Auto by CGPA'), ('FCFS', 'First Come First Served')],
         default='MANUAL'
     )
+    # Course Registration window — admin opens this per semester to allow students to register
+    course_registration_open = models.BooleanField(
+        default=False,
+        help_text='When True, students can see and submit course registration for the next semester.'
+    )
+    course_registration_semester = models.IntegerField(
+        null=True, blank=True,
+        help_text='Which semester the open registration window is for (e.g. 3 means Sem 3 registration is open).'
+    )
+    # Faculty Leave & Substitution quotas
+    max_casual_leaves   = models.IntegerField(default=12, help_text='Max Casual Leave days per faculty per year')
+    max_medical_leaves  = models.IntegerField(default=10, help_text='Max Medical Leave days per faculty per year')
+    max_earned_leaves   = models.IntegerField(default=15, help_text='Max Earned Leave days per faculty per year')
+    max_od_leaves       = models.IntegerField(default=20, help_text='Max On Duty days per faculty per year')
+    max_substitutions   = models.IntegerField(default=10, help_text='Max substitution requests per faculty per semester')
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

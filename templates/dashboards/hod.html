@@ -19,6 +19,7 @@
 <a href="#history" data-section-target="history" class="sb-link"><i class="fas fa-history"></i> History</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
 <a href="{% url 'hod_substitutions' %}" class="sb-link"><i class="fas fa-user-clock"></i> Substitutions</a>
+<a href="{% url 'hod_hall_tickets' %}" class="sb-link"><i class="fas fa-id-card-clip"></i> Hall Tickets</a>
 {% endblock %}
 
 {% block extra_css %}
@@ -289,7 +290,7 @@
 </section>
 
 <!-- MY TEACHING (HOD who also teaches) -->
-{% if hod_teaching_subjects %}
+{% if hod.can_take_classes and hod_teaching_subjects %}
 <section data-dashboard-pane="my-teaching" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-book"></i> My Teaching Subjects</div>
@@ -311,6 +312,42 @@
     </div>
     {% endfor %}
   </div>
+
+  <!-- Today's own schedule for teaching HOD -->
+  {% if hod_today_timetable %}
+  <div class="d-card" style="margin-top:16px">
+    <div class="d-title"><i class="fas fa-clock"></i> My Classes Today</div>
+    <div class="section-meta">Your own teaching schedule for today.</div>
+    {% for t in hod_today_timetable %}
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div style="min-width:80px;font-size:11px;font-weight:700;color:var(--teal)">{{ t.start_time|time:"g:i A" }}<br>{{ t.end_time|time:"g:i A" }}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ t.subject.name }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}{% if t.classroom %} &middot; {{ t.classroom.room_number }}{% endif %}</div>
+      </div>
+      {% if t.subject.id in hod_marked_subject_ids %}
+        <span style="font-size:11px;font-weight:700;color:#059669;background:rgba(5,150,105,.1);padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> Marked</span>
+      {% else %}
+        <a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:5px 12px;border-radius:7px;text-decoration:none"><i class="fas fa-calendar-check"></i> Mark Now</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Substitution quota for teaching HOD -->
+  {% if hod_sub_quota %}
+  <div class="d-card" style="margin-top:16px;padding:14px 18px">
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Substitution Quota</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="padding:10px 16px;border-radius:10px;border:1px solid {% if hod_sub_quota.remaining == 0 %}rgba(239,68,68,.3){% else %}var(--border){% endif %};background:var(--surface2)">
+        <div style="font-size:22px;font-weight:900;color:{% if hod_sub_quota.remaining == 0 %}var(--red){% else %}var(--teal){% endif %}">{{ hod_sub_quota.remaining }}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">Remaining this semester</div>
+        <div style="font-size:10px;color:var(--muted)">{{ hod_sub_quota.used }}/{{ hod_sub_quota.max }} used</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </section>
 {% endif %}
 

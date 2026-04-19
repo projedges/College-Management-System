@@ -89,6 +89,8 @@ urlpatterns = [
     path('dashboard/admin/electives/add/', views.admin_elective_pool_add, name='admin_elective_pool_add'),
     path('dashboard/admin/electives/<int:pk>/toggle/', views.admin_elective_pool_toggle, name='admin_elective_pool_toggle'),
     path('dashboard/admin/electives/<int:pk>/selections/', views.admin_elective_pool_selections, name='admin_elective_pool_selections'),
+    path('dashboard/admin/course-registration/toggle/', views.admin_course_registration_toggle, name='admin_course_registration_toggle'),
+    path('dashboard/admin/leave-quotas/', views.admin_leave_quotas, name='admin_leave_quotas'),
 
     # Student elective selection
     path('dashboard/student/electives/', views.student_elective_select, name='student_elective_select'),
@@ -121,12 +123,15 @@ urlpatterns = [
     path('dashboard/admin/semester-results/<int:batch_id>/generate/', views.admin_semester_result_generate, name='admin_semester_result_generate'),
     path('dashboard/admin/semester-results/<int:batch_id>/view/', views.admin_semester_result_view, name='admin_semester_result_view'),
     path('dashboard/admin/semester-results/<int:batch_id>/approve/', views.admin_semester_result_approve, name='admin_semester_result_approve'),
+    path('dashboard/admin/hall-tickets/', views.admin_hall_tickets, name='admin_hall_tickets'),
     path('dashboard/student/transcripts/<int:transcript_id>/download/', views.student_semester_transcript_download, name='student_semester_transcript_download'),
 
     path('dashboard/hod/', views.hod_dashboard, name='hod_dashboard'),
     path('dashboard/hod/approve/<int:pk>/', views.hod_approve, name='hod_approve'),
     path('dashboard/hod/leave/<int:pk>/review/', views.hod_leave_review, name='hod_leave_review'),
     path('dashboard/hod/substitutions/', views.hod_substitutions, name='hod_substitutions'),
+    path('dashboard/hod/hall-tickets/', views.hod_hall_tickets, name='hod_hall_tickets'),
+    path('dashboard/hod/hall-tickets/<int:exam_id>/', views.hod_exam_hall_tickets, name='hod_exam_hall_tickets'),
     path('dashboard/hod/student/<int:pk>/', views.hod_student_profile, name='hod_student_profile'),
     path('dashboard/hod/faculty/<int:pk>/', views.hod_faculty_profile, name='hod_faculty_profile'),
     path('dashboard/principal/', views.principal_dashboard, name='principal_dashboard'),
@@ -231,5 +236,11 @@ urlpatterns = [
     path('dashboard/exam/<int:exam_id>/result-versions/', views.exam_result_versions, name='exam_result_versions'),
     # Formal transcript PDF
     path('dashboard/student/transcript/pdf/', views.student_transcript_pdf, name='student_transcript_pdf'),
+    # Hall ticket PDF
+    path('dashboard/student/hall-ticket/<int:ht_id>/pdf/', views.student_hall_ticket_pdf, name='student_hall_ticket_pdf'),
+    # Semester transcript PDF
+    path('dashboard/student/transcript/sem/<int:semester>/pdf/', views.student_transcript_sem_pdf, name='student_transcript_sem_pdf'),
+    # Library portal
+    path('dashboard/student/library/', views.student_library, name='student_library'),
     path('subject/<int:subject_id>/', views.subject_detail_view, name='subject_detail'),
 ]

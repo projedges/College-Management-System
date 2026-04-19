@@ -1,116 +1,217 @@
 {% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Edit Profile - EduTrack{% endblock %}
+{% block title %}Edit Profile — EduTrack{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block page_title %}Edit Profile{% endblock %}
 {% block page_sub %}{{ student.roll_number }} &middot; {{ student.department.name }}{% endblock %}
 
+{% block sidebar_links %}
+<a href="{% url 'student_dashboard' %}#profile" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% endblock %}
+
 {% block extra_css %}
 <style>
-  .pf-label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
-  .pf-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s}
+  .pf-section{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-bottom:16px}
+  .pf-section-title{font-size:13px;font-weight:800;color:var(--deep);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .pf-label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+  .pf-input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;background:#fff}
   .pf-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
-  @media(max-width:640px){
-    .pf-grid{grid-template-columns:1fr !important}
-    .pf-grid > div[style*="grid-template-columns"]{grid-template-columns:1fr !important}
-  }
+  .pf-readonly{background:#f8fafc;color:var(--muted);cursor:not-allowed;border-color:#e2e8f0}
+  .pf-readonly-note{font-size:10px;color:var(--muted);margin-top:3px}
+  @media(max-width:640px){.pf-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 
-{% block sidebar_links %}
-<a href="{% url 'student_dashboard' %}" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
-{% endblock %}
-
 {% block dashboard_content %}
-<form method="POST" enctype="multipart/form-data" class="d-card" style="max-width:900px">
+<div style="max-width:820px">
+
+{% for message in messages %}
+<div style="padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;font-weight:600;
+  {% if message.tags == 'error' %}background:#fee2e2;color:#991b1b;border:1px solid #fca5a5
+  {% else %}background:#d1fae5;color:#065f46;border:1px solid #6ee7b7{% endif %}">
+  {{ message }}
+</div>
+{% endfor %}
+
+<form method="POST" enctype="multipart/form-data" action="{% url 'student_profile_edit' %}">
   {% csrf_token %}
 
-  <div class="d-title"><i class="fas fa-user"></i> Personal & Academic Details</div>
+  <!-- ── Personal Details ──────────────────────────────────────────────── -->
+  <div class="pf-section">
+    <div class="pf-section-title"><i class="fas fa-user" style="color:var(--teal)"></i> Personal Details</div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="pf-grid">
-    <div><label class="pf-label">First Name</label><input type="text" name="first_name" value="{{ request.user.first_name }}" required class="pf-input"/></div>
-    <div><label class="pf-label">Last Name</label><input type="text" name="last_name" value="{{ request.user.last_name }}" required class="pf-input"/></div>
-    <div><label class="pf-label">Email</label><input type="email" name="email" value="{{ request.user.email }}" required class="pf-input"/></div>
-    <div><label class="pf-label">Phone Number</label><input type="text" name="phone_number" value="{% if profile %}{{ profile.phone_number }}{% endif %}" required class="pf-input"/></div>
-    <div><label class="pf-label">Date of Birth</label><input type="date" name="date_of_birth" value="{% if profile %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}" required class="pf-input"/></div>
-    <div>
-      <label class="pf-label">Gender</label>
-      <select name="gender" required class="pf-input">
-        <option value="">Select</option>
-        <option value="Male" {% if profile and profile.gender == 'Male' %}selected{% endif %}>Male</option>
-        <option value="Female" {% if profile and profile.gender == 'Female' %}selected{% endif %}>Female</option>
-        <option value="Other" {% if profile and profile.gender == 'Other' %}selected{% endif %}>Other</option>
-      </select>
-    </div>
-    <div><label class="pf-label">Aadhaar Number</label><input type="text" name="aadhaar_number" value="{% if profile %}{{ profile.aadhaar_number }}{% endif %}" required class="pf-input"/></div>
-    <div><label class="pf-label">Profile Photo
+    <!-- Photo -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)">
       {% if profile and profile.profile_photo %}
-        <span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:6px">Current photo shown below</span>
+        <img src="{{ profile.profile_photo.url }}" alt="Photo"
+             style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--teal)"/>
+      {% else %}
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;flex-shrink:0">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
       {% endif %}
-    </label>
-    {% if profile and profile.profile_photo %}
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <img src="{{ profile.profile_photo.url }}" alt="Current photo"
-             style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--teal)"/>
-        <span style="font-size:12px;color:var(--muted)">Upload a new file to replace</span>
-      </div>
-    {% endif %}
-    <input type="file" name="profile_photo" accept="image/*" class="pf-input" style="background:#fff"/></div>
-    <div><label class="pf-label">Blood Group</label><input type="text" name="blood_group" value="{% if profile %}{{ profile.blood_group }}{% endif %}" class="pf-input"/></div>
-    <div><label class="pf-label">Nationality</label><input type="text" name="nationality" value="{% if profile %}{{ profile.nationality }}{% else %}Indian{% endif %}" required class="pf-input"/></div>
-    <div><label class="pf-label">Category</label><input type="text" name="category" value="{% if profile %}{{ profile.category }}{% endif %}" class="pf-input"/></div>
-  </div>
-
-  <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-    <div class="d-title"><i class="fas fa-graduation-cap"></i> Education History</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="pf-grid">
-      <div><label class="pf-label">Intermediate College</label><input type="text" name="inter_college_name" value="{% if profile %}{{ profile.inter_college_name }}{% endif %}" required class="pf-input"/></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="pf-label">Passed Year</label><input type="number" name="inter_passed_year" value="{% if profile %}{{ profile.inter_passed_year }}{% endif %}" required class="pf-input"/></div>
-        <div><label class="pf-label">Percentage</label><input type="number" step="0.01" name="inter_percentage" value="{% if profile %}{{ profile.inter_percentage }}{% endif %}" required class="pf-input"/></div>
-      </div>
-      <div><label class="pf-label">School Name</label><input type="text" name="school_name" value="{% if profile %}{{ profile.school_name }}{% endif %}" required class="pf-input"/></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="pf-label">Passed Year</label><input type="number" name="school_passed_year" value="{% if profile %}{{ profile.school_passed_year }}{% endif %}" required class="pf-input"/></div>
-        <div><label class="pf-label">Percentage</label><input type="number" step="0.01" name="school_percentage" value="{% if profile %}{{ profile.school_percentage }}{% endif %}" required class="pf-input"/></div>
+      <div style="flex:1">
+        <label class="pf-label">Profile Photo</label>
+        <input type="file" name="profile_photo" accept="image/*" class="pf-input" style="padding:6px"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">JPG/PNG, max 2MB. Leave blank to keep current.</div>
       </div>
     </div>
-  </div>
 
-  <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-    <div class="d-title"><i class="fas fa-house"></i> Address & Family</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="pf-grid">
-      <div style="grid-column:1 / -1"><label class="pf-label">Street Address</label><textarea name="street" rows="2" required class="pf-input" style="resize:vertical">{% if address %}{{ address.street }}{% endif %}</textarea></div>
-      <div><label class="pf-label">City</label><input type="text" name="city" value="{% if address %}{{ address.city }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">State</label><input type="text" name="state" value="{% if address %}{{ address.state }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">Pincode</label><input type="text" name="pincode" value="{% if address %}{{ address.pincode }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">Country</label><input type="text" name="country" value="{% if address %}{{ address.country }}{% else %}India{% endif %}" required class="pf-input"/></div>
-    </div>
-  </div>
-
-  <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-    <div class="d-title"><i class="fas fa-users"></i> Parent & Emergency Contact</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="pf-grid">
+    <div class="pf-grid">
       <div>
-        <label class="pf-label">Parent Type</label>
-        <select name="parent_type" required class="pf-input">
-          <option value="FATHER" {% if parent and parent.parent_type == 'FATHER' %}selected{% endif %}>Father</option>
-          <option value="MOTHER" {% if parent and parent.parent_type == 'MOTHER' %}selected{% endif %}>Mother</option>
-          <option value="GUARDIAN" {% if parent and parent.parent_type == 'GUARDIAN' %}selected{% endif %}>Guardian</option>
+        <label class="pf-label">First Name <span style="color:var(--red)">*</span></label>
+        <input type="text" name="first_name" value="{{ request.user.first_name }}" required class="pf-input" maxlength="50"/>
+      </div>
+      <div>
+        <label class="pf-label">Last Name <span style="color:var(--red)">*</span></label>
+        <input type="text" name="last_name" value="{{ request.user.last_name }}" required class="pf-input" maxlength="50"/>
+      </div>
+      <div>
+        <label class="pf-label">Email <span style="color:var(--red)">*</span></label>
+        <input type="email" name="email" value="{{ request.user.email }}" required class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">Mobile Number <span style="color:var(--red)">*</span></label>
+        <input type="tel" name="phone_number"
+               value="{% if profile %}{{ profile.phone_number }}{% endif %}"
+               required class="pf-input"
+               maxlength="10" pattern="[0-9]{10}"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)"
+               placeholder="10-digit mobile number"/>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Exactly 10 digits, numbers only.</div>
+      </div>
+      <div>
+        <label class="pf-label">Date of Birth <span style="color:var(--red)">*</span></label>
+        <input type="date" name="date_of_birth"
+               value="{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}"
+               required class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">Gender <span style="color:var(--red)">*</span></label>
+        <select name="gender" required class="pf-input">
+          <option value="">Select</option>
+          <option value="Male"   {% if profile and profile.gender == 'Male' %}selected{% endif %}>Male</option>
+          <option value="Female" {% if profile and profile.gender == 'Female' %}selected{% endif %}>Female</option>
+          <option value="Other"  {% if profile and profile.gender == 'Other' %}selected{% endif %}>Other</option>
         </select>
       </div>
-      <div><label class="pf-label">Parent Name</label><input type="text" name="parent_name" value="{% if parent %}{{ parent.name }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">Parent Phone</label><input type="text" name="parent_phone_number" value="{% if parent %}{{ parent.phone_number }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">Parent Email</label><input type="email" name="parent_email" value="{% if parent %}{{ parent.email }}{% endif %}" class="pf-input"/></div>
-      <div><label class="pf-label">Parent Occupation</label><input type="text" name="parent_occupation" value="{% if parent %}{{ parent.occupation }}{% endif %}" class="pf-input"/></div>
-      <div><label class="pf-label">Emergency Contact Name</label><input type="text" name="emergency_name" value="{% if emergency_contact %}{{ emergency_contact.name }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">Emergency Relation</label><input type="text" name="emergency_relation" value="{% if emergency_contact %}{{ emergency_contact.relation }}{% endif %}" required class="pf-input"/></div>
-      <div><label class="pf-label">Emergency Phone</label><input type="text" name="emergency_phone_number" value="{% if emergency_contact %}{{ emergency_contact.phone_number }}{% endif %}" required class="pf-input"/></div>
+      <div>
+        <label class="pf-label">Blood Group</label>
+        <input type="text" name="blood_group"
+               value="{% if profile %}{{ profile.blood_group }}{% endif %}"
+               class="pf-input" maxlength="5" placeholder="e.g. O+"/>
+      </div>
+      <div>
+        <label class="pf-label">Nationality</label>
+        <input type="text" name="nationality"
+               value="{% if profile %}{{ profile.nationality }}{% else %}Indian{% endif %}"
+               class="pf-input" maxlength="50"/>
+      </div>
+      <!-- Aadhaar — READ ONLY -->
+      <div>
+        <label class="pf-label">Aadhaar Number <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">(admin only)</span></label>
+        <input type="text" value="{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:':4' }} **** ****{% else %}Not set{% endif %}"
+               class="pf-input pf-readonly" readonly/>
+        <div class="pf-readonly-note"><i class="fas fa-lock" style="font-size:9px"></i> Contact admin to update Aadhaar.</div>
+      </div>
     </div>
   </div>
 
-  <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
-    <button type="submit" class="btn btn-teal"><i class="fas fa-save"></i> Save Profile</button>
-    <a href="{% url 'student_dashboard' %}#profile" class="btn btn-outline">Cancel</a>
+  <!-- ── Address ───────────────────────────────────────────────────────── -->
+  <div class="pf-section">
+    <div class="pf-section-title"><i class="fas fa-house" style="color:var(--teal)"></i> Address</div>
+    <div class="pf-grid">
+      <div style="grid-column:1 / -1">
+        <label class="pf-label">Street Address</label>
+        <textarea name="street" rows="2" class="pf-input" style="resize:vertical">{% if address %}{{ address.street }}{% endif %}</textarea>
+      </div>
+      <div>
+        <label class="pf-label">City</label>
+        <input type="text" name="city" value="{% if address %}{{ address.city }}{% endif %}" class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">State</label>
+        <input type="text" name="state" value="{% if address %}{{ address.state }}{% endif %}" class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">Pincode</label>
+        <input type="text" name="pincode" value="{% if address %}{{ address.pincode }}{% endif %}"
+               class="pf-input" maxlength="6"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"/>
+      </div>
+      <div>
+        <label class="pf-label">Country</label>
+        <input type="text" name="country" value="{% if address %}{{ address.country }}{% else %}India{% endif %}" class="pf-input"/>
+      </div>
+    </div>
   </div>
+
+  <!-- ── Parent Details ───────────────────────────────────────────────── -->
+  <div class="pf-section">
+    <div class="pf-section-title"><i class="fas fa-users" style="color:var(--teal)"></i> Parent / Guardian</div>
+    <div class="pf-grid">
+      <!-- READ-ONLY: name, phone, type -->
+      <div>
+        <label class="pf-label">Parent Name <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">(admin only)</span></label>
+        <input type="text" value="{% if parent %}{{ parent.name }}{% else %}Not set{% endif %}"
+               class="pf-input pf-readonly" readonly/>
+        <div class="pf-readonly-note"><i class="fas fa-lock" style="font-size:9px"></i> Contact admin to update.</div>
+      </div>
+      <div>
+        <label class="pf-label">Parent Mobile <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none">(admin only)</span></label>
+        <input type="text" value="{% if parent and parent.phone_number %}{{ parent.phone_number }}{% else %}Not set{% endif %}"
+               class="pf-input pf-readonly" readonly/>
+        <div class="pf-readonly-note"><i class="fas fa-lock" style="font-size:9px"></i> Contact admin to update.</div>
+      </div>
+      <!-- Editable: email, occupation -->
+      <div>
+        <label class="pf-label">Parent Email</label>
+        <input type="email" name="parent_email"
+               value="{% if parent %}{{ parent.email }}{% endif %}"
+               class="pf-input" placeholder="Optional"/>
+      </div>
+      <div>
+        <label class="pf-label">Parent Occupation</label>
+        <input type="text" name="parent_occupation"
+               value="{% if parent %}{{ parent.occupation }}{% endif %}"
+               class="pf-input" placeholder="Optional"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Emergency Contact ─────────────────────────────────────────────── -->
+  <div class="pf-section">
+    <div class="pf-section-title"><i class="fas fa-phone-volume" style="color:var(--teal)"></i> Emergency Contact</div>
+    <div class="pf-grid">
+      <div>
+        <label class="pf-label">Name <span style="color:var(--red)">*</span></label>
+        <input type="text" name="emergency_name"
+               value="{% if emergency_contact %}{{ emergency_contact.name }}{% endif %}"
+               required class="pf-input"/>
+      </div>
+      <div>
+        <label class="pf-label">Relation <span style="color:var(--red)">*</span></label>
+        <input type="text" name="emergency_relation"
+               value="{% if emergency_contact %}{{ emergency_contact.relation }}{% endif %}"
+               required class="pf-input" placeholder="e.g. Father, Sibling"/>
+      </div>
+      <div>
+        <label class="pf-label">Phone <span style="color:var(--red)">*</span></label>
+        <input type="tel" name="emergency_phone_number"
+               value="{% if emergency_contact %}{{ emergency_contact.phone_number }}{% endif %}"
+               required class="pf-input" maxlength="10"
+               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)"
+               placeholder="10-digit number"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Actions ───────────────────────────────────────────────────────── -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Profile</button>
+    <a href="{% url 'student_dashboard' %}#profile" class="qa-btn" style="background:#f3f4f6;color:var(--text)">Cancel</a>
+  </div>
+
 </form>
+</div>
 {% endblock %}
