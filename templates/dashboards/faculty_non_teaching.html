@@ -16,9 +16,6 @@
 
 {% block extra_css %}
 <style>
-  .summary-list{display:grid;gap:0}
-  .summary-item{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
-  .summary-item:last-child{border-bottom:none}
   .req-card{background:var(--surface2);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   .req-type{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:3px}
   .req-desc{font-size:13px;color:var(--deep)}
@@ -90,13 +87,13 @@
         <div style="font-size:12px;color:var(--muted);margin-top:4px">{{ faculty.designation }} &middot; {{ faculty.department.name }}</div>
       </div>
     </div>
-    <div class="summary-list">
-      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
-      <div class="summary-item"><span>Qualification</span><strong>{{ faculty.qualification }}</strong></div>
-      <div class="summary-item"><span>Experience</span><strong>{{ faculty.experience_years }} years</strong></div>
-      <div class="summary-item"><span>Department</span><strong>{{ faculty.department.name }}</strong></div>
-      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
-      <div class="summary-item"><span>Phone</span><strong>{{ faculty.phone_number|default:"Not set" }}</strong></div>
+    <div>
+      <div class="profile-row"><span class="profile-lbl">Email</span><span class="profile-val">{{ request.user.email|default:"Not set" }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Qualification</span><span class="profile-val">{{ faculty.qualification }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Experience</span><span class="profile-val">{{ faculty.experience_years }} years</span></div>
+      <div class="profile-row"><span class="profile-lbl">Department</span><span class="profile-val">{{ faculty.department.name }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">College</span><span class="profile-val">{{ college.name }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Phone</span><span class="profile-val">{{ faculty.phone_number|default:"Not set" }}</span></div>
     </div>
   </div>
 </section>
@@ -195,5 +192,15 @@
     {% endif %}
   </div>
 </section>
+
+{% block quick_nav %}
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#dashboard" data-section-target="dashboard" data-mob-nav="dashboard"><i class="fas fa-home"></i>Home</a>
+  <a href="#leave"     data-section-target="leave"     data-mob-nav="leave"><i class="fas fa-calendar-minus"></i>Leave</a>
+  <a href="#requests"  data-section-target="requests"  data-mob-nav="requests"><i class="fas fa-paper-plane"></i>Requests</a>
+  <a href="#notices"   data-section-target="notices"   data-mob-nav="notices"><i class="fas fa-bell"></i>Notices</a>
+  <a href="#profile"   data-section-target="profile"   data-mob-nav="profile"><i class="fas fa-id-badge"></i>Profile</a>
+</nav>
+{% endblock %}
 
 {% endblock %}

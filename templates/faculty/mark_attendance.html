@@ -32,6 +32,13 @@
   .topic-chip:hover{background:rgba(13,115,119,.1);border-color:var(--teal);color:var(--teal)}
   .topic-chip.selected{background:var(--teal);border-color:var(--teal);color:#fff}
 
+  /* Topic status buttons */
+  .ts-btn{padding:6px 16px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:#fff;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+  .ts-btn:hover{border-color:var(--teal);color:var(--teal)}
+  .ts-btn.active{color:#fff}
+  .ts-completed.active{background:#059669;border-color:#059669}
+  .ts-revision.active{background:#d97706;border-color:#d97706}
+
   /* Substitution banner */
   .sub-banner{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:rgba(99,102,241,.06);border:1.5px solid rgba(99,102,241,.25);border-radius:12px;margin-bottom:18px}
 
@@ -133,6 +140,37 @@
           Topic Covered <span style="color:var(--red)">*</span>
           <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">(required)</span>
         </div>
+
+        {% if topic_suggestions %}
+        {# Structured topic picker — select from lesson plan or type custom #}
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px"><i class="fas fa-list-check"></i> Select from your lesson plan or choose "Other" to type freely:</div>
+          <div class="topic-chips" id="topic-chips">
+            {% for t in topic_suggestions %}
+            <span class="topic-chip" data-topic="{{ t }}" onclick="selectTopicChip(this)" title="{{ t }}">
+              <span class="tc-text">{{ t }}</span>
+            </span>
+            {% endfor %}
+            <span class="topic-chip tc-other" data-topic="__other__" onclick="selectTopicChip(this)">
+              <i class="fas fa-pencil" style="font-size:10px;margin-right:4px"></i>Other (type below)
+            </span>
+          </div>
+        </div>
+
+        {# Status row — shown after selecting a chip #}
+        <div id="topic-status-row" style="display:none;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Mark as:</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="ts-btn ts-completed" id="ts-completed" onclick="setTopicStatus('completed')">
+              <i class="fas fa-check-circle"></i> Completed
+            </button>
+            <button type="button" class="ts-btn ts-revision" id="ts-revision" onclick="setTopicStatus('revision')">
+              <i class="fas fa-rotate-right"></i> Revision
+            </button>
+          </div>
+        </div>
+        {% endif %}
+
         <input type="text" name="topic_covered" id="topic-input" class="topic-input"
                value="{% if existing_session %}{{ existing_session.topic_covered }}{% elif active_sub %}{{ active_sub.topic_covered }}{% endif %}"
                placeholder="e.g. Unit 2 — Stacks: Push, Pop operations and applications"
@@ -141,15 +179,7 @@
         <div style="font-size:11px;color:var(--muted);margin-top:5px">
           <i class="fas fa-info-circle"></i>
           Recorded in the session log and visible to HOD.
-          {% if topic_suggestions %}Click a chip to fill quickly:{% endif %}
         </div>
-        {% if topic_suggestions %}
-        <div class="topic-chips" id="topic-chips">
-          {% for t in topic_suggestions %}
-          <span class="topic-chip" onclick="selectTopic(this)" title="{{ t }}">{{ t }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
       </div>
 
       <!-- ── Live stats bar ─────────────────────────────────────────────── -->
@@ -252,12 +282,40 @@ document.getElementById('date-picker').addEventListener('change', function() {
 });
 
 // ── Topic chip selection ──────────────────────────────────────────────────────
-function selectTopic(chip) {
-  document.getElementById('topic-input').value = chip.textContent.trim();
-  document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('selected'));
+var _topicStatus = 'completed';
+var _selectedChip = null;
+
+function selectTopicChip(chip) {
+  document.querySelectorAll('.topic-chip').forEach(function(c) { c.classList.remove('selected'); });
   chip.classList.add('selected');
-  document.getElementById('topic-input').classList.remove('error');
+  _selectedChip = chip;
+
+  var topic = chip.dataset.topic;
+  if (topic === '__other__') {
+    document.getElementById('topic-input').value = '';
+    document.getElementById('topic-input').focus();
+    document.getElementById('topic-status-row').style.display = 'none';
+  } else {
+    setTopicStatus(_topicStatus); // apply current status label
+    document.getElementById('topic-status-row').style.display = 'block';
+    document.getElementById('topic-input').classList.remove('error');
+  }
 }
+
+function setTopicStatus(status) {
+  _topicStatus = status;
+  document.getElementById('ts-completed').classList.toggle('active', status === 'completed');
+  document.getElementById('ts-revision').classList.toggle('active', status === 'revision');
+  if (_selectedChip && _selectedChip.dataset.topic !== '__other__') {
+    var base = _selectedChip.dataset.topic;
+    var label = status === 'revision' ? '[Revision] ' + base : base;
+    document.getElementById('topic-input').value = label;
+    document.getElementById('topic-input').classList.remove('error');
+  }
+}
+
+// Legacy alias
+function selectTopic(chip) { selectTopicChip(chip); }
 
 // ── Status toggle ─────────────────────────────────────────────────────────────
 function setStatus(sid, code) {
@@ -337,7 +395,21 @@ document.addEventListener('DOMContentLoaded', function() {
   var currentTopic = document.getElementById('topic-input').value.trim();
   if (currentTopic) {
     document.querySelectorAll('.topic-chip').forEach(function(chip) {
-      if (chip.textContent.trim() === currentTopic) chip.classList.add('selected');
+      if (chip.dataset.topic && chip.dataset.topic !== '__other__') {
+        var base = chip.dataset.topic;
+        if (currentTopic === base || currentTopic === '[Revision] ' + base) {
+          chip.classList.add('selected');
+          _selectedChip = chip;
+          if (currentTopic.startsWith('[Revision]')) {
+            _topicStatus = 'revision';
+            document.getElementById('ts-revision').classList.add('active');
+          } else {
+            document.getElementById('ts-completed').classList.add('active');
+          }
+          var row = document.getElementById('topic-status-row');
+          if (row) row.style.display = 'block';
+        }
+      }
     });
   }
 });

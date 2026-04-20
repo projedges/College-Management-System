@@ -1,0 +1,150 @@
+{# HOD faculty profile modal fragment — complete inline profile #}
+
+{# ── Sticky Header ── #}
+<div style="padding:16px 18px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:14px;position:sticky;top:0;background:#fff;z-index:2">
+  <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#1a9fa4);color:#fff;display:flex;align-items:center;justify-content:center;font-family:Outfit,sans-serif;font-size:19px;font-weight:900;flex-shrink:0">
+    {{ faculty.user.first_name|first|upper }}{{ faculty.user.last_name|first|upper }}
+  </div>
+  <div style="flex:1;min-width:0">
+    <div style="font-family:Outfit,sans-serif;font-size:16px;font-weight:900;color:#071e26;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ faculty.user.get_full_name|default:faculty.user.username }}</div>
+    <div style="font-size:12px;color:#0d7377;font-weight:700;margin-top:1px">{{ faculty.employee_id }}</div>
+    <div style="font-size:11px;color:#6b7280;margin-top:2px">{{ faculty.designation }} &middot; {{ dept.name }}</div>
+  </div>
+  {% if feedback_avg %}
+  <div style="text-align:center;flex-shrink:0;padding:6px 10px;background:#f9fafb;border-radius:10px">
+    <div style="font-size:16px;font-weight:900;color:{% if feedback_avg >= 4 %}#0d7377{% elif feedback_avg >= 3 %}#d97706{% else %}#ef4444{% endif %}">{{ feedback_avg }}</div>
+    <div style="font-size:9px;color:#9ca3af;margin-top:1px">/ 5 rating</div>
+  </div>
+  {% endif %}
+  <button onclick="document.getElementById('hodFacModalBg').style.display='none'" style="background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:4px 6px;line-height:1;flex-shrink:0">&#x2715;</button>
+</div>
+
+{# ── Info strip ── #}
+<div style="padding:10px 18px;background:#f9fafb;border-bottom:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+  {% if faculty.qualification %}
+  <span style="font-size:11px;color:#374151"><i class="fas fa-graduation-cap" style="color:#0d7377;margin-right:5px"></i>{{ faculty.qualification }}</span>
+  {% endif %}
+  {% if faculty.experience_years %}
+  <span style="font-size:11px;color:#374151"><i class="fas fa-briefcase" style="color:#0d7377;margin-right:5px"></i>{{ faculty.experience_years }} yr{{ faculty.experience_years|pluralize }} exp</span>
+  {% endif %}
+  {% if faculty.joined_date %}
+  <span style="font-size:11px;color:#374151"><i class="fas fa-calendar-plus" style="color:#0d7377;margin-right:5px"></i>Joined {{ faculty.joined_date|date:"M Y" }}</span>
+  {% endif %}
+  {% if faculty.phone_number %}
+  <span style="font-size:11px;color:#374151"><i class="fas fa-phone" style="color:#0d7377;margin-right:5px"></i>{{ faculty.phone_number }}</span>
+  {% endif %}
+  {% if faculty.user.email %}
+  <span style="font-size:11px;color:#374151"><i class="fas fa-envelope" style="color:#0d7377;margin-right:5px"></i>{{ faculty.user.email }}</span>
+  {% endif %}
+</div>
+
+{# ── Stats row ── #}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px 10px">
+  <div style="background:#f9fafb;border-radius:10px;padding:10px 8px;text-align:center">
+    <div style="font-family:Outfit,sans-serif;font-size:20px;font-weight:900;color:#0d7377">{{ assigned_subjects|length }}</div>
+    <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Subjects</div>
+  </div>
+  <div style="background:#f9fafb;border-radius:10px;padding:10px 8px;text-align:center">
+    <div style="font-family:Outfit,sans-serif;font-size:20px;font-weight:900;color:#071e26">{{ sessions_this_month }}</div>
+    <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Sessions/mo</div>
+  </div>
+  <div style="background:#f9fafb;border-radius:10px;padding:10px 8px;text-align:center">
+    <div style="font-family:Outfit,sans-serif;font-size:20px;font-weight:900;color:#071e26">{{ sessions_total }}</div>
+    <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Total Sessions</div>
+  </div>
+  <div style="background:{% if pending_reviews > 0 %}#fef3c7{% else %}#f9fafb{% endif %};border-radius:10px;padding:10px 8px;text-align:center">
+    <div style="font-family:Outfit,sans-serif;font-size:20px;font-weight:900;color:{% if pending_reviews > 0 %}#d97706{% else %}#9ca3af{% endif %}">{{ pending_reviews }}</div>
+    <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Pending Reviews</div>
+  </div>
+</div>
+
+{# ── Leave summary pills ── #}
+{% if leave_summary %}
+<div style="display:flex;gap:8px;padding:0 18px 14px;flex-wrap:wrap">
+  <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:#d1fae5;color:#065f46">
+    <i class="fas fa-check" style="margin-right:4px"></i>{{ leave_summary.approved }} Approved
+  </span>
+  {% if leave_summary.pending > 0 %}
+  <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:#fef3c7;color:#92400e">
+    <i class="fas fa-clock" style="margin-right:4px"></i>{{ leave_summary.pending }} Pending
+  </span>
+  {% endif %}
+  {% if leave_summary.rejected > 0 %}
+  <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:#fee2e2;color:#991b1b">
+    <i class="fas fa-times" style="margin-right:4px"></i>{{ leave_summary.rejected }} Rejected
+  </span>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── Assigned Subjects & Attendance ── #}
+<div style="padding:0 18px 16px">
+  <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;margin-bottom:10px">
+    <i class="fas fa-book" style="margin-right:5px"></i>Assigned Subjects &amp; Class Attendance
+  </div>
+  {% if subject_stats %}
+  {% for s in subject_stats %}
+  <div style="padding:11px 13px;background:#f9fafb;border-radius:10px;margin-bottom:8px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#071e26;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.subject.name }}</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px">{{ s.subject.code }} &middot; Sem {{ s.subject.semester }}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:15px;font-weight:900;color:{% if s.pct >= 75 %}#0d7377{% elif s.pct >= 60 %}#d97706{% else %}#ef4444{% endif %}">{{ s.pct }}%</div>
+        <div style="font-size:10px;color:#9ca3af">{{ s.present }}/{{ s.total }} present</div>
+      </div>
+    </div>
+    <div style="height:5px;border-radius:99px;background:#e5e7eb;overflow:hidden">
+      <div style="height:100%;border-radius:99px;background:{% if s.pct >= 75 %}#0d7377{% elif s.pct >= 60 %}#d97706{% else %}#ef4444{% endif %};width:{{ s.pct }}%"></div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="font-size:12px;color:#9ca3af;padding:10px 0">No subjects assigned.</div>
+  {% endif %}
+</div>
+
+{# ── Leave History ── #}
+<div style="padding:0 18px 16px">
+  <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;margin-bottom:10px">
+    <i class="fas fa-calendar-minus" style="margin-right:5px"></i>Leave History
+  </div>
+  {% if leave_history %}
+  {% for lv in leave_history %}
+  <div style="padding:10px 13px;background:#f9fafb;border-radius:10px;margin-bottom:7px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#071e26">{{ lv.get_leave_type_display }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">
+          {{ lv.from_date|date:"d M Y" }} &ndash; {{ lv.to_date|date:"d M Y" }}
+          &middot; <strong>{{ lv.days }}</strong> day{{ lv.days|pluralize }}
+        </div>
+        {% if lv.reason %}
+        <div style="font-size:11px;color:#9ca3af;margin-top:4px;font-style:italic">{{ lv.reason|truncatechars:100 }}</div>
+        {% endif %}
+        {% if lv.hod_remarks %}
+        <div style="font-size:11px;color:#0d7377;margin-top:3px"><i class="fas fa-comment-dots" style="margin-right:3px"></i>{{ lv.hod_remarks|truncatechars:80 }}</div>
+        {% endif %}
+      </div>
+      <span style="padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;
+        background:{% if lv.status == 'APPROVED' %}#d1fae5{% elif lv.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};
+        color:{% if lv.status == 'APPROVED' %}#065f46{% elif lv.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">
+        {{ lv.get_status_display }}
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="font-size:12px;color:#9ca3af;padding:10px 0">No leave history.</div>
+  {% endif %}
+</div>
+
+{# ── Sticky Footer ── #}
+<div style="padding:12px 18px;border-top:1px solid #f3f4f6;position:sticky;bottom:0;background:#fff;z-index:2">
+  <button onclick="document.getElementById('hodFacModalBg').style.display='none'"
+    style="width:100%;padding:11px;border-radius:9px;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:background .15s"
+    onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+    Close
+  </button>
+</div>

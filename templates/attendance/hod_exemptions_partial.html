@@ -1,0 +1,92 @@
+{# Exemptions partial — no extends, rendered inside HOD dashboard pane #}
+{% if messages %}
+{% for msg in messages %}
+<div style="padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:600;
+  background:{% if 'success' in msg.tags %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if exemptions %}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-file-medical"></i> Exemption Requests</div>
+  {% for ex in exemptions %}
+  <div style="padding:14px 0;border-bottom:1px solid #f3f4f6">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">
+          {{ ex.student.user.get_full_name }}
+          <span style="color:var(--muted);font-weight:400">({{ ex.student.roll_number }})</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">
+          {{ ex.get_reason_type_display }} &middot; {{ ex.from_date|date:"d M Y" }} &ndash; {{ ex.to_date|date:"d M Y" }}
+          ({{ ex.days }} day{{ ex.days|pluralize }})
+        </div>
+        <div style="font-size:12px;color:var(--deep);margin-top:4px">{{ ex.reason|truncatechars:120 }}</div>
+        {% if ex.document %}
+        <div style="margin-top:4px">
+          <a href="{{ ex.document.url }}" target="_blank" style="font-size:11px;color:var(--teal)">
+            <i class="fas fa-paperclip"></i> View Document
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      <div style="flex-shrink:0">
+        {% if ex.status == 'PENDING' %}
+        <form class="exemption-ajax-form" style="display:flex;flex-direction:column;gap:6px;min-width:200px">
+          {% csrf_token %}
+          <input type="hidden" name="exemption_id" value="{{ ex.pk }}">
+          <textarea name="review_note" rows="2" placeholder="Review note (optional)"
+            style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'Inter',sans-serif;resize:none"></textarea>
+          <div style="display:flex;gap:6px">
+            <button type="submit" name="action" value="APPROVED"
+              style="flex:1;padding:6px;border-radius:6px;background:#d1fae5;color:#065f46;border:none;cursor:pointer;font-size:12px;font-weight:600">
+              <i class="fas fa-check"></i> Approve
+            </button>
+            <button type="submit" name="action" value="REJECTED"
+              style="flex:1;padding:6px;border-radius:6px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-size:12px;font-weight:600">
+              <i class="fas fa-times"></i> Reject
+            </button>
+          </div>
+        </form>
+        {% else %}
+        <span class="dbadge {% if ex.status == 'APPROVED' %}dbadge-active{% else %}dbadge-red{% endif %}">
+          {{ ex.status }}
+        </span>
+        {% if ex.review_note %}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ex.review_note }}</div>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty"><i class="fas fa-file-medical"></i>No exemption requests.</div>
+{% endif %}
+
+<script>
+(function() {
+  document.querySelectorAll('.exemption-ajax-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var btn = e.submitter || form.querySelector('button[type="submit"]:focus') || form.querySelector('button[type="submit"]');
+      var data = new FormData(form);
+      if (btn && btn.name) data.set(btn.name, btn.value);
+      fetch('{% url "hod_exemptions" %}', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: data
+      })
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        var inner = document.getElementById('exemptions-pane-inner');
+        if (inner) inner.innerHTML = html;
+      })
+      .catch(function(err) { console.error(err); });
+    });
+  });
+})();
+</script>

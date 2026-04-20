@@ -10,7 +10,7 @@
 <a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-id-badge"></i> My Profile</a>
 <a href="#schedule" data-section-target="schedule" class="sb-link"><i class="fas fa-calendar-day"></i> Today's Schedule</a>
 <a href="#classrooms" data-section-target="classrooms" class="sb-link"><i class="fas fa-door-open"></i> Classrooms</a>
-<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#inbox" data-section-target="inbox" class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
 <a href="#support" data-section-target="support" class="sb-link"><i class="fas fa-headset"></i> Support</a>
 {% endblock %}
 
@@ -86,10 +86,10 @@
       </div>
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Account Details</div>
-    <div class="summary-list">
-      <div class="summary-item"><span>Username</span><strong>{{ request.user.username }}</strong></div>
-      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
-      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
+    <div>
+      <div class="profile-row"><span class="profile-lbl">Username</span><span class="profile-val" style="color:var(--muted)">{{ request.user.username }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Email</span><span class="profile-val">{{ request.user.email|default:"Not set" }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">College</span><span class="profile-val">{{ college.name }}</span></div>
     </div>
   </div>
 </section>
@@ -169,6 +169,8 @@
   </div>
 </section>
 
+{% include "_inbox_pane.html" %}
+
 <section data-dashboard-pane="support" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-headset"></i> Help Desk</div>
@@ -179,4 +181,14 @@
     <div class="hint-box">Use the help desk for login issues, room allocation problems, or any technical support needed for lab operations.</div>
   </div>
 </section>
+
+{% block quick_nav %}
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#dashboard"  data-section-target="dashboard"  data-mob-nav="dashboard"><i class="fas fa-home"></i>Home</a>
+  <a href="#schedule"   data-section-target="schedule"   data-mob-nav="schedule"><i class="fas fa-calendar-day"></i>Schedule</a>
+  <a href="#classrooms" data-section-target="classrooms" data-mob-nav="classrooms"><i class="fas fa-door-open"></i>Rooms</a>
+  <a href="#notices"    data-section-target="notices"    data-mob-nav="notices"><i class="fas fa-bell"></i>Notices</a>
+  <a href="#profile"    data-section-target="profile"    data-mob-nav="profile"><i class="fas fa-id-badge"></i>Profile</a>
+</nav>
+{% endblock %}
 {% endblock %}

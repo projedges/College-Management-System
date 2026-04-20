@@ -7,3 +7,8 @@ test.txt
 *.csv
 students/migrations/
 migrate_to_mysql.py
+WORKFLOW_GUIDE.md
+_debug_sub.py
+_scan_fix.py
+seed_exam_results.py
+seed_data.py

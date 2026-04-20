@@ -153,12 +153,12 @@
       <div class="d-title"><i class="fas fa-indian-rupee-sign"></i> Fee Summary</div>
       {% if fee %}
       <div class="summary-list">
-        <div class="summary-item"><span>Total Amount</span><strong>â‚¹{{ fee.total_amount|floatformat:0 }}</strong></div>
-        <div class="summary-item"><span>Paid</span><strong style="color:var(--teal)">â‚¹{{ fee.paid_amount|floatformat:0 }}</strong></div>
+        <div class="summary-item"><span>Total Amount</span><strong>&#8377;{{ fee.total_amount|floatformat:0 }}</strong></div>
+        <div class="summary-item"><span>Paid</span><strong style="color:var(--teal)">&#8377;{{ fee.paid_amount|floatformat:0 }}</strong></div>
         <div class="summary-item">
           <span>Balance</span>
           <strong style="color:{% if fee.status == 'PAID' %}var(--teal){% else %}var(--red){% endif %}">
-            â‚¹{{ fee.total_amount|floatformat:0 }}
+            &#8377;{{ fee.total_amount|floatformat:0 }}
           </strong>
         </div>
         <div class="summary-item">

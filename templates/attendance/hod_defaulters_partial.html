@@ -1,0 +1,71 @@
+{# Defaulters report — partial for HOD dashboard pane (no extends) #}
+
+<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  <div style="display:flex;gap:8px;align-items:center">
+    <select onchange="loadDefaultersPane(this.value)"
+      style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff;cursor:pointer">
+      <option value="">All Semesters</option>
+      {% for sem in semesters %}
+      <option value="{{ sem }}" {% if semester_filter == sem %}selected{% endif %}>Semester {{ sem }}</option>
+      {% endfor %}
+    </select>
+    {% if semester_filter %}
+    <button onclick="loadDefaultersPane('')" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">Clear</button>
+    {% endif %}
+  </div>
+  <span style="font-size:13px;color:var(--muted);margin-left:auto">
+    {{ rows|length }} student{{ rows|length|pluralize }} &middot;
+    <span style="color:var(--red);font-weight:600">{% with ineligible=rows|length %}{{ ineligible }}{% endwith %} checked</span>
+  </span>
+</div>
+
+{% if rows %}
+<div class="d-card" style="padding:0;overflow:hidden">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Roll No</th><th>Name</th><th>Sem</th>
+          <th>Overall %</th><th>Eligibility</th><th>Issues</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr style="{% if not row.eligible %}background:#fff8f8{% endif %};cursor:pointer"
+            onclick="stuOpenDrawer({{ row.student.pk }})">
+          <td style="font-weight:600;color:var(--teal)">{{ row.student.roll_number }}</td>
+          <td>{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+          <td style="text-align:center">{{ row.student.current_semester }}</td>
+          <td>
+            {% if row.overall_pct is not None %}
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;background:#f3f4f6;border-radius:99px;height:6px;min-width:60px">
+                <div style="height:6px;border-radius:99px;width:{{ row.overall_pct }}%;background:{% if row.overall_pct >= row.rule.effective_min_overall %}var(--teal){% elif row.overall_pct >= row.rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:{% if row.overall_pct >= row.rule.effective_min_overall %}var(--teal){% elif row.overall_pct >= row.rule.critical_below_pct %}var(--gold){% else %}var(--red){% endif %}">{{ row.overall_pct }}%</span>
+            </div>
+            {% else %}<span style="color:var(--muted);font-size:12px">No data</span>{% endif %}
+          </td>
+          <td>
+            {% if row.eligible %}
+              <span class="dbadge dbadge-active"><i class="fas fa-check"></i> Eligible</span>
+            {% else %}
+              <span class="dbadge dbadge-red"><i class="fas fa-ban"></i> Ineligible</span>
+            {% endif %}
+          </td>
+          <td style="font-size:11px;color:var(--red)">
+            {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty"><i class="fas fa-check-double"></i>No students found.</div>
+{% endif %}
+
+<div style="margin-top:16px">
+  <a href="{% url 'hod_exemptions' %}" class="qa-btn qa-teal" style="font-size:12px"><i class="fas fa-file-medical"></i> Review Exemption Requests</a>
+</div>

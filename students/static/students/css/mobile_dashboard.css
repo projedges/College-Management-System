@@ -1,5 +1,13 @@
 /* EduTrack - mobile and responsive dashboard utilities */
 
+/* -- Profile rows (shared across all dashboards) -- */
+.profile-row{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;align-items:start}
+.profile-row:last-child{border-bottom:none}
+.profile-lbl{font-size:12px;color:var(--muted);font-weight:600}
+.profile-val{font-size:13px;font-weight:700;color:var(--deep);word-break:break-word}
+
+
+
 /* Pane transitions */
 .dashboard-pane{display:none;opacity:0;transform:translateY(10px);transition:opacity .35s ease,transform .35s ease}
 .dashboard-pane.active{display:block;opacity:1;transform:translateY(0)}
@@ -27,7 +35,47 @@
 .has-tooltip .tooltip-text{visibility:hidden;width:180px;background:var(--deep);color:#fff;text-align:center;border-radius:6px;padding:7px 10px;position:absolute;z-index:100;bottom:130%;left:50%;margin-left:-90px;opacity:0;transition:opacity .25s;font-size:11px;pointer-events:none}
 .has-tooltip:hover .tooltip-text{visibility:visible;opacity:1}
 
-/* Tablet / small laptop */
+/* EduTrack - mobile and responsive dashboard utilities */
+
+/* -- Profile rows (shared across all dashboards) -- */
+.profile-row{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;align-items:start}
+.profile-row:last-child{border-bottom:none}
+.profile-lbl{font-size:12px;color:var(--muted);font-weight:600}
+.profile-val{font-size:13px;font-weight:700;color:var(--deep);word-break:break-word}
+
+
+
+/* Pane transitions */
+.dashboard-pane{display:none;opacity:0;transform:translateY(10px);transition:opacity .35s ease,transform .35s ease}
+.dashboard-pane.active{display:block;opacity:1;transform:translateY(0)}
+
+/* Card hover lift (desktop only) */
+@media(min-width:861px){
+  .d-card:hover,.stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(7,30,38,.1)}
+  .d-card,.stat-card{transition:transform .25s ease,box-shadow .25s ease}
+}
+
+/* Sidebar link transitions */
+.sb-link{transition:background .15s ease,color .15s ease}
+
+/* Table horizontal scroll */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dtable{min-width:520px}
+
+/* Toast notifications */
+.messages-toast-container{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:340px}
+.toast-msg{pointer-events:auto;background:#fff;border-radius:12px;padding:12px 18px;box-shadow:0 8px 24px rgba(0,0,0,.14);border-left:4px solid var(--teal);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;animation:toastIn .4s cubic-bezier(.175,.885,.32,1.275) both}
+@keyframes toastIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+
+/* Tooltip */
+.has-tooltip{position:relative;display:inline-block}
+.has-tooltip .tooltip-text{visibility:hidden;width:180px;background:var(--deep);color:#fff;text-align:center;border-radius:6px;padding:7px 10px;position:absolute;z-index:100;bottom:130%;left:50%;margin-left:-90px;opacity:0;transition:opacity .25s;font-size:11px;pointer-events:none}
+.has-tooltip:hover .tooltip-text{visibility:visible;opacity:1}
+
+/* ── Mobile bottom nav (shared across non-admin dashboards) ── */
+.mob-bottom-nav{display:none}
+
+/* ── Tablet / small laptop ── */
 @media(max-width:860px){
   .db-main{padding:16px 14px 24px;width:100%;max-width:100vw}
   .db-sidebar{max-width:86vw}
@@ -54,24 +102,77 @@
 
   .focus-card{padding:16px}
 
+  /* Attendance */
   .att-summary-bar{flex-direction:column;gap:14px}
   .att-donut-wrap{align-self:center}
   .att-summary-stats{justify-content:center;flex-wrap:wrap}
   .att-table-controls{flex-direction:column;align-items:flex-start;gap:8px}
+  .att-course-table{font-size:12px}
+  .att-course-table th{padding:8px 12px}
+  .att-course-table td{padding:9px 12px}
 
+  /* Timetable */
   .week-matrix-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .week-matrix{min-width:640px}
-
-  .subject-grid{grid-template-columns:1fr}
-  .planner-grid{grid-template-columns:1fr}
+  .fac-matrix-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .fac-matrix{min-width:600px}
   .tt-row{flex-wrap:wrap;gap:4px}
   .tt-room{margin-left:0}
+  .week-tt-grid{grid-template-columns:repeat(3,1fr)}
+
+  /* Faculty specific */
+  .subj-card{flex-wrap:wrap}
+  .subj-actions{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap}
+  .course-card{margin-bottom:12px}
+  .course-header{padding:12px 14px}
+  .course-tab-bar{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .course-pane{padding:14px 16px}
+  .ce-row{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
+  .marks-table{min-width:480px}
+  .quiz-card-grid{grid-template-columns:1fr}
+  .lesson-plan-row{flex-wrap:wrap;gap:8px}
+
+  /* HOD specific */
+  .approval-actions{flex-wrap:wrap}
+  .hod-faculty-table{min-width:480px}
+
+  /* Principal specific */
+  .dept-overview-grid{grid-template-columns:1fr}
+
+  /* Misc */
+  .subject-grid{grid-template-columns:1fr}
+  .planner-grid{grid-template-columns:1fr}
   .approval-row{flex-wrap:wrap;gap:8px}
+  .res-row{flex-wrap:wrap;gap:6px}
+  .asgn-row{flex-wrap:wrap}
+  .deadline-badge{margin-left:0;margin-top:4px}
+  .profile-grid{grid-template-columns:1fr!important}
+  .fee-breakdown-grid{grid-template-columns:1fr!important}
+  .sem-stat-box{padding:10px 12px}
+  .result-subject-row{flex-wrap:wrap;gap:6px}
+
+  /* Bottom nav visible on mobile */
+  .mob-bottom-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:9000;
+    background:#fff;border-top:2px solid var(--border);
+    box-shadow:0 -4px 20px rgba(7,30,38,.12);
+    height:58px;align-items:stretch;
+  }
+  .mob-bottom-nav a{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;font-size:9px;font-weight:700;color:var(--muted);text-decoration:none;
+    text-transform:uppercase;letter-spacing:.4px;padding:6px 2px;
+    border-top:2px solid transparent;transition:color .15s,border-color .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mob-bottom-nav a i{font-size:17px}
+  .mob-bottom-nav a.active,.mob-bottom-nav a:hover{color:var(--teal);border-top-color:var(--teal)}
+  .db-main{padding-bottom:72px!important}
 }
 
-/* Phone */
+/* ── Phone ── */
 @media(max-width:480px){
-  .db-main{padding:10px 10px 20px}
+  .db-main{padding:10px 10px 20px;padding-bottom:72px!important}
   .stat-grid{grid-template-columns:1fr}
   .d-card{padding:14px;margin-bottom:10px}
   .db-page-title{font-size:16px}
@@ -81,24 +182,68 @@
   .table-scroll{margin-left:-4px;margin-right:-4px;padding:0 4px}
 
   .qa-btn,.quick-chip,.mini-btn,.btn-sm{width:100%;justify-content:center}
+  .btn-sm{width:auto}  /* override for inline action buttons */
 
   .dbadge{font-size:10px;padding:2px 7px}
 
+  /* Attendance */
   .att-donut-wrap{width:80px;height:80px}
   .att-donut-svg{width:80px;height:80px}
   .att-donut-val{font-size:14px}
   .att-stat-box{min-width:58px;padding:8px 10px}
   .att-stat-val{font-size:15px}
-
   #att-search,#att-cal-search{width:130px}
+  .att-elig-warn{flex-direction:column;gap:8px;padding:10px 12px}
+  .att-elig-btn{width:100%;text-align:center;justify-content:center}
+  .att-course-table{font-size:11px;min-width:420px}
+  .att-view-tab,.att-filter-tab{padding:7px 12px;font-size:11px}
 
+  /* Timetable */
+  .week-tt-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .week-tt-day{padding:8px;min-height:60px}
+  .week-tt-day-label{font-size:10px}
+  .week-tt-slot{padding:6px 8px;font-size:10px}
+  .week-tt-slot-time{font-size:10px}
+  .week-tt-slot-subj{font-size:11px}
+  .tt-row{padding:8px 10px;gap:8px;margin-bottom:6px}
+  .tt-time{font-size:11px;width:auto;min-width:70px}
+
+  /* Faculty */
+  .subj-card{padding:10px 12px}
+  .subj-icon{width:34px;height:34px;font-size:14px}
+  .subj-name{font-size:12px}
+  .subj-actions .btn-sm{width:auto}
+  .course-header{padding:10px 12px;gap:10px}
+  .course-icon{width:34px;height:34px;font-size:14px}
+  .course-tab{padding:8px 12px;font-size:11px}
+  .course-pane{padding:12px 14px}
+  .ce-row{grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px}
+  .ce-box{padding:10px}
+  .ce-val{font-size:18px}
+  .ce-lbl{font-size:9px}
+  .fac-modal-box{max-width:100%;border-radius:12px 12px 0 0;position:fixed;bottom:0;left:0;right:0;max-height:85vh}
+
+  /* Substitution form */
+  .fac-input{font-size:12px;padding:8px 10px}
+  .fac-lbl{font-size:10px}
+
+  /* HOD */
+  .approval-card{padding:12px}
+  .approval-desc{font-size:12px}
+  .btn-approve,.btn-reject{padding:5px 12px;font-size:11px}
+
+  /* Sem tabs */
   .sem-tab{padding:6px 10px;font-size:11px}
+  .inbox-tab{padding:4px 11px;font-size:11px}
 
-  .week-chip{padding:6px}
-  .week-chip-subj{font-size:11px}
-  .week-chip-meta{font-size:10px}
+  /* Results */
+  .sem-stat-box{padding:12px}
+  .sem-stat-val{font-size:18px}
+  .sem-stat-lbl{font-size:10px}
 
-  .messages-toast-container{top:auto;bottom:16px;right:10px;left:10px;max-width:none}
-
+  /* Misc */
+  .messages-toast-container{top:auto;bottom:72px;right:10px;left:10px;max-width:none}
   .form-actions,.hero-btns{flex-direction:column;gap:8px}
+  .req-card{flex-wrap:wrap;gap:8px}
+  .req-card > span{align-self:flex-start}
 }

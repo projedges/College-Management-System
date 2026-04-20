@@ -1,0 +1,158 @@
+{# Exam hall tickets detail partial — rendered inline inside HOD dashboard #}
+
+{% if messages %}
+{% for msg in messages %}
+<div style="padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:600;
+  background:{% if 'success' in msg.tags %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+{# ── Header ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button onclick="htBackToList()"
+      style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--surface2);color:var(--deep);font-size:12px;font-weight:700;border:1px solid var(--border);cursor:pointer">
+      <i class="fas fa-arrow-left"></i> All Exams
+    </button>
+    <div>
+      <div style="font-size:16px;font-weight:800;color:var(--deep)">
+        <i class="fas fa-id-card-clip" style="color:var(--teal)"></i> {{ exam.name }}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">
+        Semester {{ exam.semester }} &middot; {{ dept.name }} &middot; Min attendance: <strong>{{ threshold }}%</strong>
+      </div>
+    </div>
+  </div>
+  {# Generate button — plain onclick, no form needed #}
+  <button id="ht-gen-btn-{{ exam.pk }}"
+    onclick="htGenerate({{ exam.pk }}, this)"
+    style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">
+    <i class="fas fa-wand-magic-sparkles"></i> Generate / Refresh Hall Tickets
+  </button>
+</div>
+
+{# ── Stats ── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:18px">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+    <div style="font-size:22px;font-weight:900;color:var(--deep)">{{ counts.total }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Total</div>
+  </div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+    <div style="font-size:22px;font-weight:900;color:var(--teal)">{{ counts.eligible }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Eligible</div>
+  </div>
+  <div style="background:#fff;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;text-align:center">
+    <div style="font-size:22px;font-weight:900;color:#dc2626">{{ counts.detained }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Detained</div>
+  </div>
+  <div style="background:#fff;border:1px solid rgba(230,168,23,.2);border-radius:12px;padding:14px;text-align:center">
+    <div style="font-size:22px;font-weight:900;color:#b88510">{{ counts.withheld }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Withheld</div>
+  </div>
+</div>
+
+{# ── Student table ── #}
+<div class="d-card" style="padding:0;overflow:hidden">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Roll No.</th><th>Name</th>
+          <th style="text-align:center">Attendance</th>
+          <th style="text-align:center">Status</th>
+          <th style="text-align:center">Hall Ticket</th>
+          <th style="text-align:center">Exemption</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr style="{% if r.auto_status == 'DETAINED' %}background:rgba(239,68,68,.02){% endif %}">
+          <td style="font-weight:700;color:var(--teal)">{{ r.student.roll_number }}</td>
+          <td style="font-weight:600;color:var(--deep)">{{ r.student.user.get_full_name|default:r.student.user.username }}</td>
+          <td style="text-align:center">
+            <span style="font-size:13px;font-weight:700;color:{% if r.att_pct >= threshold %}var(--teal){% elif r.att_pct >= 60 %}var(--gold){% else %}#dc2626{% endif %}">
+              {{ r.att_pct }}%
+            </span>
+            <div style="font-size:10px;color:var(--muted)">min {{ threshold }}%</div>
+          </td>
+          <td style="text-align:center">
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+              background:{% if r.auto_status == 'ELIGIBLE' %}rgba(13,115,119,.1){% elif r.auto_status == 'DETAINED' %}rgba(239,68,68,.1){% else %}rgba(230,168,23,.1){% endif %};
+              color:{% if r.auto_status == 'ELIGIBLE' %}var(--teal){% elif r.auto_status == 'DETAINED' %}#dc2626{% else %}#b88510{% endif %}">
+              {{ r.auto_status }}
+            </span>
+          </td>
+          <td style="text-align:center">
+            {% if r.hall_ticket %}
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+              background:{% if r.hall_ticket.status == 'ISSUED' %}rgba(13,115,119,.1){% elif r.hall_ticket.status == 'DETAINED' %}rgba(239,68,68,.1){% else %}rgba(100,116,139,.1){% endif %};
+              color:{% if r.hall_ticket.status == 'ISSUED' %}var(--teal){% elif r.hall_ticket.status == 'DETAINED' %}#dc2626{% else %}var(--muted){% endif %}">
+              {{ r.hall_ticket.get_status_display }}
+            </span>
+            {% else %}
+            <span style="font-size:11px;color:var(--muted)">Not generated</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if r.auto_status == 'DETAINED' %}
+              {% if r.override %}
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;
+                background:{% if r.override.status == 'APPROVED' %}rgba(13,115,119,.1){% elif r.override.status == 'REJECTED' %}rgba(239,68,68,.1){% else %}rgba(230,168,23,.1){% endif %};
+                color:{% if r.override.status == 'APPROVED' %}var(--teal){% elif r.override.status == 'REJECTED' %}#dc2626{% else %}#b88510{% endif %}">
+                {{ r.override.get_status_display }}
+              </span>
+              {% else %}
+              <button onclick="htOpenExemption({{ exam.pk }}, '{{ r.student.pk }}','{{ r.student.roll_number }}','{{ r.student.user.get_full_name|default:r.student.user.username|escapejs }}')"
+                style="padding:5px 12px;border-radius:7px;background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2);font-size:11px;font-weight:700;cursor:pointer">
+                <i class="fas fa-file-medical"></i> Request Exemption
+              </button>
+              {% endif %}
+            {% else %}
+            <span style="color:var(--muted);font-size:12px">&mdash;</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="padding:32px;text-align:center;color:var(--muted)">No students found for this semester.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="margin-top:14px;background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.7">
+  <strong style="color:var(--teal)">Exemption flow:</strong>
+  Click "Request Exemption" for a detained student → provide reason → submitted to college admin →
+  once approved, click "Generate / Refresh" to issue the hall ticket.
+</div>
+
+{# ── Exemption modal ── #}
+<div id="ht-exemption-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center"
+     onclick="if(event.target===this)htCloseExemption()">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;margin:16px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:4px">Request Exemption</div>
+    <div id="ht-exemption-label" style="font-size:12px;color:var(--muted);margin-bottom:16px"></div>
+    <input type="hidden" id="ht-ex-exam-id" value=""/>
+    <input type="hidden" id="ht-ex-student-id" value=""/>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Reason *</label>
+      <textarea id="ht-ex-reason" rows="4" placeholder="Explain why this student should be granted an exemption..."
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+    <div style="background:rgba(230,168,23,.06);border:1px solid rgba(230,168,23,.25);border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:16px">
+      <i class="fas fa-circle-info"></i> This request will be sent to the college admin for approval.
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="htSubmitExemption()"
+        style="flex:1;padding:10px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">
+        <i class="fas fa-paper-plane"></i> Submit Request
+      </button>
+      <button type="button" onclick="htCloseExemption()"
+        style="padding:10px 18px;border-radius:9px;background:#f3f4f6;color:var(--deep);font-size:13px;font-weight:700;border:none;cursor:pointer">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>

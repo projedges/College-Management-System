@@ -8,18 +8,20 @@
 {% block sidebar_links %}
 <a href="#dashboard" data-section-target="dashboard" class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
 <a href="#profile" data-section-target="profile" class="sb-link"><i class="fas fa-user-tie"></i> My Profile</a>
-{% if hod_teaching_subjects %}<a href="#my-teaching" data-section-target="my-teaching" class="sb-link"><i class="fas fa-book"></i> My Teaching</a>{% endif %}
+<a href="#my-subjects" data-section-target="my-subjects" class="sb-link"><i class="fas fa-book-open"></i> My Subjects</a>
+<a href="#my-timetable" data-section-target="my-timetable" class="sb-link"><i class="fas fa-clock"></i> My Timetable</a>
+{% if hod_teaching_subjects %}<a href="#my-teaching" data-section-target="my-teaching" class="sb-link"><i class="fas fa-chalkboard"></i> Teaching Overview</a>{% endif %}
 <a href="#faculty" data-section-target="faculty" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="#students" data-section-target="students" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
-<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-clock"></i> Today's Timetable</a>
+<a href="#timetable" data-section-target="timetable" class="sb-link"><i class="fas fa-calendar-alt"></i> Dept Timetable</a>
 <a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance</a>
-<a href="{% url 'hod_defaulters_report' %}" class="sb-link"><i class="fas fa-user-slash"></i> Defaulters Report</a>
-<a href="{% url 'hod_exemptions' %}" class="sb-link"><i class="fas fa-file-medical"></i> Exemption Requests</a>
+<a href="#defaulters" data-section-target="defaulters" class="sb-link"><i class="fas fa-user-slash"></i> Defaulters Report</a>
+<a href="#exemptions" data-section-target="exemptions" class="sb-link"><i class="fas fa-file-medical"></i> Exemptions</a>
 <a href="#approvals" data-section-target="approvals" class="sb-link"><i class="fas fa-check-circle"></i> Approvals{% if pending_approvals_count > 0 %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ pending_approvals_count }}</span>{% endif %}</a>
-<a href="#history" data-section-target="history" class="sb-link"><i class="fas fa-history"></i> History</a>
 <a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
-<a href="{% url 'hod_substitutions' %}" class="sb-link"><i class="fas fa-user-clock"></i> Substitutions</a>
-<a href="{% url 'hod_hall_tickets' %}" class="sb-link"><i class="fas fa-id-card-clip"></i> Hall Tickets</a>
+<a href="#inbox" data-section-target="inbox" class="sb-link"><i class="fas fa-inbox"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
+<a href="#substitutions" data-section-target="substitutions" class="sb-link"><i class="fas fa-user-clock"></i> Substitutions</a>
+<a href="#hall-tickets" data-section-target="hall-tickets" class="sb-link"><i class="fas fa-id-card-clip"></i> Hall Tickets</a>
 {% endblock %}
 
 {% block extra_css %}
@@ -42,6 +44,11 @@
   .tt-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface2);margin-bottom:8px}
   .tt-time{font-size:12px;font-weight:700;color:var(--teal);width:90px;flex-shrink:0}
   .tt-room{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;background:var(--border);padding:2px 8px;border-radius:6px}
+  /* Faculty performance cards */
+  .fac-perf-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;transition:box-shadow .15s,transform .15s}
+  .fac-perf-card:hover{box-shadow:0 4px 20px rgba(7,30,38,.1);transform:translateY(-2px)}
+  /* Smart alert */
+  .hod-alert{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:10px;border:1px solid;margin-bottom:8px}
   @media(max-width:860px){
     .hod-stat-grid{grid-template-columns:repeat(2,1fr)}
     .hod-dept-grid{grid-template-columns:1fr}
@@ -49,80 +56,99 @@
     .approval-actions{width:100%;justify-content:flex-start}
     .tt-row{flex-wrap:wrap;gap:4px}
     .tt-room{margin-left:0}
+    #fac-perf-grid{grid-template-columns:1fr!important}
+    .two-col{grid-template-columns:1fr!important}
   }
   @media(max-width:480px){
     .hod-stat-grid{grid-template-columns:1fr}
+    #fac-perf-grid{grid-template-columns:1fr!important}
+    .stat-grid{grid-template-columns:repeat(2,1fr)!important}
   }
 </style>
 {% endblock %}
 
 {% block dashboard_content %}
 <section data-dashboard-pane="dashboard" class="dashboard-pane active">
-  <div class="stat-grid">
-    <div class="stat-card">
+
+  {# ── Smart Alerts ── #}
+  {% if smart_alerts %}
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+    {% for alert in smart_alerts %}
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:10px;border:1px solid {% if alert.type == 'danger' %}rgba(239,68,68,.3){% else %}rgba(230,168,23,.3){% endif %};background:{% if alert.type == 'danger' %}rgba(239,68,68,.04){% else %}rgba(230,168,23,.04){% endif %}">
+      <i class="fas {{ alert.icon }}" style="font-size:15px;color:{% if alert.type == 'danger' %}var(--red){% else %}#d97706{% endif %};flex-shrink:0"></i>
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--deep)">{{ alert.msg }}</span>
+      <a href="{{ alert.link }}" {% if not alert.link|slice:":1" == '/' %}data-section-target="{{ alert.link|slice:'1:' }}"{% endif %} style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:7px;background:{% if alert.type == 'danger' %}var(--red){% else %}#d97706{% endif %};color:#fff;text-decoration:none;white-space:nowrap;flex-shrink:0">{{ alert.link_label }}</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Stat cards ── #}
+  <div class="stat-grid" style="margin-bottom:20px">
+    <a href="#faculty" data-section-target="faculty" class="stat-card" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-chalkboard-teacher"></i></div>
       <div class="s-val">{{ total_faculty }}</div><div class="s-lbl">Faculty</div>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a href="#students" data-section-target="students" class="stat-card" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-user-graduate"></i></div>
       <div class="s-val">{{ total_students }}</div><div class="s-lbl">Students</div>
-    </div>
+    </a>
     <div class="stat-card">
       <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-book"></i></div>
       <div class="s-val">{{ total_subjects }}</div><div class="s-lbl">Subjects</div>
     </div>
-    <div class="stat-card">
+    <a href="#approvals" data-section-target="approvals" class="stat-card" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-check-circle"></i></div>
       <div class="s-val">{{ pending_approvals_count }}</div><div class="s-lbl">Pending Approvals</div>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a href="#timetable" data-section-target="timetable" class="stat-card" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-clock"></i></div>
       <div class="s-val">{{ today_timetable|length }}</div><div class="s-lbl">Classes Today</div>
-    </div>
+    </a>
   </div>
 
-  <!-- Quick actions -->
-  <div class="d-card" style="margin-bottom:20px">
-    <div class="d-title"><i class="fas fa-rocket"></i> Quick Actions</div>
-    <div class="qa-row">
-      <a href="#approvals" data-section-target="approvals" class="qa-btn qa-teal"><i class="fas fa-check-circle"></i> Review Approvals{% if pending_approvals_count > 0 %} ({{ pending_approvals_count }}){% endif %}</a>
-      <a href="{% url 'hod_substitutions' %}" class="qa-btn qa-deep"><i class="fas fa-user-clock"></i> Manage Substitutions</a>
-      <a href="#attendance" data-section-target="attendance" class="qa-btn" style="background:var(--surface2);color:var(--deep)"><i class="fas fa-calendar-check"></i> Attendance Overview</a>
-      <a href="#timetable" data-section-target="timetable" class="qa-btn" style="background:var(--surface2);color:var(--deep)"><i class="fas fa-clock"></i> Today's Timetable</a>
-    </div>
-  </div>
-
+  {# ── Two-col: Today's timetable + Pending approvals ── #}
   <div class="two-col">
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> Faculty Snapshot</div>
-      {% if faculty_list %}
-      <div class="table-scroll content-scroll soft">
-        <table class="dtable">
-          <thead><tr><th>Name</th><th>Designation</th><th>Emp ID</th></tr></thead>
-          <tbody>
-            {% for f in faculty_list %}
-            <tr>
-              <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
-              <td style="color:var(--muted)">{{ f.designation }}</td>
-              <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="d-title"><i class="fas fa-clock"></i> Today's Schedule</div>
+      {% if today_timetable %}
+      <div class="content-scroll soft">
+        {% for t in today_timetable %}
+        <div class="tt-row">
+          <div class="tt-time">{{ t.start_time|time:"g:i A" }}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ t.faculty.user.get_full_name|default:t.faculty.user.username }}</div>
+          </div>
+          {% if t.classroom %}<div class="tt-room">{{ t.classroom.room_number }}</div>{% endif %}
+        </div>
+        {% endfor %}
       </div>
       {% else %}
-      <div class="empty"><i class="fas fa-chalkboard-teacher"></i>No faculty in this department.</div>
+      <div class="empty"><i class="fas fa-mug-hot"></i>No classes today.</div>
       {% endif %}
     </div>
 
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-check-circle"></i> Pending Approvals</div>
-      {% if pending_approvals %}
+      <div class="d-title"><i class="fas fa-check-circle"></i> Pending Approvals
+        {% if pending_approvals_count > 0 %}<span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:6px">{{ pending_approvals_count }}</span>{% endif %}
+      </div>
+      {% if pending_approvals or pending_leaves %}
       <div class="content-scroll soft">
+        {% for leave in pending_leaves %}
+        <div class="approval-card" style="border-left:3px solid #6366f1">
+          <div class="approval-type" style="color:#6366f1"><i class="fas fa-calendar-minus"></i> Leave &mdash; {{ leave.get_leave_type_display }}</div>
+          <div class="approval-desc">{{ leave.faculty.user.get_full_name }} &middot; {{ leave.from_date|date:"d M" }}&ndash;{{ leave.to_date|date:"d M Y" }}</div>
+          <div class="approval-actions">
+            <form method="POST" action="{% url 'hod_leave_review' leave.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
+            <a href="#approvals" data-section-target="approvals" style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:700;background:var(--surface2);color:var(--deep);text-decoration:none">Details</a>
+          </div>
+        </div>
+        {% endfor %}
         {% for ap in pending_approvals %}
         <div class="approval-card">
           <div class="approval-type">{{ ap.get_approval_type_display }}</div>
-          <div class="approval-desc">{{ ap.description|truncatechars:100 }}</div>
+          <div class="approval-desc">{{ ap.description|truncatechars:80 }}</div>
           <div class="approval-meta">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
           <div class="approval-actions">
             <form method="POST" action="{% url 'hod_approve' ap.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="APPROVED"/><button type="submit" class="btn-approve"><i class="fas fa-check"></i> Approve</button></form>
@@ -132,102 +158,183 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="hint-box">No pending approvals right now.</div>
+      <div class="hint-box"><i class="fas fa-check-double" style="color:var(--teal)"></i> No pending approvals right now.</div>
       {% endif %}
     </div>
   </div>
+
 </section>
 
 <section data-dashboard-pane="profile" class="dashboard-pane">
-  <div class="d-card" style="max-width:640px">
-    <div style="display:flex;align-items:center;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
-      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.2);box-shadow:0 4px 14px rgba(13,115,119,.15);flex-shrink:0">
+  <div class="d-card" style="max-width:600px">
+
+    {# ── Identity header ── #}
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;flex-wrap:wrap">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:#fff;flex-shrink:0">
         {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep);line-height:1.2">{{ request.user.get_full_name|default:request.user.username }}</div>
-        <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:3px">{{ hod.employee_id }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">Head of Department &middot; {{ dept.name }}</div>
-        {% if hod.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ hod.phone_number }}</div>{% endif %}
+      <div>
+        <div style="font-family:'Outfit',sans-serif;font-size:19px;font-weight:900;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:12px;color:var(--teal);font-weight:700;margin-top:3px">{{ hod.employee_id }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Head of Department &middot; {{ dept.name }}</div>
+        {% if hod.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:5px"></i>{{ hod.phone_number }}</div>{% endif %}
       </div>
     </div>
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Professional Details</div>
-    <div class="summary-list">
-      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
-      <div class="summary-item"><span>Qualification</span><strong>{{ hod.qualification }}</strong></div>
-      <div class="summary-item"><span>Experience</span><strong>{{ hod.experience_years }} years</strong></div>
-      <div class="summary-item"><span>Department</span><strong>{{ dept.name }} ({{ dept.code }})</strong></div>
-      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
-      <div class="summary-item"><span>Username</span><strong style="color:var(--muted)">{{ request.user.username }}</strong></div>
+
+    {# ── Details grid ── #}
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:12px">Professional Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="padding:10px 14px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Email</div>
+        <div style="font-size:13px;font-weight:600;color:var(--deep);word-break:break-all">{{ request.user.email|default:"Not set" }}</div>
+      </div>
+      <div style="padding:10px 14px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Qualification</div>
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ hod.qualification }}</div>
+      </div>
+      <div style="padding:10px 14px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Experience</div>
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ hod.experience_years }} years</div>
+      </div>
+      <div style="padding:10px 14px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Department</div>
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ dept.name }} <span style="color:var(--teal)">({{ dept.code }})</span></div>
+      </div>
+      <div style="padding:10px 14px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">College</div>
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ college.name }}</div>
+      </div>
+      <div style="padding:10px 14px;background:var(--surface2);border-radius:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Username</div>
+        <div style="font-size:13px;font-weight:600;color:var(--muted)">{{ request.user.username }}</div>
+      </div>
     </div>
+
   </div>
 </section>
 
 <section data-dashboard-pane="students" class="dashboard-pane">
-  <div class="two-col">
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-chart-pie"></i> Students by Semester</div>
-      <div class="section-meta">Distribution of active students across semesters.</div>
-      {% if sem_breakdown %}
-      <div style="display:flex;align-items:flex-end;gap:10px;height:100px;padding:8px 0;margin-bottom:10px">
-        {% for row in sem_breakdown %}
-        {% widthratio row.count total_students 100 as bar_h %}
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div style="font-size:11px;font-weight:700;color:var(--teal)">{{ row.count }}</div>
-          <div style="width:100%;background:var(--teal);border-radius:4px 4px 0 0;height:{{ bar_h }}px;min-height:6px;opacity:.8"></div>
-          <div style="font-size:10px;color:var(--muted)">S{{ row.current_semester }}</div>
-        </div>
+
+  {# ── Filter bar ── #}
+  <div class="d-card" style="padding:12px 16px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="sf-chip sf-active" id="sfAllBtn" onclick="sfSetAll()" style="flex-shrink:0">ALL</button>
+      <select id="sfSem" class="sf-select" style="min-width:120px">
+        <option value="">All Sems</option>
+        {% for grp in students_by_sem_section %}
+        <option value="{{ grp.semester }}">Sem {{ grp.semester }} ({{ grp.total }})</option>
         {% endfor %}
+      </select>
+      <select id="sfSec" class="sf-select" style="min-width:120px">
+        <option value="">All Sections</option>
+      </select>
+      <div style="position:relative;flex:1;min-width:140px;max-width:220px">
+        <i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)"></i>
+        <input id="sfSearch" type="text" placeholder="Search name or roll..."
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px 10px 6px 28px;font-size:12px;outline:none;background:var(--surface2);box-sizing:border-box">
       </div>
-      {% else %}
-      <div class="empty"><i class="fas fa-user-graduate"></i>No students yet.</div>
-      {% endif %}
-    </div>
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-user-graduate"></i> Quick Stats</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:var(--r)">
-          <div style="font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--teal)">{{ total_students }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Active Students</div>
-        </div>
-        <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:var(--r)">
-          <div style="font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)">{{ total_faculty }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Faculty</div>
-        </div>
-        <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:var(--r)">
-          <div style="font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--gold)">{{ total_subjects }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Subjects</div>
-        </div>
-        <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:var(--r)">
-          <div style="font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:{% if pending_approvals_count > 0 %}var(--red){% else %}var(--teal){% endif %}">{{ pending_approvals_count }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Pending Approvals</div>
-        </div>
-      </div>
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0">
+        <span id="sfCount">{{ total_students }}</span> of {{ total_students }} students
+      </span>
     </div>
   </div>
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-user-graduate"></i> Active Students{% if total_students > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ total_students }})</span>{% endif %}</div>
-    {% if students_list %}
-    <div class="table-scroll content-scroll">
-      <table class="dtable">
-        <thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for s in students_list %}
-          <tr style="cursor:pointer" onclick="window.location='{% url 'hod_student_profile' s.pk %}'">
-            <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
-            <td>{{ s.user.get_full_name|default:s.user.username }}</td>
-            <td style="text-align:center">{{ s.current_semester }}</td>
-            <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">{{ s.status }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-user-graduate"></i>No active students.</div>
-    {% endif %}
+
+  {# ── Student table ── #}
+  <div class="sf-table-wrap">
+    <table class="stu-table">
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Roll No</th>
+          <th>Name</th>
+          <th>Sem</th>
+          <th>Section</th>
+        </tr>
+      </thead>
+      <tbody id="sfBody">
+        {% for grp in students_by_sem_section %}
+          {% if grp.has_sections %}
+            {% for sec in grp.sections %}
+              {% for s in sec.students %}
+              <tr class="stu-row"
+                  data-sem="{{ grp.semester }}"
+                  data-sec="{{ sec.label }}"
+                  data-roll="{{ s.roll_number|lower }}"
+                  data-name="{{ s.user.get_full_name|lower|default:s.user.username|lower }}"
+                  onclick="stuOpenDrawer({{ s.pk }})">
+                <td class="sf-idx" style="color:var(--muted);font-size:11px"></td>
+                <td><span class="stu-roll">{{ s.roll_number }}</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div class="stu-avatar">{{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}</div>
+                    <span style="font-size:13px;font-weight:600;color:var(--deep)">{{ s.user.get_full_name|default:s.user.username }}</span>
+                  </div>
+                </td>
+                <td><span class="sf-sem-badge">{{ grp.semester }}</span></td>
+                <td><span class="stu-sec-badge">{{ s.section|default:"&mdash;" }}</span></td>
+              </tr>
+              {% endfor %}
+            {% endfor %}
+          {% else %}
+            {% for s in grp.sections.0.students %}
+            <tr class="stu-row"
+                data-sem="{{ grp.semester }}"
+                data-sec=""
+                data-roll="{{ s.roll_number|lower }}"
+                data-name="{{ s.user.get_full_name|lower|default:s.user.username|lower }}"
+                onclick="stuOpenDrawer({{ s.pk }})">
+              <td class="sf-idx" style="color:var(--muted);font-size:11px"></td>
+              <td><span class="stu-roll">{{ s.roll_number }}</span></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div class="stu-avatar">{{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}</div>
+                  <span style="font-size:13px;font-weight:600;color:var(--deep)">{{ s.user.get_full_name|default:s.user.username }}</span>
+                </div>
+              </td>
+              <td><span class="sf-sem-badge">{{ grp.semester }}</span></td>
+              <td><span class="stu-sec-badge">&mdash;</span></td>
+            </tr>
+            {% endfor %}
+          {% endif %}
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-user-graduate" style="display:block;font-size:24px;margin-bottom:8px"></i>No active students.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+
 </section>
+
+{# ── Student Modal — appended to body by JS, no overflow clipping ── #}
+
+<style>
+/* Filter bar */
+.sf-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px}
+.sf-group{display:flex;align-items:center;gap:6px}
+.sf-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.sf-chip{padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.sf-chip.sf-active,.sf-chip:hover{background:var(--teal);border-color:var(--teal);color:#fff}
+.sf-select{padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--deep);background:#fff;cursor:pointer;outline:none;transition:border-color .15s}
+.sf-select:focus{border-color:var(--teal)}
+.sf-sem-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(13,115,119,.08);color:var(--teal)}
+/* Table */
+.sf-table-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.stu-table{width:100%;border-collapse:collapse}
+.stu-table thead th{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+.stu-table tbody tr.stu-row{cursor:pointer;transition:background .12s}
+.stu-table tbody tr.stu-row:hover{background:rgba(13,115,119,.05)}
+.stu-table td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+.stu-table tbody tr:last-child td{border-bottom:none}
+.stu-roll{font-size:12px;font-weight:700;color:var(--teal);font-family:"Outfit",sans-serif}
+.stu-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Outfit",sans-serif;font-size:11px;font-weight:900;flex-shrink:0}
+.stu-sec-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(13,115,119,.08);color:var(--teal)}
+/* modal built dynamically in JS */
+.sf-chip{padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.sf-chip.sf-active,.sf-chip:hover{background:var(--teal);border-color:var(--teal);color:#fff}
+.sf-select{padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--deep);background:#fff;cursor:pointer;outline:none;transition:border-color .15s}
+.sf-select:focus{border-color:var(--teal)}
+</style>
+
 
 <section data-dashboard-pane="timetable" class="dashboard-pane">
   <div class="d-card">
@@ -257,16 +364,20 @@
 
 <section data-dashboard-pane="attendance" class="dashboard-pane">
   <div class="d-card">
-    <div class="d-title"><i class="fas fa-calendar-check"></i> Subject Attendance Overview</div>
-    <div class="section-meta">Sessions, class average, and students below 75% per subject.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="d-title" style="margin:0"><i class="fas fa-calendar-check"></i> Subject Attendance Overview</div>
+      <a href="#defaulters" data-section-target="defaulters" style="font-size:12px;font-weight:700;padding:6px 14px;border-radius:8px;background:rgba(239,68,68,.08);color:var(--red);text-decoration:none;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-user-slash"></i> Full Defaulters Report</a>
+    </div>
+    <div class="section-meta">Sessions, class average, and students below threshold per subject.</div>
     {% if subject_attendance %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
-        <thead><tr><th>Subject</th><th>Sessions</th><th>Class Avg</th><th>Defaulters</th></tr></thead>
+        <thead><tr><th>Subject</th><th>Sem</th><th>Sessions</th><th>Class Avg</th><th style="text-align:center">Defaulters</th></tr></thead>
         <tbody>
           {% for sa in subject_attendance %}
           <tr>
-            <td><div style="font-weight:600;color:var(--deep)">{{ sa.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ sa.subject.code }} &middot; Sem {{ sa.subject.semester }}</div></td>
+            <td><div style="font-weight:600;color:var(--deep)">{{ sa.subject.name }}</div><div style="font-size:11px;color:var(--muted)">{{ sa.subject.code }}</div></td>
+            <td style="text-align:center;font-size:12px;color:var(--muted)">{{ sa.subject.semester }}</td>
             <td style="text-align:center">{{ sa.sessions }}</td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
@@ -286,6 +397,15 @@
     {% else %}
     <div class="empty"><i class="fas fa-calendar-xmark"></i>No attendance data yet.</div>
     {% endif %}
+  </div>
+</section>
+
+<!-- DEFAULTERS REPORT (lazy-loaded pane) -->
+<section data-dashboard-pane="defaulters" class="dashboard-pane">
+  <div id="defaulters-pane-inner">
+    <div style="padding:60px 0;text-align:center;color:var(--muted)">
+      <i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading defaulters report...
+    </div>
   </div>
 </section>
 
@@ -351,62 +471,151 @@
 </section>
 {% endif %}
 
-<!-- FACULTY WORKLOAD (new) -->
-<section data-dashboard-pane="faculty" class="dashboard-pane">
+{# ── My Subjects pane ── #}
+<section data-dashboard-pane="my-subjects" class="dashboard-pane">
   <div class="d-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-      <div class="d-title" style="margin:0"><i class="fas fa-chalkboard-teacher"></i> Faculty Members</div>
-      <input id="fac-search" type="text" oninput="filterFacTable()" placeholder="Search name or ID&hellip;"
-        style="border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;outline:none;width:200px">
+    <div class="d-title"><i class="fas fa-book-open"></i> My Subjects</div>
+    <div class="section-meta">Subjects you are personally assigned to teach.</div>
+    {% if hod_teaching_subjects %}
+    {% for fs in hod_teaching_subjects %}
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6">
+      <div style="width:38px;height:38px;border-radius:9px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0"><i class="fas fa-book"></i></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ fs.subject.name }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ fs.subject.code }} &middot; Sem {{ fs.subject.semester }} &middot; {{ fs.subject.credits }}C</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <a href="{% url 'faculty_mark_attendance' fs.subject.id %}" class="btn-sm btn-sm-teal" style="font-size:11px"><i class="fas fa-calendar-check"></i> Attendance</a>
+        <a href="{% url 'faculty_internal_marks' fs.subject.id %}" class="btn-sm btn-sm-deep" style="font-size:11px"><i class="fas fa-table-list"></i> CE Marks</a>
+      </div>
     </div>
-    {% if faculty_list %}
-    <div class="table-scroll content-scroll">
-      <table class="dtable" id="fac-table">
-        <thead><tr><th>Name</th><th>Designation</th><th>Qualification</th><th>Emp ID</th><th>Phone</th></tr></thead>
-        <tbody>
-          {% for f in faculty_list %}
-          <tr class="fac-row" data-name="{{ f.user.get_full_name|lower }}" data-empid="{{ f.employee_id|lower }}">
-            <td><a href="{% url 'hod_faculty_profile' f.pk %}" style="font-weight:600;color:var(--teal);text-decoration:none">{{ f.user.get_full_name|default:f.user.username }}</a></td>
-            <td style="color:var(--muted)">{{ f.designation }}</td>
-            <td style="color:var(--muted)">{{ f.qualification }}</td>
-            <td style="color:var(--deep);font-weight:600">{{ f.employee_id }}</td>
-            <td style="color:var(--muted)">{{ f.phone_number }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {% endfor %}
     {% else %}
-    <div class="empty"><i class="fas fa-chalkboard-teacher"></i>No faculty in this department.</div>
-    {% endif %}
-  </div>
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-briefcase"></i> Faculty Workload &ndash; This Month</div>
-    <div class="section-meta">Subjects assigned, sessions marked, and pending assignment reviews.</div>
-    {% if faculty_workload %}
-    <div class="table-scroll">
-      <table class="dtable">
-        <thead><tr><th>Faculty</th><th>Subjects</th><th>Sessions This Month</th><th>Pending Reviews</th></tr></thead>
-        <tbody>
-          {% for row in faculty_workload %}
-          <tr>
-            <td style="font-weight:600;color:var(--deep)">{{ row.faculty.user.get_full_name|default:row.faculty.user.username }}</td>
-            <td style="text-align:center">{{ row.subj_count }}</td>
-            <td style="text-align:center;font-weight:600;color:var(--teal)">{{ row.sessions_this_month }}</td>
-            <td style="text-align:center">
-              {% if row.pending_reviews > 0 %}<span style="color:var(--gold);font-weight:700">{{ row.pending_reviews }}</span>
-              {% else %}<span style="color:var(--muted)">0</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="hint-box" style="text-align:center">
+      <i class="fas fa-book" style="font-size:22px;color:var(--muted);display:block;margin-bottom:8px"></i>
+      No subjects assigned yet. Ask admin to enable teaching role and assign subjects.
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-briefcase"></i>No workload data.</div>
     {% endif %}
   </div>
 </section>
+
+{# ── My Timetable pane ── #}
+<section data-dashboard-pane="my-timetable" class="dashboard-pane">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-clock"></i> My Timetable</div>
+    <div class="section-meta">Your personal teaching schedule for today.</div>
+    {% if hod_teaching_subjects %}
+      {% if hod_today_timetable %}
+      {% for t in hod_today_timetable %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="min-width:80px;font-size:11px;font-weight:700;color:var(--teal)">{{ t.start_time|time:"g:i A" }}<br>{{ t.end_time|time:"g:i A" }}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ t.subject.name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}{% if t.classroom %} &middot; {{ t.classroom.room_number }}{% endif %}</div>
+        </div>
+        {% if t.subject.id in hod_marked_subject_ids %}
+          <span style="font-size:11px;font-weight:700;color:#059669;background:rgba(5,150,105,.1);padding:3px 10px;border-radius:99px"><i class="fas fa-check"></i> Marked</span>
+        {% else %}
+          <a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:5px 12px;border-radius:7px;text-decoration:none"><i class="fas fa-calendar-check"></i> Mark Now</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty"><i class="fas fa-mug-hot"></i>No classes scheduled today.</div>
+      {% endif %}
+    {% else %}
+    <div class="hint-box" style="text-align:center">
+      <i class="fas fa-clock" style="font-size:22px;color:var(--muted);display:block;margin-bottom:8px"></i>
+      No timetable assigned. Teaching role needs to be enabled by admin.
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- FACULTY WORKLOAD (new) -->
+<section data-dashboard-pane="faculty" class="dashboard-pane">
+  {# ── Search bar ── #}
+  <div class="d-card" style="padding:12px 16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="position:relative;flex:1;min-width:160px">
+        <i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)"></i>
+        <input id="fac-search" type="text" oninput="filterFacTable()" placeholder="Search name or ID..."
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px 10px 6px 28px;font-size:12px;outline:none;background:var(--surface2);box-sizing:border-box">
+      </div>
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap">{{ total_faculty }} faculty</span>
+    </div>
+  </div>
+
+  {# ── Performance cards ── #}
+  {% if faculty_performance %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px" id="fac-perf-grid">
+    {% for row in faculty_performance %}
+    <div class="fac-perf-card" data-name="{{ row.faculty.user.get_full_name|lower }}" data-empid="{{ row.faculty.employee_id|lower }}"
+         onclick="hodFacModal({{ row.faculty.pk }})" style="cursor:pointer">
+      {# Header #}
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;flex-shrink:0">
+          {{ row.faculty.user.first_name|first|upper }}{{ row.faculty.user.last_name|first|upper }}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.faculty.user.get_full_name|default:row.faculty.user.username }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ row.faculty.designation }} &middot; {{ row.faculty.employee_id }}</div>
+        </div>
+        {% if row.feedback_avg %}
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:14px;font-weight:900;color:{% if row.feedback_avg >= 4 %}var(--teal){% elif row.feedback_avg >= 3 %}#d97706{% else %}var(--red){% endif %}">{{ row.feedback_avg }}</div>
+          <div style="font-size:9px;color:var(--muted)">/ 5 rating</div>
+        </div>
+        {% endif %}
+      </div>
+      {# Metrics row #}
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center">
+        <div style="padding:7px 4px;background:var(--surface2);border-radius:8px">
+          <div style="font-size:14px;font-weight:900;color:var(--teal)">{{ row.subj_count }}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">Subjects</div>
+        </div>
+        <div style="padding:7px 4px;background:var(--surface2);border-radius:8px">
+          <div style="font-size:14px;font-weight:900;color:var(--deep)">{{ row.sessions_taken }}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">Sessions</div>
+        </div>
+        <div style="padding:7px 4px;background:{% if row.pending_reviews > 0 %}rgba(230,168,23,.1){% else %}var(--surface2){% endif %};border-radius:8px">
+          <div style="font-size:14px;font-weight:900;color:{% if row.pending_reviews > 0 %}#d97706{% else %}var(--muted){% endif %}">{{ row.pending_reviews }}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">Pending</div>
+        </div>
+        <div style="padding:7px 4px;background:{% if row.leave_days > 3 %}rgba(239,68,68,.06){% else %}var(--surface2){% endif %};border-radius:8px">
+          <div style="font-size:14px;font-weight:900;color:{% if row.leave_days > 3 %}var(--red){% else %}var(--muted){% endif %}">{{ row.leave_days }}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">Leave days</div>
+        </div>
+      </div>
+      {# Sessions bar #}
+      {% if row.slots_assigned > 0 %}
+      {% widthratio row.sessions_taken row.slots_assigned 100 as taken_pct %}
+      <div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px">
+          <span>Classes taken this month</span>
+          <span>{{ row.sessions_taken }}/{{ row.slots_assigned }} slots</span>
+        </div>
+        <div style="height:4px;border-radius:99px;background:#f3f4f6;overflow:hidden">
+          <div style="height:100%;border-radius:99px;background:{% if taken_pct >= 80 %}var(--teal){% elif taken_pct >= 50 %}#d97706{% else %}var(--red){% endif %};width:{{ taken_pct }}%"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-chalkboard-teacher"></i>No faculty in this department.</div>
+  {% endif %}
+
+</section>
+
+{# Faculty profile modal #}
+<div id="hodFacModalBg" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.5);z-index:99998;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(7,30,38,.3);overflow:hidden">
+    <div id="hodFacModalLoad" style="padding:60px 24px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>
+    <div id="hodFacModalContent" style="display:none;flex:1;overflow-y:auto"></div>
+  </div>
+</div>
 
 <section data-dashboard-pane="approvals" class="dashboard-pane">
   <div class="two-col">
@@ -494,33 +703,63 @@
     </div>
 
     <div class="d-card">
-      <div class="d-title"><i class="fas fa-lightbulb"></i> How Approvals Work</div>
-      <div class="hint-box">
-        Faculty submit leave applications and general requests (event, course, etc.).
-        Both appear here. Approving a leave notifies the faculty immediately.
-        If a substitute was suggested, you can confirm the substitution after approving.
+      <div class="d-title"><i class="fas fa-history"></i> Approval History</div>
+
+      {# ── Tabs ── #}
+      <div style="display:flex;gap:0;border-bottom:2px solid #f3f4f6;margin-bottom:14px">
+        <button onclick="hodApprovalTab('leaves')" id="tab-leaves"
+          style="padding:8px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--teal);color:var(--teal);margin-bottom:-2px">
+          Recent Leaves
+        </button>
+        <button onclick="hodApprovalTab('requests')" id="tab-requests"
+          style="padding:8px 16px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);margin-bottom:-2px">
+          Request History
+        </button>
       </div>
 
-      {% if recent_leaves %}
-      <div style="margin-top:16px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recent Leave Decisions</div>
-        {% for leave in recent_leaves %}
-        {% if leave.status != 'PENDING' %}
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;gap:10px">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--deep)">{{ leave.faculty.user.get_full_name }}</div>
-            <div style="font-size:11px;color:var(--muted)">{{ leave.get_leave_type_display }} &middot; {{ leave.from_date|date:"d M" }}–{{ leave.to_date|date:"d M Y" }}</div>
+      {# ── Recent leave decisions ── #}
+      <div id="tab-panel-leaves">
+        {% if recent_leaves %}
+        <div class="content-scroll">
+          {% for leave in recent_leaves %}
+          {% if leave.status != 'PENDING' %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;gap:10px">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--deep)">{{ leave.faculty.user.get_full_name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ leave.get_leave_type_display }} &middot; {{ leave.from_date|date:"d M" }}–{{ leave.to_date|date:"d M Y" }}</div>
+            </div>
+            <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;
+              background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};
+              color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">
+              {{ leave.get_status_display }}
+            </span>
           </div>
-          <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;
-            background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};
-            color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">
-            {{ leave.get_status_display }}
-          </span>
+          {% endif %}
+          {% endfor %}
         </div>
+        {% else %}
+        <div class="empty"><i class="fas fa-calendar-check"></i>No leave history.</div>
         {% endif %}
-        {% endfor %}
       </div>
-      {% endif %}
+
+      {# ── Request history ── #}
+      <div id="tab-panel-requests" style="display:none">
+        {% if recent_approvals %}
+        <div class="content-scroll">
+          {% for ap in recent_approvals %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:12px">
+            <div>
+              <span style="font-weight:600;color:var(--deep);font-size:13px">{{ ap.get_approval_type_display }}</span>
+              <div style="font-size:11px;color:var(--muted)">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
+            </div>
+            <span class="status-badge status-{{ ap.status|lower }}">{{ ap.get_status_display }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><i class="fas fa-history"></i>No approval history.</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 </section>
@@ -533,54 +772,455 @@ function rejectLeave(pk) {
 }
 </script>
 
-<section data-dashboard-pane="history" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-history"></i> Approval History</div>
-    {% if recent_approvals %}
-    <div class="content-scroll">
-      {% for ap in recent_approvals %}
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6;gap:12px">
-        <div>
-          <span style="font-weight:600;color:var(--deep)">{{ ap.get_approval_type_display }}</span>
-          <div style="font-size:11px;color:var(--muted)">{{ ap.requested_by.get_full_name|default:ap.requested_by.username }} &middot; {{ ap.created_at|date:"d M Y" }}</div>
+
+<section data-dashboard-pane="notices" class="dashboard-pane">
+  <div class="two-col" style="align-items:start">
+
+    {# ── Compose ── #}
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-pen-to-square"></i> Post a Notice</div>
+      <form method="POST" action="{% url 'hod_post_notice' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Title <span style="color:var(--red)">*</span></label>
+          <input type="text" name="title" required placeholder="e.g. Exam schedule update"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box"/>
         </div>
-        <span class="status-badge status-{{ ap.status|lower }}">{{ ap.get_status_display }}</span>
-      </div>
-      {% endfor %}
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Message <span style="color:var(--red)">*</span></label>
+          <textarea name="message" rows="4" required placeholder="Write your notice here..."
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Send To</label>
+          <select name="target"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff">
+            <option value="all">Everyone (Faculty + Students)</option>
+            <option value="faculty">Faculty Only</option>
+            <option value="students">Students Only</option>
+          </select>
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">
+            Attachment <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">(PDF or image, optional)</span>
+          </label>
+          <input type="file" name="attachment" id="notice-attachment-input" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+            onchange="previewNoticeAttachment(this)"
+            style="display:block;width:100%;padding:8px 12px;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;cursor:pointer;background:var(--surface2);box-sizing:border-box"/>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Accepted: PDF, JPG, PNG</div>
+          <div id="notice-img-preview" style="display:none;margin-top:10px">
+            <img id="notice-img-preview-img" src="" alt="Preview"
+              style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);object-fit:cover"/>
+            <button type="button" onclick="clearNoticeAttachment()"
+              style="display:block;margin-top:6px;font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:0">
+              <i class="fas fa-times"></i> Remove
+            </button>
+          </div>
+        </div>
+        <button type="submit" style="display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">
+          <i class="fas fa-paper-plane"></i> Post Notice
+        </button>
+      </form>
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-history"></i>No approval history.</div>
-    {% endif %}
+
+    {# ── Recent notices ── #}
+    <div class="d-card">
+      <div class="d-title"><i class="fas fa-bell"></i> Recent Notices</div>
+      {% if announcements %}
+      <div class="content-scroll">
+        {% for ann in announcements %}
+        <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+            {% if ann.created_by == request.user %}
+            <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:rgba(13,115,119,.1);color:var(--teal);white-space:nowrap;flex-shrink:0">You</span>
+            {% endif %}
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5">{{ ann.message|truncatechars:140 }}</div>
+          {% if ann.attachment %}
+            {% with fname=ann.attachment.name|lower %}
+            {% if '.jpg' in fname or '.jpeg' in fname or '.png' in fname or '.gif' in fname or '.webp' in fname %}
+            <div style="margin:7px 0">
+              <img src="{{ ann.attachment.url }}" alt="Attachment"
+                style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);cursor:pointer;object-fit:cover"
+                onclick="window.open('{{ ann.attachment.url }}','_blank')"/>
+            </div>
+            {% else %}
+            <a href="{{ ann.attachment.url }}" target="_blank"
+              style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--teal);text-decoration:none;padding:3px 9px;border-radius:6px;background:rgba(13,115,119,.07);margin-top:5px">
+              <i class="fas fa-file-arrow-down"></i> Download Attachment
+            </a>
+            {% endif %}
+            {% endwith %}
+          {% endif %}
+          <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</span>
+            {% if ann.target %}<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--surface2);color:var(--muted)">{{ ann.get_target_display }}</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><i class="fas fa-bell-slash"></i>No notices yet.</div>
+      {% endif %}
+    </div>
+
   </div>
 </section>
 
-<section data-dashboard-pane="notices" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
-    {% if announcements %}
-    <div class="content-scroll">
-      {% for ann in announcements %}
-      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
-        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>
-    {% endif %}
+{% include "_inbox_pane.html" %}
+
+{# ── Exemptions pane (lazy) ── #}
+<section data-dashboard-pane="exemptions" class="dashboard-pane">
+  <div id="exemptions-pane-inner">
+    <div style="padding:60px 0;text-align:center;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading exemptions...</div>
   </div>
 </section>
+
+{# ── Substitutions pane (lazy) ── #}
+<section data-dashboard-pane="substitutions" class="dashboard-pane">
+  <div id="substitutions-pane-inner">
+    <div style="padding:60px 0;text-align:center;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading substitutions...</div>
+  </div>
+</section>
+
+{# ── Hall Tickets pane (lazy) ── #}
+<section data-dashboard-pane="hall-tickets" class="dashboard-pane">
+  <div id="hall-tickets-pane-inner">
+    <div style="padding:60px 0;text-align:center;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading hall tickets...</div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block quick_nav %}
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#dashboard"  data-section-target="dashboard"  data-mob-nav="dashboard"><i class="fas fa-home"></i>Home</a>
+  <a href="#faculty"    data-section-target="faculty"    data-mob-nav="faculty"><i class="fas fa-chalkboard-teacher"></i>Faculty</a>
+  <a href="#students"   data-section-target="students"   data-mob-nav="students"><i class="fas fa-user-graduate"></i>Students</a>
+  <a href="#approvals"  data-section-target="approvals"  data-mob-nav="approvals"><i class="fas fa-check-circle"></i>Approvals{% if pending_approvals_count > 0 %}<span style="background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:99px;margin-left:2px">{{ pending_approvals_count }}</span>{% endif %}</a>
+  <a href="#timetable"  data-section-target="timetable"  data-mob-nav="timetable"><i class="fas fa-clock"></i>Timetable</a>
+</nav>
 {% endblock %}
 
 {% block extra_js %}
 function filterFacTable() {
   var q = document.getElementById('fac-search').value.toLowerCase();
-  document.querySelectorAll('#fac-table tbody tr').forEach(function(row) {
-    var name = row.dataset.name || '';
-    var empid = row.dataset.empid || '';
-    row.style.display = (!q || name.indexOf(q) !== -1 || empid.indexOf(q) !== -1) ? '' : 'none';
+  document.querySelectorAll('#fac-perf-grid .fac-perf-card').forEach(function(card) {
+    var name = card.dataset.name || '';
+    var empid = card.dataset.empid || '';
+    card.style.display = (!q || name.indexOf(q) !== -1 || empid.indexOf(q) !== -1) ? '' : 'none';
   });
 }
+
+function hodFacModal(pk) {
+  var bg = document.getElementById('hodFacModalBg');
+  if (bg && bg.parentNode !== document.body) {
+    document.body.appendChild(bg);
+  }
+  bg = document.getElementById('hodFacModalBg');
+  var ld = document.getElementById('hodFacModalLoad');
+  var ct = document.getElementById('hodFacModalContent');
+  bg.style.display = 'flex';
+  ld.style.display = 'block'; ct.style.display = 'none'; ct.innerHTML = '';
+  fetch('/dashboard/hod/faculty/' + pk + '/?modal=1', {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(html) { ct.innerHTML = html; ld.style.display = 'none'; ct.style.display = 'block'; })
+    .catch(function(err) { ld.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center">' + err.message + '</div>'; });
+}
+document.getElementById('hodFacModalBg').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var bg = document.getElementById('hodFacModalBg');
+    if (bg && bg.style.display !== 'none') bg.style.display = 'none';
+    stuCloseModal();
+  }
+});
+
+/* ── Student filter ── */
+var _sfSemSecs = {};
+{% for grp in students_by_sem_section %}_sfSemSecs['{{ grp.semester }}'] = [{% for sec in grp.sections %}'{{ sec.label }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+{% endfor %}
+
+function sfSetAll() {
+  document.getElementById('sfSem').value = '';
+  sfPopulateSecs('');
+  sfApply();
+}
+function sfPopulateSecs(sem) {
+  var sel = document.getElementById('sfSec');
+  sel.innerHTML = '<option value="">All Sections</option>';
+  if (sem && _sfSemSecs[sem]) {
+    _sfSemSecs[sem].forEach(function(s) {
+      if (s) sel.innerHTML += '<option value="' + s + '">Section ' + s + '</option>';
+    });
+  }
+}
+function sfApply() {
+  var sem = document.getElementById('sfSem').value;
+  var sec = document.getElementById('sfSec').value;
+  var q   = (document.getElementById('sfSearch').value || '').toLowerCase().trim();
+  var rows = document.querySelectorAll('#sfBody .stu-row');
+  var count = 0, idx = 0;
+  rows.forEach(function(r) {
+    var show = (!sem || r.dataset.sem === sem) && (!sec || r.dataset.sec === sec) &&
+               (!q || r.dataset.roll.indexOf(q) !== -1 || r.dataset.name.indexOf(q) !== -1);
+    r.style.display = show ? '' : 'none';
+    if (show) { idx++; r.querySelector('.sf-idx').textContent = idx; count++; }
+  });
+  var cnt = document.getElementById('sfCount');
+  if (cnt) cnt.textContent = count;
+}
+
+(function() {
+  var semSel = document.getElementById('sfSem');
+  var secSel = document.getElementById('sfSec');
+  var search = document.getElementById('sfSearch');
+  if (semSel) semSel.addEventListener('change', function() { sfPopulateSecs(this.value); sfApply(); });
+  if (secSel) secSel.addEventListener('change', sfApply);
+  if (search) search.addEventListener('input', sfApply);
+  var rows = document.querySelectorAll('#sfBody .stu-row'), i = 0;
+  rows.forEach(function(r) { r.querySelector('.sf-idx').textContent = ++i; });
+})();
+
+/* ── Student modal (appended to body, no overflow clipping) ── */
+var _stuModal = null;
+
+function _stuCreateModal() {
+  if (_stuModal) return;
+  var el = document.createElement('div');
+  el.id = 'stuModal';
+  el.innerHTML =
+    '<div id="stuModalBg" style="position:fixed;inset:0;background:rgba(7,30,38,.5);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px">'
+    + '<div id="stuModalBox" style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(7,30,38,.3);overflow:hidden">'
+    + '<div id="stuModalLoad" style="padding:60px 24px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>'
+    + '<div id="stuModalContent" style="display:none;flex:1;overflow-y:auto"></div>'
+    + '</div></div>';
+  document.body.appendChild(el);
+  document.getElementById('stuModalBg').addEventListener('click', function(e) {
+    if (e.target === this) stuCloseModal();
+  });
+  _stuModal = el;
+}
+
+function stuOpenDrawer(pk) {
+  _stuCreateModal();
+  var bg = document.getElementById('stuModalBg');
+  var ld = document.getElementById('stuModalLoad');
+  var ct = document.getElementById('stuModalContent');
+  bg.style.display = 'flex';
+  ld.style.display = 'block'; ct.style.display = 'none'; ct.innerHTML = '';
+  fetch('/dashboard/hod/student/' + pk + '/?modal=1', {
+    headers: {'X-Requested-With': 'XMLHttpRequest'}
+  })
+  .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(function(html) {
+    ct.innerHTML = html;
+    ld.style.display = 'none';
+    ct.style.display = 'block';
+  })
+  .catch(function(err) {
+    ld.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center"><i class="fas fa-exclamation-circle" style="font-size:20px;display:block;margin-bottom:8px"></i>' + err.message + '</div>';
+  });
+}
+
+function stuCloseModal() {
+  var bg = document.getElementById('stuModalBg');
+  if (bg) bg.style.display = 'none';
+}
+function stuCloseDrawer() { stuCloseModal(); }
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') stuCloseModal(); });
+
+/* ── Notice attachment preview ── */
+function previewNoticeAttachment(input) {
+  var preview = document.getElementById('notice-img-preview');
+  var img = document.getElementById('notice-img-preview-img');
+  if (!input.files || !input.files[0]) { preview.style.display = 'none'; return; }
+  var file = input.files[0];
+  if (file.type.startsWith('image/')) {
+    var reader = new FileReader();
+    reader.onload = function(e) { img.src = e.target.result; preview.style.display = 'block'; };
+    reader.readAsDataURL(file);
+  } else {
+    preview.style.display = 'none';
+  }
+}
+function clearNoticeAttachment() {
+  document.getElementById('notice-attachment-input').value = '';
+  document.getElementById('notice-img-preview').style.display = 'none';
+}
+
+/* ── Hall ticket inline functions ── */
+function _htCsrf() {
+  var m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
+function htLoadExam(examId) {
+  var paneInner = document.getElementById('hall-tickets-pane-inner');
+  if (!paneInner) return;
+  var listView = paneInner.querySelector('#ht-list-view');
+  var examView = paneInner.querySelector('#ht-exam-view');
+  if (!examView) return;
+  examView.innerHTML = '<div style="padding:60px 0;text-align:center;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>';
+  if (listView) listView.style.display = 'none';
+  examView.style.display = 'block';
+  fetch('/dashboard/hod/hall-tickets/' + examId + '/?partial=1', {
+    headers: {'X-Requested-With': 'XMLHttpRequest'}
+  })
+  .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(function(html) { examView.innerHTML = html; })
+  .catch(function(err) {
+    examView.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center"><i class="fas fa-exclamation-circle"></i> ' + err.message + '</div>';
+  });
+}
+
+function htBackToList() {
+  var paneInner = document.getElementById('hall-tickets-pane-inner');
+  if (!paneInner) return;
+  var listView = paneInner.querySelector('#ht-list-view');
+  var examView = paneInner.querySelector('#ht-exam-view');
+  if (listView) listView.style.display = '';
+  if (examView) { examView.style.display = 'none'; examView.innerHTML = ''; }
+  _loadPane('hall-tickets', '{% url "hod_hall_tickets" %}?partial=1');
+}
+
+function htGenerate(examId, btn) {
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  var fd = new FormData();
+  fd.append('action', 'generate');
+  fetch('/dashboard/hod/hall-tickets/' + examId + '/', {
+    method: 'POST',
+    headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': _htCsrf()},
+    body: fd
+  })
+  .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(function(html) {
+    var paneInner = document.getElementById('hall-tickets-pane-inner');
+    var examView = paneInner ? paneInner.querySelector('#ht-exam-view') : null;
+    if (examView) examView.innerHTML = html;
+  })
+  .catch(function(err) {
+    btn.disabled = false; btn.innerHTML = orig;
+    alert('Error: ' + err.message);
+  });
+}
+
+function htOpenExemption(examId, studentId, rollNo, name) {
+  var paneInner = document.getElementById('hall-tickets-pane-inner');
+  if (!paneInner) return;
+  paneInner.querySelector('#ht-ex-exam-id').value = examId;
+  paneInner.querySelector('#ht-ex-student-id').value = studentId;
+  paneInner.querySelector('#ht-exemption-label').textContent = rollNo + ' — ' + name;
+  paneInner.querySelector('#ht-ex-reason').value = '';
+  paneInner.querySelector('#ht-exemption-overlay').style.display = 'flex';
+}
+
+function htCloseExemption() {
+  var paneInner = document.getElementById('hall-tickets-pane-inner');
+  var ov = paneInner ? paneInner.querySelector('#ht-exemption-overlay') : document.getElementById('ht-exemption-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function htSubmitExemption() {
+  var paneInner = document.getElementById('hall-tickets-pane-inner');
+  if (!paneInner) return;
+  var examId = paneInner.querySelector('#ht-ex-exam-id').value;
+  var studentId = paneInner.querySelector('#ht-ex-student-id').value;
+  var reason = paneInner.querySelector('#ht-ex-reason').value.trim();
+  if (!reason) { alert('Please provide a reason.'); return; }
+  var fd = new FormData();
+  fd.append('action', 'request_exemption');
+  fd.append('student_id', studentId);
+  fd.append('reason', reason);
+  fetch('/dashboard/hod/hall-tickets/' + examId + '/', {
+    method: 'POST',
+    headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': _htCsrf()},
+    body: fd
+  })
+  .then(function(r) { return r.text(); })
+  .then(function(html) {
+    htCloseExemption();
+    var examView = paneInner.querySelector('#ht-exam-view');
+    if (examView) examView.innerHTML = html;
+  });
+}
+
+/* ── Approval history tabs ── */
+function hodApprovalTab(tab) {
+  var panels = ['leaves', 'requests'];
+  panels.forEach(function(t) {
+    var panel = document.getElementById('tab-panel-' + t);
+    var btn = document.getElementById('tab-' + t);
+    if (!panel || !btn) return;
+    var active = t === tab;
+    panel.style.display = active ? '' : 'none';
+    btn.style.borderBottomColor = active ? 'var(--teal)' : 'transparent';
+    btn.style.color = active ? 'var(--teal)' : 'var(--muted)';
+  });
+}
+
+/* ── Defaulters pane lazy-load ── */
+var _defaultersLoaded = false;
+function loadDefaultersPane(semester) {
+  var inner = document.getElementById('defaulters-pane-inner');
+  if (!inner) return;
+  var url = '{% url "hod_defaulters_report" %}?partial=1' + (semester ? '&semester=' + semester : '');
+  inner.innerHTML = '<div style="padding:60px 0;text-align:center;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>';
+  fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(html) { inner.innerHTML = html; _defaultersLoaded = true; })
+    .catch(function(err) { inner.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center"><i class="fas fa-exclamation-circle"></i> ' + err.message + '</div>'; });
+}
+
+/* ── Generic lazy pane loader ── */
+function _loadPane(paneId, url) {
+  var inner = document.getElementById(paneId + '-pane-inner');
+  if (!inner) return;
+  inner.innerHTML = '<div style="padding:60px 0;text-align:center;color:var(--muted)"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>';
+  fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(html) { inner.innerHTML = html; })
+    .catch(function(err) { inner.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center"><i class="fas fa-exclamation-circle"></i> ' + err.message + '</div>'; });
+}
+
+// Hook into section switching — load when pane becomes active
+(function() {
+  var paneUrls = {
+    'defaulters':     '{% url "hod_defaulters_report" %}?partial=1',
+    'exemptions':     '{% url "hod_exemptions" %}?partial=1',
+    'substitutions':  '{% url "hod_substitutions" %}?partial=1',
+    'hall-tickets':   '{% url "hod_hall_tickets" %}?partial=1',
+  };
+  var loaded = {};
+
+  document.querySelectorAll('[data-section-target]').forEach(function(link) {
+    link.addEventListener('click', function() {
+      var target = link.getAttribute('data-section-target');
+      if (paneUrls[target] && !loaded[target]) {
+        loaded[target] = true;
+        setTimeout(function() {
+          if (target === 'defaulters') loadDefaultersPane(null);
+          else _loadPane(target, paneUrls[target]);
+        }, 50);
+      }
+    });
+  });
+
+  // Handle direct hash on page load
+  var hash = (window.location.hash || '').replace('#', '');
+  if (paneUrls[hash]) {
+    loaded[hash] = true;
+    setTimeout(function() {
+      if (hash === 'defaulters') loadDefaultersPane(null);
+      else _loadPane(hash, paneUrls[hash]);
+    }, 150);
+  }
+})();
+
 {% endblock %}

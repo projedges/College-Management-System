@@ -882,10 +882,16 @@ def _scope_departments(request, queryset=None):
     return queryset.filter(college=college)
 
 
-def _scope_announcements_for_college(college):
-    if college:
-        return Announcement.objects.filter(Q(college=college) | Q(college__isnull=True))
-    return Announcement.objects.all()
+def _scope_announcements_for_college(college, target=None):
+    """Return announcements scoped to a college, optionally filtered by target audience.
+    target: 'students', 'faculty', or None (returns all/everyone notices only)
+    """
+    qs = Announcement.objects.filter(Q(college=college) | Q(college__isnull=True)) if college else Announcement.objects.all()
+    if target == 'students':
+        qs = qs.filter(Q(target='all') | Q(target='students'))
+    elif target == 'faculty':
+        qs = qs.filter(Q(target='all') | Q(target='faculty'))
+    return qs
 
 
 def _scope_exams(request, queryset=None):
@@ -903,24 +909,34 @@ def _get_attendance_rule(college, department=None, semester=None):
     Returns the most specific AttendanceRule for the given context.
     Precedence: dept+sem > dept only > college-wide.
     Falls back to a default rule (75%) if none configured.
+    Results are cached in Django's cache for 5 minutes to avoid repeated DB hits.
     """
+    from django.core.cache import cache
+    cache_key = f'att_rule_{college.pk}_{getattr(department,"pk","x")}_{semester or "x"}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     qs = AttendanceRule.objects.filter(college=college, is_active=True)
 
     # Most specific: dept + semester
     if department and semester:
         rule = qs.filter(department=department, semester=semester).first()
         if rule:
+            cache.set(cache_key, rule, 300)
             return rule
 
     # Dept-level (any semester)
     if department:
         rule = qs.filter(department=department, semester__isnull=True).first()
         if rule:
+            cache.set(cache_key, rule, 300)
             return rule
 
     # College-wide fallback
     rule = qs.filter(department__isnull=True, semester__isnull=True).first()
     if rule:
+        cache.set(cache_key, rule, 300)
         return rule
 
     # Absolute fallback — default 75% rule (not saved to DB)
@@ -934,6 +950,7 @@ def _get_attendance_rule(college, department=None, semester=None):
         alert_below_pct=75.0,
         critical_below_pct=65.0,
     )
+    cache.set(cache_key, default, 300)
     return default
 
 
@@ -1088,7 +1105,9 @@ def home(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect("dashboard")
+        response = redirect("dashboard")
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
 
     # Show a friendly message when the session timed out.
     if request.GET.get("timeout"):
@@ -1167,7 +1186,9 @@ def login_view(request):
             next_url = request.GET.get("next", "dashboard")
             if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
                 next_url = reverse("dashboard")
-            return redirect(next_url)
+            response = redirect(next_url)
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            return response
         else:
             if existing_user is not None:
                 security = _get_or_create_security(existing_user)
@@ -1195,7 +1216,9 @@ def login_view(request):
             request.session['captcha_q'] = f"{a} + {b}"
             captcha_q = request.session['captcha_q']
             messages.error(request, "Invalid username or password.")
-    return render(request, "auth/login.html", {'captcha_q': captcha_q})
+    resp = render(request, "auth/login.html", {'captcha_q': captcha_q})
+    resp['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return resp
 
 
 def logout_view(request):
@@ -1492,6 +1515,7 @@ def lab_staff_dashboard(request):
         'active_lab_sessions': active_lab_sessions,
         'today_schedule': today_schedule,
         'announcements': announcements,
+        'notifications': Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:20],
         'role_name': 'Lab Technician',
         'branding': _get_college_branding(college),
     }
@@ -1912,6 +1936,7 @@ def principal_dashboard(request):
         "sem_distribution": sem_distribution,
         "dept_gpa": dept_gpa,
         "recent_activity": recent_activity,
+        "notifications": Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:20],
         "branding": _get_college_branding(college),
     }
     return render(request, "dashboards/principal.html", context)
@@ -1931,6 +1956,36 @@ def hod_dashboard(request):
     total_faculty_count = Faculty.objects.filter(department=dept).count()
     students_list  = Student.objects.filter(department=dept, status='ACTIVE').select_related('user').order_by('roll_number')[:100]
     total_students_count = Student.objects.filter(department=dept, status='ACTIVE').count()
+
+    # Build semester → section → students grouped structure for HOD students pane
+    all_active_students = Student.objects.filter(
+        department=dept, status='ACTIVE', is_deleted=False
+    ).select_related('user').order_by('current_semester', 'section', 'roll_number')
+
+    from collections import OrderedDict
+    _sem_sec_map = OrderedDict()
+    for s in all_active_students:
+        sem = s.current_semester
+        sec = s.section.strip() if s.section and s.section.strip() else None
+        _sem_sec_map.setdefault(sem, OrderedDict()).setdefault(sec, []).append(s)
+
+    students_by_sem_section = []
+    for sem, sec_map in _sem_sec_map.items():
+        # If only one key and it's None → no sections assigned, flat list
+        has_sections = not (len(sec_map) == 1 and None in sec_map)
+        sections = []
+        for sec_label, stu_list in sec_map.items():
+            sections.append({
+                'label': sec_label or '',
+                'students': stu_list,
+                'count': len(stu_list),
+            })
+        students_by_sem_section.append({
+            'semester': sem,
+            'sections': sections,
+            'has_sections': has_sections,
+            'total': sum(len(v) for v in sec_map.values()),
+        })
     subjects_list  = Subject.objects.filter(department=dept)
     pending_approvals = HODApproval.objects.filter(department=dept, status='PENDING').select_related('requested_by')
     recent_approvals  = HODApproval.objects.filter(department=dept).order_by('-created_at')[:10]
@@ -1942,7 +1997,7 @@ def hod_dashboard(request):
     recent_leaves = LeaveApplication.objects.filter(
         faculty__department=dept
     ).order_by('-created_at')[:10]
-    announcements  = _scope_announcements_for_college(dept.college).order_by('-created_at')[:5]
+    announcements  = _scope_announcements_for_college(dept.college, target='faculty').order_by('-created_at')[:20]
 
     today_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}.get(timezone.localtime(timezone.now()).weekday(), '')
     today_timetable = Timetable.objects.filter(
@@ -2026,6 +2081,106 @@ def hod_dashboard(request):
         'rejected': HODApproval.objects.filter(department=dept, status='REJECTED').count(),
     }
 
+    # ── Smart Alerts ─────────────────────────────────────────────────────────
+    today_local = timezone.localdate()
+    smart_alerts = []
+
+    # Alert: pending approvals
+    pending_total = pending_approvals.count() + pending_leaves.count()
+    if pending_total > 0:
+        smart_alerts.append({
+            'type': 'warning',
+            'icon': 'fa-check-circle',
+            'msg': f'{pending_total} approval{"s" if pending_total > 1 else ""} waiting for your review',
+            'link': '#approvals',
+            'link_label': 'Review',
+        })
+
+    # Alert: faculty who have timetable today but haven't marked attendance
+    today_slots = Timetable.objects.filter(
+        subject__department=dept, day_of_week=today_day
+    ).select_related('faculty__user', 'subject').distinct()
+    marked_today = set(AttendanceSession.objects.filter(
+        subject__department=dept, date=today_local
+    ).values_list('faculty_id', flat=True))
+    absent_faculty = []
+    for slot in today_slots:
+        if slot.faculty_id not in marked_today:
+            absent_faculty.append(slot.faculty.user.get_full_name() or slot.faculty.user.username)
+    absent_faculty = list(dict.fromkeys(absent_faculty))  # dedupe
+    if absent_faculty:
+        names = ', '.join(absent_faculty[:3]) + (f' +{len(absent_faculty)-3} more' if len(absent_faculty) > 3 else '')
+        smart_alerts.append({
+            'type': 'danger',
+            'icon': 'fa-user-slash',
+            'msg': f'Classes not marked today: {names}',
+            'link': '#timetable',
+            'link_label': 'View',
+        })
+
+    # Alert: subjects with high defaulter count
+    high_defaulter_subjects = [sa for sa in subject_attendance if sa['defaulters'] > 0]
+    if high_defaulter_subjects:
+        total_def = sum(sa['defaulters'] for sa in high_defaulter_subjects)
+        smart_alerts.append({
+            'type': 'warning',
+            'icon': 'fa-user-graduate',
+            'msg': f'{total_def} student{"s" if total_def > 1 else ""} below attendance threshold across {len(high_defaulter_subjects)} subject{"s" if len(high_defaulter_subjects) > 1 else ""}',
+            'link': '#attendance',
+            'link_label': 'View',
+        })
+
+    # ── Faculty Performance ───────────────────────────────────────────────────
+    # Sessions assigned (timetable slots this week) vs sessions taken (AttendanceSession this month)
+    from django.db.models import Avg as _Avg
+    month_start = today_local.replace(day=1)
+    sessions_taken_map = {row['faculty_id']: row['count'] for row in sessions_month}
+
+    # Timetable slots per faculty (total weekly slots = proxy for "assigned")
+    slots_assigned = Timetable.objects.filter(
+        subject__department=dept
+    ).values('faculty_id').annotate(count=Count('id'))
+    slots_assigned_map = {row['faculty_id']: row['count'] for row in slots_assigned}
+
+    # Feedback avg per faculty
+    feedback_agg = FacultyFeedbackResponse.objects.filter(
+        cycle__department=dept
+    ).values('cycle__faculty_id').annotate(responses=Count('id'))
+    feedback_map = {}
+    for row in feedback_agg:
+        fid = row['cycle__faculty_id']
+        # Compute avg rating from all responses for this faculty
+        responses = FacultyFeedbackResponse.objects.filter(cycle__faculty_id=fid)
+        ratings = []
+        for r in responses:
+            for v in r.ratings.values():
+                try: ratings.append(float(v))
+                except: pass
+        feedback_map[fid] = round(sum(ratings)/len(ratings), 1) if ratings else None
+
+    # Leave days this month per faculty
+    leave_days_map = {}
+    for f in faculty_list:
+        days = 0
+        for lv in LeaveApplication.objects.filter(
+            faculty=f, status='APPROVED',
+            from_date__gte=month_start, from_date__lte=today_local
+        ):
+            days += max((lv.to_date - lv.from_date).days + 1, 1)
+        leave_days_map[f.id] = days
+
+    faculty_performance = []
+    for f in faculty_list:
+        faculty_performance.append({
+            'faculty': f,
+            'subj_count': subj_count_map.get(f.id, 0),
+            'sessions_taken': sessions_taken_map.get(f.id, 0),
+            'slots_assigned': slots_assigned_map.get(f.id, 0),
+            'pending_reviews': pending_reviews_map.get(f.user_id, 0),
+            'feedback_avg': feedback_map.get(f.id),
+            'leave_days': leave_days_map.get(f.id, 0),
+        })
+
     context = {
         'hod': hod, 'dept': dept,
         'college': dept.college,
@@ -2035,6 +2190,7 @@ def hod_dashboard(request):
         'pending_approvals_count': pending_approvals.count() + pending_leaves.count(),
         'faculty_list': faculty_list,
         'students_list': students_list,
+        'students_by_sem_section': students_by_sem_section,
         'pending_approvals': pending_approvals,
         'recent_approvals': recent_approvals,
         'pending_leaves': pending_leaves,
@@ -2044,8 +2200,10 @@ def hod_dashboard(request):
         'today_day': today_day,
         'announcements': announcements,
         'faculty_workload': faculty_workload,
+        'faculty_performance': faculty_performance,
         'sem_breakdown': sem_breakdown,
         'approval_stats': approval_stats,
+        'smart_alerts': smart_alerts,
         'branding': _get_college_branding(dept.college),
     }
 
@@ -2090,8 +2248,41 @@ def hod_dashboard(request):
         'hod_today_timetable': hod_today_timetable,
         'hod_marked_subject_ids': hod_marked_subject_ids,
         'hod_sub_quota': hod_sub_quota,
+        'notifications': Notification.objects.filter(user=user, is_read=False).order_by('-created_at')[:20],
     })
     return render(request, 'dashboards/hod.html', context)
+
+
+@login_required
+def hod_post_notice(request):
+    """HOD creates an announcement for their department."""
+    if request.method != 'POST':
+        return redirect('hod_dashboard')
+    try:
+        hod = HOD.objects.select_related('department').get(user=request.user)
+    except HOD.DoesNotExist:
+        return redirect('dashboard')
+
+    title = request.POST.get('title', '').strip()
+    message = request.POST.get('message', '').strip()
+    target = request.POST.get('target', 'all')
+    attachment = request.FILES.get('attachment')
+
+    if not title or not message:
+        messages.error(request, 'Title and message are required.')
+        return redirect(f"{reverse('hod_dashboard')}#notices")
+
+    Announcement.objects.create(
+        college=hod.department.college,
+        department=hod.department,
+        title=title,
+        message=message,
+        target=target,
+        attachment=attachment,
+        created_by=request.user,
+    )
+    messages.success(request, 'Notice posted successfully.')
+    return redirect(f"{reverse('hod_dashboard')}#notices")
 
 
 @login_required
@@ -2536,40 +2727,105 @@ def hod_substitutions(request):
         # Prevent assigning the same faculty as their own substitute
         if slot.faculty_id == sub_faculty.id:
             messages.error(request, f"{sub_faculty.user.get_full_name()} is already the assigned faculty for this slot — choose a different substitute.")
-            return redirect('hod_substitutions')
-        
-        try:
-            sub_date = datetime.fromisoformat(sub_date_str).date()
-        except ValueError:
-            sub_date = today
+        else:
+            try:
+                sub_date = datetime.fromisoformat(sub_date_str).date()
+            except ValueError:
+                sub_date = today
 
-        Substitution.objects.update_or_create(
-            timetable_slot=slot,
-            date=sub_date,
-            defaults={
-                'original_faculty': slot.faculty,
-                'substitute_faculty': sub_faculty
-            }
-        )
-        messages.success(request, f"Substitution assigned: {sub_faculty.user.get_full_name()} will cover {slot.subject.name} on {sub_date}.")
-        return redirect('hod_substitutions')
+            Substitution.objects.update_or_create(
+                timetable_slot=slot,
+                date=sub_date,
+                defaults={
+                    'original_faculty': slot.faculty,
+                    'substitute_faculty': sub_faculty
+                }
+            )
+            messages.success(request, f"Substitution assigned: {sub_faculty.user.get_full_name()} will cover {slot.subject.name} on {sub_date}.")
+        # Reload substitutions after POST
+        substitutions = Substitution.objects.filter(timetable_slot__subject__department=dept, date__gte=today).order_by('date')
 
     # For the form: slots in this department and available faculty
-    # Build a map of slot_id → original_faculty_id for JS filtering
     slots = Timetable.objects.filter(subject__department=dept).select_related('subject', 'faculty__user')
     faculty_list = Faculty.objects.filter(department=dept).select_related('user')
     slot_faculty_map = {slot.pk: slot.faculty_id for slot in slots}
 
     import json
     slot_faculty_json = json.dumps(slot_faculty_map)
-    
-    return render(request, 'hod/substitutions.html', {
+
+    ctx = {
         'substitutions': substitutions, 'slots': slots, 'faculty_list': faculty_list,
         'slot_faculty_map': slot_faculty_map,
         'slot_faculty_json': slot_faculty_json,
         'today': today,
         'college': dept.college,
         'branding': _get_college_branding(dept.college),
+    }
+    if request.GET.get('partial') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'hod/substitutions_partial.html', ctx)
+    return render(request, 'hod/substitutions.html', ctx)
+
+
+@login_required
+def hod_student_quick_json(request, pk):
+    """Return lightweight student stats as JSON for the HOD popup dialog."""
+    from django.http import JsonResponse
+    try:
+        hod = HOD.objects.select_related('department').get(user=request.user)
+    except HOD.DoesNotExist:
+        return JsonResponse({'error': 'forbidden'}, status=403)
+
+    dept = hod.department
+    student = get_object_or_404(Student, pk=pk, department=dept)
+
+    # Basic profile
+    try:
+        profile = student.user.studentprofile
+        dob = str(profile.date_of_birth) if profile.date_of_birth else None
+        gender = profile.gender
+        phone = profile.phone_number
+    except Exception:
+        dob = gender = phone = None
+
+    # Attendance this semester
+    subjects = Subject.objects.filter(department=dept, semester=student.current_semester)
+    att_agg = Attendance.objects.filter(
+        student=student, session__subject__in=subjects
+    ).values('session__subject_id', 'session__subject__name').annotate(
+        total=Count('id'),
+        present=Count('id', filter=Q(status='PRESENT'))
+    )
+    att_list = []
+    total_p = total_t = 0
+    for r in att_agg:
+        pct = round(r['present'] / r['total'] * 100, 1) if r['total'] else None
+        att_list.append({'subject': r['session__subject__name'], 'present': r['present'], 'total': r['total'], 'pct': pct})
+        total_p += r['present']
+        total_t += r['total']
+    overall_pct = round(total_p / total_t * 100, 1) if total_t else None
+
+    # Results summary
+    results = list(Result.objects.filter(student=student).order_by('semester').values('semester', 'sgpa', 'percentage'))
+    cgpa = round(sum(r['sgpa'] for r in results) / len(results), 2) if results else None
+
+    return JsonResponse({
+        'id': student.pk,
+        'name': student.user.get_full_name() or student.user.username,
+        'roll_number': student.roll_number,
+        'email': student.user.email,
+        'semester': student.current_semester,
+        'section': student.section or '—',
+        'status': student.status,
+        'admission_year': student.admission_year,
+        'admission_type': student.get_admission_type_display(),
+        'dob': dob,
+        'gender': gender,
+        'phone': phone,
+        'overall_attendance': overall_pct,
+        'attendance': att_list,
+        'results': [{'semester': r['semester'], 'sgpa': round(r['sgpa'], 2), 'pct': round(r['percentage'], 1)} for r in results],
+        'cgpa': cgpa,
+        'profile_url': f'/dashboard/hod/student/{student.pk}/',
     })
 
 
@@ -2628,7 +2884,7 @@ def hod_student_profile(request, pk):
         session__subject__in=subjects
     ).select_related('session__subject').order_by('-session__date')[:10]
 
-    return render(request, 'hod/student_profile.html', {
+    ctx = {
         'hod': hod, 'dept': dept, 'college': college,
         'student': student,
         'attendance_data': attendance_data,
@@ -2640,7 +2896,10 @@ def hod_student_profile(request, pk):
         'pending_assignments': pending_assignments,
         'recent_absences': recent_absences,
         'branding': _get_college_branding(college),
-    })
+    }
+    if request.GET.get('modal'):
+        return render(request, 'hod/student_profile_fragment.html', ctx)
+    return render(request, 'hod/student_profile.html', ctx)
 
 
 @login_required
@@ -2686,9 +2945,32 @@ def hod_faculty_profile(request, pk):
     ).count()
 
     # Leave history
-    leave_history = LeaveApplication.objects.filter(faculty=faculty).order_by('-from_date')[:8]
+    leave_history = LeaveApplication.objects.filter(faculty=faculty).order_by('-from_date')[:10]
 
-    return render(request, 'hod/faculty_profile.html', {
+    # Feedback average from student feedback cycles
+    feedback_avg = None
+    try:
+        responses = FacultyFeedbackResponse.objects.filter(cycle__faculty=faculty)
+        ratings = []
+        for r in responses:
+            for v in r.ratings.values():
+                try:
+                    ratings.append(float(v))
+                except (TypeError, ValueError):
+                    pass
+        if ratings:
+            feedback_avg = round(sum(ratings) / len(ratings), 1)
+    except Exception:
+        pass
+
+    # Leave summary counts
+    leave_summary = {
+        'approved': LeaveApplication.objects.filter(faculty=faculty, status='APPROVED').count(),
+        'pending': LeaveApplication.objects.filter(faculty=faculty, status='PENDING').count(),
+        'rejected': LeaveApplication.objects.filter(faculty=faculty, status='REJECTED').count(),
+    }
+
+    ctx = {
         'hod': hod, 'dept': dept, 'college': dept.college,
         'faculty': faculty,
         'assigned_subjects': assigned_subjects,
@@ -2697,8 +2979,13 @@ def hod_faculty_profile(request, pk):
         'sessions_total': sessions_total,
         'pending_reviews': pending_reviews,
         'leave_history': leave_history,
+        'feedback_avg': feedback_avg,
+        'leave_summary': leave_summary,
         'branding': _get_college_branding(dept.college),
-    })
+    }
+    if request.GET.get('modal'):
+        return render(request, 'hod/faculty_profile_fragment.html', ctx)
+    return render(request, 'hod/faculty_profile.html', ctx)
 
 
 # ── FACULTY DASHBOARD ────────────────────────────────────
@@ -2720,6 +3007,76 @@ def _non_teaching_faculty_dashboard(request, faculty):
         'my_requests_count': my_requests_qs.filter(status='PENDING').count(),
         'notifications': notifications,
         'branding': _get_college_branding(college),
+    })
+
+
+@login_required
+def faculty_student_profile_fragment(request, pk):
+    """Faculty views a student's full profile in a modal — attendance, marks, quizzes, assignments."""
+    try:
+        faculty = Faculty.objects.select_related('department').get(user=request.user)
+    except Faculty.DoesNotExist:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    student = get_object_or_404(Student, pk=pk, department=faculty.department)
+    subject_ids = list(FacultySubject.objects.filter(faculty=faculty).values_list('subject_id', flat=True))
+    subjects = Subject.objects.filter(id__in=subject_ids, semester=student.current_semester)
+
+    # Attendance per subject this semester
+    att_agg = Attendance.objects.filter(
+        student=student, session__subject__in=subjects
+    ).values('session__subject_id', 'session__subject__name').annotate(
+        total=Count('id'), present=Count('id', filter=Q(status='PRESENT'))
+    )
+    att_data = []
+    total_p = total_t = 0
+    for r in att_agg:
+        pct = round(r['present'] / r['total'] * 100, 1) if r['total'] else None
+        att_data.append({'name': r['session__subject__name'], 'present': r['present'], 'total': r['total'], 'pct': pct})
+        total_p += r['present']; total_t += r['total']
+    overall_att = round(total_p / total_t * 100, 1) if total_t else None
+
+    # Internal marks per subject
+    im_qs = InternalMark.objects.filter(student=student, subject__in=subjects).select_related('subject')
+    im_data = [{'subject': im.subject.name, 'ia1': im.ia1, 'ia2': im.ia2,
+                'assignment': im.assignment_marks, 'attendance': im.attendance_marks,
+                'total': im.total} for im in im_qs]
+
+    # Quiz attempts for faculty's quizzes
+    quiz_qs = QuizAttempt.objects.filter(
+        student=student, quiz__subject_id__in=subject_ids, is_submitted=True
+    ).select_related('quiz__subject').order_by('-submitted_at')
+    quiz_data = [{'quiz': qa.quiz.title, 'subject': qa.quiz.subject.name,
+                  'score': qa.score, 'max': qa.quiz.total_marks,
+                  'pct': round(qa.score / qa.quiz.total_marks * 100, 1) if qa.score and qa.quiz.total_marks else None}
+                 for qa in quiz_qs]
+
+    # Assignment submissions for faculty's assignments
+    asn_qs = AssignmentSubmission.objects.filter(
+        student=student, assignment__created_by=request.user,
+        assignment__subject_id__in=subject_ids
+    ).select_related('assignment__subject').order_by('-submitted_at')
+    asn_data = [{'title': s.assignment.title, 'subject': s.assignment.subject.name,
+                 'marks': s.marks, 'max': s.assignment.max_marks,
+                 'submitted': True,
+                 'pct': round(s.marks / s.assignment.max_marks * 100, 1) if s.marks and s.assignment.max_marks else None}
+                for s in asn_qs]
+    # Also find assignments not submitted
+    all_asn = Assignment.objects.filter(created_by=request.user, subject_id__in=subject_ids, is_published=True)
+    submitted_ids = set(asn_qs.values_list('assignment_id', flat=True))
+    for a in all_asn:
+        if a.id not in submitted_ids:
+            asn_data.append({'title': a.title, 'subject': a.subject.name,
+                             'marks': None, 'max': a.max_marks, 'submitted': False, 'pct': None})
+
+    return render(request, 'faculty/student_profile_fragment.html', {
+        'student': student,
+        'overall_att': overall_att,
+        'att_data': att_data,
+        'im_data': im_data,
+        'quiz_data': quiz_data,
+        'asn_data': asn_data,
     })
 
 
@@ -2873,7 +3230,7 @@ def faculty_dashboard(request):
     # Leave applications
     leave_history = LeaveApplication.objects.filter(faculty=faculty).order_by('-from_date')[:8]
 
-    announcements = _scope_announcements_for_college(faculty.department.college).order_by('-created_at').select_related('created_by')[:10]
+    announcements = _scope_announcements_for_college(faculty.department.college, target='faculty').order_by('-created_at').select_related('created_by')[:20]
 
     # Today's breaks for faculty's college
     faculty_today_breaks = list(TimetableBreak.objects.filter(
@@ -3211,6 +3568,22 @@ def faculty_dashboard(request):
     context['at_risk_students'] = at_risk_students
     context['recent_absent'] = list(recent_absent_qs)
     context['analytics_subjects'] = analytics_subjects
+
+    # Pass full student list + per-student subject breakdown for the new students pane
+    # Build internal marks map: {student_id: {subject_id: InternalMark}}
+    im_qs = InternalMark.objects.filter(subject_id__in=subject_ids).values(
+        'student_id', 'subject_id', 'ia1', 'ia2', 'assignment_marks', 'attendance_marks'
+    )
+    stu_im_map = {}
+    for im in im_qs:
+        stu_im_map.setdefault(im['student_id'], {})[im['subject_id']] = im
+
+    context['analytics_students'] = sorted(analytics_students, key=lambda x: (x['student'].current_semester, x['student'].section or '', x['student'].roll_number))
+    context['stu_subj_att_map'] = stu_subj_map
+    context['stu_marks_map'] = stu_marks_map
+    context['stu_im_map'] = stu_im_map
+    context['fac_subjects'] = subjects
+    context['notifications'] = Notification.objects.filter(user=user, is_read=False).order_by('-created_at')[:20]
 
     return render(request, 'dashboards/faculty.html', context)
 
@@ -4245,7 +4618,7 @@ def faculty_lesson_plans(request, subject_id):
             plan.status = 'SUBMITTED'
             plan.save(update_fields=['actual_date', 'status'])
             messages.success(request, 'Marked as completed.')
-        return redirect('faculty_lesson_plans', subject_id=subject_id)
+        return redirect(f'/dashboard/faculty/#subjects')
 
     return render(request, 'faculty/lesson_plans.html', {'subject': subject, 'plans': plans, 'faculty': faculty})
 
@@ -4624,7 +4997,7 @@ def student_dashboard(request):
     ).select_related('assignment__subject').order_by('-submitted_at')[:5]
 
     # Announcements
-    announcements = _scope_announcements_for_college(student.department.college).order_by('-created_at')[:5]
+    announcements = _scope_announcements_for_college(student.department.college, target='students').order_by('-created_at')[:20]
 
     # Course structure — all subjects for current semester with faculty
     course_subjects = Subject.objects.filter(
@@ -5009,7 +5382,9 @@ def student_dashboard(request):
     context['student_hall_tickets'] = student_hall_tickets
     context['total_semester_credits'] = sum(s.credits or 0 for s in course_subjects)
 
-    return render(request, 'dashboards/student.html', context)
+    resp = render(request, 'dashboards/student.html', context)
+    resp['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return resp
 
 
 @login_required
@@ -8831,6 +9206,8 @@ def exam_dashboard(request):
         'hall_tickets_issued': hall_tickets_issued,
         'detained_students': detained_students,
         'recent_log': recent_log,
+        'announcements': _scope_announcements_for_college(college).order_by('-created_at')[:10],
+        'notifications': Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:20],
         'branding': _get_college_branding(college),
     }
     return render(request, 'exam/dashboard.html', context)
@@ -10073,7 +10450,6 @@ def hod_exemptions(request):
             ).update(status=action, reviewed_by=request.user, review_note=note)
             messages.success(request, f'{updated} exemption(s) {action.lower()}.')
         elif not batch_ids:
-            # Single item (legacy)
             ex_id = request.POST.get('exemption_id')
             ex = get_object_or_404(AttendanceExemption, pk=ex_id, student__department=hod.department)
             if action in ('APPROVED', 'REJECTED'):
@@ -10082,13 +10458,27 @@ def hod_exemptions(request):
                 ex.review_note = note
                 ex.save()
                 messages.success(request, f'Exemption {action.lower()}.')
+
+        # Re-fetch after POST so partial re-render shows updated state
+        exemptions = AttendanceExemption.objects.filter(
+            student__department=hod.department
+        ).select_related('student__user').order_by('-created_at')[:50]
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            ctx = {'exemptions': exemptions, 'hod': hod,
+                   'college': hod.department.college,
+                   'branding': _get_college_branding(hod.department.college)}
+            return render(request, 'attendance/hod_exemptions_partial.html', ctx)
         return redirect('hod_exemptions')
 
-    return render(request, 'attendance/hod_exemptions.html', {
+    ctx = {
         'exemptions': exemptions, 'hod': hod,
         'college': hod.department.college,
         'branding': _get_college_branding(hod.department.college),
-    })
+    }
+    if request.GET.get('partial') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'attendance/hod_exemptions_partial.html', ctx)
+    return render(request, 'attendance/hod_exemptions.html', ctx)
 
 
 # ── HOD DEFAULTERS REPORT ─────────────────────────────────────────────────────
@@ -10130,13 +10520,16 @@ def hod_defaulters_report(request):
 
     semesters = Student.objects.filter(department=dept, status='ACTIVE').values_list('current_semester', flat=True).distinct().order_by('current_semester')
 
-    return render(request, 'attendance/hod_defaulters.html', {
+    ctx = {
         'rows': rows, 'hod': hod, 'dept': dept,
         'college': college,
         'semester_filter': semester_filter,
         'semesters': semesters,
         'branding': _get_college_branding(college),
-    })
+    }
+    if request.GET.get('partial') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'attendance/hod_defaulters_partial.html', ctx)
+    return render(request, 'attendance/hod_defaulters.html', ctx)
 
 
 # ── ELIGIBILITY OVERRIDE (EXAM CELL) ─────────────────────────────────────────
@@ -11440,14 +11833,17 @@ def hod_hall_tickets(request):
             'withheld': ht_qs.filter(status='WITHHELD').count(),
         })
 
-    return render(request, 'admin_panel/hall_tickets.html', {
+    ctx = {
         'exam_summaries': exam_summaries,
         'departments': [],
         'dept_filter': None,
         'branding': _get_college_branding(college),
         'college': college,
         'hod_dept': dept,
-    })
+    }
+    if request.GET.get('partial') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'hod/hall_tickets_partial.html', ctx)
+    return render(request, 'admin_panel/hall_tickets.html', ctx)
 
 
 @login_required
@@ -11516,6 +11912,14 @@ def hod_exam_hall_tickets(request, exam_id):
             'override': override,
         })
 
+    def _row_counts(rows):
+        return {
+            'total': len(rows),
+            'eligible': sum(1 for r in rows if r['auto_status'] == 'ELIGIBLE'),
+            'detained': sum(1 for r in rows if r['auto_status'] == 'DETAINED'),
+            'withheld': sum(1 for r in rows if r['auto_status'] == 'WITHHELD'),
+        }
+
     if request.method == 'POST':
         action = request.POST.get('action')
 
@@ -11560,6 +11964,17 @@ def hod_exam_hall_tickets(request, exam_id):
                 else:
                     updated += 1
             messages.success(request, f'Hall tickets generated: {created} new, {updated} updated.')
+            # Re-fetch after generate
+            existing_ht = {ht.student_id: ht for ht in HallTicket.objects.filter(exam=exam, student__department=dept)}
+            existing_overrides = {ov.student_id: ov for ov in EligibilityOverride.objects.filter(exam=exam, student__department=dept)}
+            for r in rows:
+                r['hall_ticket'] = existing_ht.get(r['student'].id)
+                r['override'] = existing_overrides.get(r['student'].id)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                ctx = {'hod': hod, 'dept': dept, 'exam': exam, 'rows': rows,
+                       'threshold': threshold, 'counts': _row_counts(rows),
+                       'branding': _get_college_branding(college)}
+                return render(request, 'hod/exam_hall_tickets_partial.html', ctx)
             return redirect('hod_exam_hall_tickets', exam_id=exam.pk)
 
         elif action == 'request_exemption':
@@ -11582,13 +11997,26 @@ def hod_exam_hall_tickets(request, exam_id):
                     status='PENDING',
                 )
                 messages.success(request, f'Exemption request submitted for {student_obj.roll_number}. Awaiting college admin approval.')
+            # Re-fetch overrides
+            existing_overrides = {ov.student_id: ov for ov in EligibilityOverride.objects.filter(exam=exam, student__department=dept)}
+            for r in rows:
+                r['override'] = existing_overrides.get(r['student'].id)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                ctx = {'hod': hod, 'dept': dept, 'exam': exam, 'rows': rows,
+                       'threshold': threshold, 'counts': _row_counts(rows),
+                       'branding': _get_college_branding(college)}
+                return render(request, 'hod/exam_hall_tickets_partial.html', ctx)
             return redirect('hod_exam_hall_tickets', exam_id=exam.pk)
 
-    return render(request, 'hod/exam_hall_tickets.html', {
+    is_partial = request.GET.get('partial') or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    ctx = {
         'hod': hod, 'dept': dept, 'exam': exam, 'rows': rows,
-        'threshold': threshold,
+        'threshold': threshold, 'counts': _row_counts(rows),
         'branding': _get_college_branding(college),
-    })
+    }
+    if is_partial:
+        return render(request, 'hod/exam_hall_tickets_partial.html', ctx)
+    return render(request, 'hod/exam_hall_tickets.html', ctx)
 
 
 
@@ -11796,3 +12224,120 @@ def admin_leave_quotas(request):
             ('max_od_leaves',      'On Duty (OD)',       cfg.max_od_leaves),
         ],
     })
+
+
+@login_required
+def admin_college_settings(request):
+    """
+    Consolidated college configuration page.
+    Covers: feature toggles, evaluation scheme (CGPA), hall ticket rules summary,
+    leave/substitution quotas, and attendance rule overview.
+    """
+    if not _admin_guard(request):
+        return redirect('dashboard')
+    college = _get_admin_college(request)
+    cfg, _ = CollegeFeatureConfig.objects.get_or_create(college=college)
+    departments = _scope_departments(request).order_by('name')
+
+    # Evaluation scheme — college-wide default
+    scheme = EvaluationScheme.objects.filter(college=college, department__isnull=True, is_active=True).first()
+
+    # Attendance rules summary
+    att_rules = AttendanceRule.objects.filter(college=college).select_related('department').order_by('department__name', 'semester')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # ── Feature toggles ──────────────────────────────────────────────────
+        if action == 'features':
+            bool_fields = [
+                'enable_electives', 'enable_online_payment', 'enable_quiz_module',
+                'enable_assignment_module', 'enable_lesson_plans', 'enable_helpdesk',
+                'enable_supply_exam', 'enable_revaluation', 'enable_grace_marks',
+                'enable_fee_installments', 'require_hod_for_attendance_correction',
+                'require_principal_for_result_publish', 'auto_promote_students',
+            ]
+            for field in bool_fields:
+                setattr(cfg, field, request.POST.get(field) == 'on')
+            cfg.save()
+            messages.success(request, 'Feature settings updated.')
+
+        # ── Leave & substitution quotas ───────────────────────────────────────
+        elif action == 'quotas':
+            cfg.max_casual_leaves  = _safe_int(request.POST.get('max_casual_leaves'),  12)
+            cfg.max_medical_leaves = _safe_int(request.POST.get('max_medical_leaves'), 10)
+            cfg.max_earned_leaves  = _safe_int(request.POST.get('max_earned_leaves'),  15)
+            cfg.max_od_leaves      = _safe_int(request.POST.get('max_od_leaves'),      20)
+            cfg.max_substitutions  = _safe_int(request.POST.get('max_substitutions'),  10)
+            cfg.save(update_fields=[
+                'max_casual_leaves', 'max_medical_leaves', 'max_earned_leaves',
+                'max_od_leaves', 'max_substitutions'
+            ])
+            messages.success(request, 'Leave and substitution quotas updated.')
+
+        # ── Evaluation scheme (CGPA) ──────────────────────────────────────────
+        elif action == 'scheme':
+            name         = request.POST.get('scheme_name', 'Default Scheme').strip()
+            grading_type = request.POST.get('grading_type', 'CREDIT')
+            cie_count    = _safe_int(request.POST.get('cie_count'), 2)
+            cie_best_of  = _safe_int(request.POST.get('cie_best_of'), 2)
+            cie_max      = _safe_int(request.POST.get('cie_max_per_test'), 25)
+            cie_total    = _safe_int(request.POST.get('cie_total_max'), 50)
+            see_max      = _safe_int(request.POST.get('see_max'), 100)
+            see_scaled   = _safe_int(request.POST.get('see_scaled_to'), 50)
+            see_pass     = _safe_int(request.POST.get('see_passing_min'), 20)
+            overall_pass = _safe_int(request.POST.get('overall_passing_min'), 40)
+
+            if scheme:
+                scheme.name = name
+                scheme.grading_type = grading_type
+                scheme.cie_count = cie_count
+                scheme.cie_best_of = cie_best_of
+                scheme.cie_max_per_test = cie_max
+                scheme.cie_total_max = cie_total
+                scheme.see_max = see_max
+                scheme.see_scaled_to = see_scaled
+                scheme.see_passing_min = see_pass
+                scheme.overall_passing_min = overall_pass
+                scheme.save()
+            else:
+                scheme = EvaluationScheme.objects.create(
+                    college=college, department=None, name=name,
+                    grading_type=grading_type, cie_count=cie_count,
+                    cie_best_of=cie_best_of, cie_max_per_test=cie_max,
+                    cie_total_max=cie_total, see_max=see_max,
+                    see_scaled_to=see_scaled, see_passing_min=see_pass,
+                    overall_passing_min=overall_pass, is_active=True,
+                )
+            messages.success(request, 'Evaluation scheme updated.')
+
+        return redirect('admin_college_settings')
+
+    ctx = {
+        'cfg': cfg, 'college': college, 'scheme': scheme,
+        'att_rules': att_rules, 'departments': departments,
+        'branding': _get_college_branding(college),
+        'grading_choices': EvaluationScheme.GRADING_CHOICES,
+        'leave_fields': [
+            ('max_casual_leaves',  'Casual Leave (CL)',  cfg.max_casual_leaves),
+            ('max_medical_leaves', 'Medical Leave (ML)', cfg.max_medical_leaves),
+            ('max_earned_leaves',  'Earned Leave (EL)',  cfg.max_earned_leaves),
+            ('max_od_leaves',      'On Duty (OD)',       cfg.max_od_leaves),
+        ],
+        'feature_toggles': [
+            ('enable_electives',                    'Elective Courses',             'Allow students to register for elective subjects',                  cfg.enable_electives),
+            ('enable_online_payment',               'Online Fee Payment',           'Enable Razorpay payment gateway for fees',                          cfg.enable_online_payment),
+            ('enable_quiz_module',                  'Quiz Module',                  'Faculty can create and assign quizzes',                             cfg.enable_quiz_module),
+            ('enable_assignment_module',            'Assignment Module',            'Faculty can create assignments; students submit online',             cfg.enable_assignment_module),
+            ('enable_lesson_plans',                 'Lesson Plans',                 'Faculty can upload lesson plans per subject',                        cfg.enable_lesson_plans),
+            ('enable_helpdesk',                     'Help Desk',                    'Students and staff can raise support tickets',                       cfg.enable_helpdesk),
+            ('enable_supply_exam',                  'Supplementary Exams',          'Students can register for supply exams for failed subjects',         cfg.enable_supply_exam),
+            ('enable_revaluation',                  'Revaluation Requests',         'Students can request revaluation of answer scripts',                 cfg.enable_revaluation),
+            ('enable_grace_marks',                  'Grace Marks',                  'Exam dept can apply grace marks to borderline students',             cfg.enable_grace_marks),
+            ('enable_fee_installments',             'Fee Installments',             'Allow partial fee payments in installments',                         cfg.enable_fee_installments),
+            ('require_hod_for_attendance_correction','HOD Approval for Attendance Correction', 'Attendance corrections need HOD sign-off',               cfg.require_hod_for_attendance_correction),
+            ('require_principal_for_result_publish','Principal Approval for Results','Results need principal approval before publishing',                 cfg.require_principal_for_result_publish),
+            ('auto_promote_students',               'Auto-Promote Students',        'Automatically move students to next semester at year end',           cfg.auto_promote_students),
+        ],
+    }
+    return render(request, 'admin_panel/college_settings.html', ctx)

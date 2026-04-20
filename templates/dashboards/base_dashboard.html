@@ -93,8 +93,6 @@
       </div>
     </div>
 
-    {% block quick_nav %}{% endblock %}
-
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }} auto-dismiss-msg" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <span><i class="fas fa-circle-info"></i> {{ message }}</span>
@@ -105,6 +103,32 @@
     {% block dashboard_content %}{% endblock %}
   </main>
 </div>
+
+{% block quick_nav %}{% endblock %}
+
+<style>
+/* Inline bottom nav — guaranteed to load regardless of static file caching */
+.mob-bottom-nav{display:none}
+@media(max-width:860px){
+  .mob-bottom-nav{
+    display:flex!important;position:fixed;bottom:0;left:0;right:0;z-index:9000;
+    background:#fff;border-top:2px solid #d8e4ea;
+    box-shadow:0 -4px 20px rgba(7,30,38,.12);
+    height:58px;align-items:stretch;
+  }
+  .mob-bottom-nav a{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;font-size:9px;font-weight:700;color:#5a7080;text-decoration:none;
+    text-transform:uppercase;letter-spacing:.4px;padding:6px 2px;
+    border-top:2px solid transparent;
+  }
+  .mob-bottom-nav a i{font-size:17px}
+  .mob-bottom-nav a.active{color:#0d7377;border-top-color:#0d7377}
+  .db-main{padding-bottom:72px!important}
+  /* Pure CSS: hide bottom nav whenever sidebar is open */
+  body:has(#db-sidebar.open) .mob-bottom-nav{display:none!important}
+}
+</style>
 <script>
 // Auto-dismiss flash messages after 5 seconds
 document.querySelectorAll('.auto-dismiss-msg').forEach(function(el) {
@@ -389,7 +413,6 @@ body{overflow:hidden}
   if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
   if (overlay)  overlay.addEventListener('click', closeSidebar);
 })();
-
 /* ---- Session countdown ---- */
 (function() {
   var secs = {{ request.session_seconds_left|default:1800 }};
