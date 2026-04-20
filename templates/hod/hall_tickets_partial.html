@@ -1,0 +1,79 @@
+{# Hall tickets list partial — rendered inside HOD dashboard pane #}
+<div id="ht-list-view">
+
+{% if messages %}
+{% for msg in messages %}
+<div style="padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:600;
+  background:{% if 'success' in msg.tags %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div style="margin-bottom:16px">
+  <div style="font-size:15px;font-weight:800;color:var(--deep);margin-bottom:4px">
+    <i class="fas fa-id-card-clip" style="color:var(--teal)"></i> Hall Ticket Management
+  </div>
+  <div style="font-size:12px;color:var(--muted)">Click an exam to generate or manage hall tickets inline.</div>
+</div>
+
+{% if exam_summaries %}
+<div class="d-card" style="padding:0;overflow:hidden">
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th>Examination</th>
+          <th style="text-align:center">Sem</th>
+          <th style="text-align:center">Date</th>
+          <th style="text-align:center">Issued</th>
+          <th style="text-align:center">Detained</th>
+          <th style="text-align:center">Withheld</th>
+          <th style="text-align:center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for es in exam_summaries %}
+        <tr>
+          <td style="font-weight:600;color:var(--deep)">{{ es.exam.name }}</td>
+          <td style="text-align:center;color:var(--muted)">{{ es.exam.semester }}</td>
+          <td style="text-align:center;color:var(--muted);font-size:12px">{{ es.exam.start_date|date:"d M Y"|default:"—" }}</td>
+          <td style="text-align:center;font-size:13px;font-weight:700;color:var(--teal)">
+            {{ es.issued }}{% if es.total > 0 %}<span style="font-size:11px;color:var(--muted)">/{{ es.total }}</span>{% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if es.detained > 0 %}<span style="font-size:13px;font-weight:700;color:#dc2626">{{ es.detained }}</span>
+            {% else %}<span style="color:var(--muted)">0</span>{% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if es.withheld > 0 %}<span style="font-size:13px;font-weight:700;color:#b88510">{{ es.withheld }}</span>
+            {% else %}<span style="color:var(--muted)">0</span>{% endif %}
+          </td>
+          <td style="text-align:center">
+            <button onclick="htLoadExam({{ es.exam.pk }})"
+              style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--teal);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;white-space:nowrap">
+              <i class="fas fa-{% if es.total == 0 %}wand-magic-sparkles{% else %}eye{% endif %}"></i>
+              {% if es.total == 0 %}Generate{% else %}Manage{% endif %}
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty"><i class="fas fa-id-card-clip"></i>No exams found. Create exams first from the admin panel.</div>
+{% endif %}
+
+<div style="margin-top:16px;background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:10px;padding:14px;font-size:12px;color:var(--muted);line-height:1.8">
+  <strong style="color:var(--teal)"><i class="fas fa-circle-info"></i> How it works:</strong>
+  Click <strong>Generate</strong> to run eligibility checks and issue hall tickets.
+  <strong style="color:#dc2626">Detained</strong> = below attendance threshold.
+  <strong style="color:#b88510">Withheld</strong> = fee dues pending.
+</div>
+
+</div>{# end #ht-list-view #}
+
+{# Exam detail view — injected here inline #}
+<div id="ht-exam-view" style="display:none"></div>

@@ -1,0 +1,104 @@
+{# Substitutions partial — no extends, rendered inside HOD dashboard pane #}
+{% if messages %}
+{% for msg in messages %}
+<div style="padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:600;
+  background:{% if 'success' in msg.tags %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-clock"></i> Assign Substitution</div>
+    <form method="POST" action="{% url 'hod_substitutions' %}" id="sub-form-inline">
+      {% csrf_token %}
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Timetable Slot <span style="color:#ef4444">*</span></label>
+        <select name="slot_id" id="slot-select-inline" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;outline:none;background:#fff" required onchange="filterSubFacultyInline(this.value)">
+          <option value="">Select slot</option>
+          {% for slot in slots %}
+          <option value="{{ slot.pk }}" data-faculty-id="{{ slot.faculty_id }}">{{ slot.get_day_of_week_display }} {{ slot.start_time|time:"g:i A" }} &mdash; {{ slot.subject.name }}{% if slot.section %} [Sec {{ slot.section }}]{% endif %} ({{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Substitute Faculty <span style="color:#ef4444">*</span></label>
+        <select name="substitute_faculty_id" id="sub-faculty-select-inline" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;outline:none;background:#fff" required>
+          <option value="">Select slot first</option>
+          {% for f in faculty_list %}
+          <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }}</option>
+          {% endfor %}
+        </select>
+        <div id="sub-faculty-hint-inline" style="font-size:11px;color:var(--muted);margin-top:4px;display:none">
+          <i class="fas fa-circle-info"></i> The original faculty is excluded from this list.
+        </div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--deep);margin-bottom:6px">Date <span style="color:#ef4444">*</span></label>
+        <input type="date" name="date" value="{{ today }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;outline:none" required/>
+      </div>
+      <button type="submit" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer">
+        <i class="fas fa-check"></i> Assign Substitution
+      </button>
+    </form>
+  </div>
+
+  <div class="d-card">
+    <div class="d-title"><i class="fas fa-list-check"></i> Upcoming Substitutions</div>
+    {% if substitutions %}
+    <div class="content-scroll">
+      {% for sub in substitutions %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.timetable_slot.subject.name }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">
+          {{ sub.date|date:"d M Y" }} &nbsp;&middot;&nbsp;
+          <span style="color:var(--red)">{{ sub.original_faculty.user.get_full_name|default:sub.original_faculty.user.username }}</span>
+          <i class="fas fa-arrow-right" style="font-size:9px;margin:0 4px"></i>
+          <span style="color:var(--teal)">{{ sub.substitute_faculty.user.get_full_name|default:sub.substitute_faculty.user.username }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-calendar-check"></i>No upcoming substitutions.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+var SLOT_FACULTY_MAP_INLINE = {{ slot_faculty_json }};
+
+function filterSubFacultyInline(slotId) {
+  var subSelect = document.getElementById('sub-faculty-select-inline');
+  var hint = document.getElementById('sub-faculty-hint-inline');
+  subSelect.value = '';
+  Array.from(subSelect.options).forEach(function(opt) { opt.hidden = false; opt.disabled = false; });
+  if (!slotId) { subSelect.options[0].text = 'Select slot first'; hint.style.display = 'none'; return; }
+  subSelect.options[0].text = 'Select substitute faculty';
+  var origPk = SLOT_FACULTY_MAP_INLINE[String(slotId)];
+  if (origPk === undefined) return;
+  Array.from(subSelect.options).forEach(function(opt) {
+    if (parseInt(opt.value, 10) === origPk) { opt.hidden = true; opt.disabled = true; if (opt.selected) opt.selected = false; }
+  });
+  hint.style.display = 'block';
+}
+
+// Intercept form submit — POST then reload the pane
+document.getElementById('sub-form-inline').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var form = this;
+  var data = new FormData(form);
+  fetch(form.action + '?partial=1', {
+    method: 'POST',
+    headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': data.get('csrfmiddlewaretoken')},
+    body: data
+  })
+  .then(function(r) { return r.text(); })
+  .then(function(html) {
+    var inner = document.getElementById('substitutions-pane-inner');
+    if (inner) inner.innerHTML = html;
+  })
+  .catch(function(err) { console.error(err); });
+});
+</script>

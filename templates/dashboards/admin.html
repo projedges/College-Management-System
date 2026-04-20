@@ -1,7 +1,6 @@
 {% extends 'dashboards/base_dashboard.html' %}
 {% block title %}College Admin Dashboard{% endblock %}
 {% block dashboard_default_section %}overview{% endblock %}
-{% block dashboard_section_aliases %}{"academics":"departments"}{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}College Admin Workspace{% endblock %}
@@ -14,14 +13,22 @@
 <a href="#workflow"      data-section-target="workflow"       class="sb-link"><i class="fas fa-compass"></i> Start Here</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Manage</p>
-<a href="#departments"   data-section-target="departments"   class="sb-link"><i class="fas fa-building"></i> Departments</a>
+<a href="#departments"   data-section-target="departments"   class="sb-link"><i class="fas fa-building"></i> Departments &amp; Subjects</a>
 <a href="#requests"      data-section-target="requests"      class="sb-link"><i class="fas fa-inbox"></i> Invite &amp; Requests{% if pending_requests %} <span style="margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ pending_requests }}</span>{% endif %}</a>
 <a href="#students"      data-section-target="students"      class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="#bulk"          data-section-target="bulk"          class="sb-link"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
 <a href="#faculty"       data-section-target="faculty"       class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
-<a href="#academics"     data-section-target="academics"     class="sb-link"><i class="fas fa-book"></i> Academics</a>
 <a href="#planner"       data-section-target="planner"       class="sb-link"><i class="fas fa-calendar-days"></i> Semester Planner</a>
 <a href="#exams"         data-section-target="exams"         class="sb-link"><i class="fas fa-file-pen"></i> Exams</a>
+
+<p class="sb-nav-label" style="margin-top:12px">Configuration</p>
+<a href="{% url 'admin_college_settings' %}" class="sb-link"><i class="fas fa-gear"></i> College Settings</a>
+<a href="{% url 'admin_attendance_rules' %}" class="sb-link"><i class="fas fa-sliders"></i> Attendance Rules</a>
+<a href="{% url 'admin_leave_quotas' %}" class="sb-link"><i class="fas fa-calendar-minus"></i> Leave &amp; Substitution Quotas</a>
+<a href="{% url 'admin_regulations' %}" class="sb-link"><i class="fas fa-scroll"></i> Regulations &amp; Curriculum</a>
+<a href="{% url 'admin_sections' %}" class="sb-link"><i class="fas fa-layer-group"></i> Sections</a>
+<a href="{% url 'admin_ssf_map' %}" class="sb-link"><i class="fas fa-diagram-project"></i> Student-Faculty Mapping</a>
+<a href="{% url 'admin_elective_pools' %}" class="sb-link"><i class="fas fa-list-check"></i> Elective Pools</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Finance &amp; Comms</p>
 <a href="#finance"       data-section-target="finance"       class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>
@@ -29,6 +36,7 @@
 <a href="#helpdesk"      data-section-target="helpdesk"      class="sb-link"><i class="fas fa-headset"></i> Help Desk{% if open_helpdesk_tickets %} <span style="margin-left:auto;background:var(--gold);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ open_helpdesk_tickets }}</span>{% endif %}</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Reports</p>
+<a href="{% url 'admin_semester_results' %}" class="sb-link"><i class="fas fa-square-poll-horizontal"></i> Semester Results</a>
 <a href="#reports"       data-section-target="reports"       class="sb-link"><i class="fas fa-download"></i> Export Reports</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Platform</p>
@@ -384,9 +392,6 @@
   </div>
   {% endif %}
 </section>
-
-<!-- ACADEMICS (redirects to departments) -->
-<section data-dashboard-pane="academics" class="dashboard-pane"></section>
 
 <!-- DEPARTMENTS -->
 <section data-dashboard-pane="departments" class="dashboard-pane">
@@ -787,6 +792,16 @@
   </div>
 </section>
 
+{% endblock %}
+
+{% block quick_nav %}
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#overview"      data-section-target="overview"      data-mob-nav="overview"><i class="fas fa-home"></i>Home</a>
+  <a href="#students"      data-section-target="students"      data-mob-nav="students"><i class="fas fa-user-graduate"></i>Students</a>
+  <a href="#faculty"       data-section-target="faculty"       data-mob-nav="faculty"><i class="fas fa-chalkboard-teacher"></i>Faculty</a>
+  <a href="#departments"   data-section-target="departments"   data-mob-nav="departments"><i class="fas fa-book"></i>Academics</a>
+  <a href="#finance"       data-section-target="finance"       data-mob-nav="finance"><i class="fas fa-indian-rupee-sign"></i>Finance</a>
+</nav>
 {% endblock %}
 
 {% block extra_js %}

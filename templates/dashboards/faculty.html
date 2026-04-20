@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Faculty Dashboard - EduTrack{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block role_label_foot %}Faculty{% endblock %}
@@ -13,7 +13,8 @@
 <a href="#students"     data-section-target="students"     class="sb-link"><i class="fas fa-user-graduate"></i> My Students</a>
 <a href="#leave"        data-section-target="leave"        class="sb-link"><i class="fas fa-calendar-minus"></i> Leave &amp; Requests</a>
 <a href="#substitution" data-section-target="substitution" class="sb-link"><i class="fas fa-people-arrows"></i> Substitution</a>
-<a href="#notices"    data-section-target="notices"    class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#library"      data-section-target="library"      class="sb-link"><i class="fas fa-book-open-reader"></i> Library</a>
+<a href="#inbox"      data-section-target="inbox"      class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
 {% endblock %}
 
 {% block extra_css %}
@@ -90,11 +91,15 @@
   .fac-radio-lbl:has(input:checked){border-color:var(--teal);background:rgba(13,115,119,.05)}
   .fac-radio-lbl span{font-weight:600;color:var(--deep)}
   .fac-radio-lbl small{color:var(--muted);font-size:11px}
+  /* Faculty profile rows */
+  .fac-profile-grid{display:grid;gap:0}
+  .fac-profile-row{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;align-items:start}
+  .fac-profile-row:last-child{border-bottom:none}
+  .fac-profile-lbl{font-size:12px;color:var(--muted);font-weight:600}
+  .fac-profile-val{font-size:13px;font-weight:700;color:var(--deep);word-break:break-word}
   @media(max-width:860px){
     .subj-card{flex-wrap:wrap}
     .subj-actions{width:100%;margin-left:0;justify-content:flex-start;flex-wrap:wrap}
-    .faculty-stat-grid{grid-template-columns:repeat(2,1fr)}
-    .tt-day-grid{grid-template-columns:1fr}
     .marks-table{min-width:480px}
     .quiz-card-grid{grid-template-columns:1fr}
     .lesson-plan-row{flex-wrap:wrap;gap:8px}
@@ -102,14 +107,92 @@
   @media(max-width:600px){
     .subj-card{flex-wrap:wrap}
     .subj-actions{width:100%;margin-left:0}
-    .faculty-stat-grid{grid-template-columns:1fr}
     .marks-entry-row{flex-wrap:wrap}
+  }
+  /* ── Leave & Substitution redesign ── */
+  .lv-balance-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:20px}
+  .lv-bal-card{padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2)}
+  .lv-bal-card.lv-bal-danger{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
+  .lv-bal-card.lv-bal-warn{border-color:rgba(230,168,23,.3);background:rgba(230,168,23,.04)}
+  .lv-bal-num{font-family:Outfit,sans-serif;font-size:26px;font-weight:900;color:var(--teal);line-height:1}
+  .lv-bal-card.lv-bal-danger .lv-bal-num{color:var(--red)}
+  .lv-bal-card.lv-bal-warn .lv-bal-num{color:#b88510}
+  .lv-bal-label{font-size:11px;font-weight:700;color:var(--deep);margin-top:4px}
+  .lv-bal-sub{font-size:10px;color:var(--muted);margin-top:2px}
+  .lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .lv-col-main,.lv-col-side{display:flex;flex-direction:column;gap:16px}
+  .lv-form-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .lv-field{margin-bottom:14px}
+  .lv-date-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .lv-hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .lv-submit-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:opacity .15s;margin-top:4px}
+  .lv-submit-btn:hover{opacity:.88}
+  .lv-submit-btn:disabled{opacity:.5;cursor:not-allowed}
+  .lv-affected{background:rgba(230,168,23,.04);border-color:rgba(230,168,23,.25)}
+  .lv-slot-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:12px}
+  .lv-slot-row:last-child{border-bottom:none}
+  .lv-slot-day{font-size:10px;font-weight:800;color:var(--teal);width:32px;flex-shrink:0;text-transform:uppercase}
+  .lv-slot-time{font-size:11px;color:var(--muted);width:110px;flex-shrink:0}
+  .lv-slot-subj{flex:1;font-weight:600;color:var(--deep)}
+  .lv-slot-room{font-size:10px;color:var(--muted);background:var(--border);padding:2px 7px;border-radius:5px;flex-shrink:0}
+  .lv-history-list{display:flex;flex-direction:column;gap:10px;max-height:480px;overflow-y:auto}
+  .lv-hist-item{padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2)}
+  .lv-hist-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .lv-hist-type{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--teal)}
+  .lv-hist-dates{font-size:13px;font-weight:700;color:var(--deep)}
+  .lv-hist-reason{font-size:12px;color:var(--muted);margin-top:3px}
+  .lv-hist-meta{font-size:11px;color:var(--muted);margin-top:3px}
+  .lv-withdraw-btn{padding:4px 10px;border-radius:6px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:600;border:none;cursor:pointer}
+  .lv-status-badge{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
+  .lv-status-approved{background:#d1fae5;color:#065f46}
+  .lv-status-rejected{background:#fee2e2;color:#991b1b}
+  .lv-status-pending{background:#fef3c7;color:#92400e}
+  /* Substitution */
+  .sub-quota-banner{display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);margin-bottom:20px;flex-wrap:wrap}
+  .sub-quota-banner.sub-quota-danger{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
+  .sub-quota-banner.sub-quota-warn{border-color:rgba(230,168,23,.3);background:rgba(230,168,23,.04)}
+  .sub-quota-num{font-family:Outfit,sans-serif;font-size:32px;font-weight:900;color:var(--teal);line-height:1;flex-shrink:0}
+  .sub-quota-banner.sub-quota-danger .sub-quota-num{color:var(--red)}
+  .sub-quota-banner.sub-quota-warn .sub-quota-num{color:#b88510}
+  .sub-requests-card{border-color:rgba(99,102,241,.2);background:rgba(99,102,241,.02)}
+  .sub-req-item{padding:12px 0;border-bottom:1px solid #f3f4f6}
+  .sub-req-item:last-child{border-bottom:none}
+  .sub-req-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .sub-req-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .sub-duty-row,.sub-covered-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6}
+  .sub-duty-row:last-child,.sub-covered-row:last-child{border-bottom:none}
+  @media(max-width:860px){
+    .lv-grid{grid-template-columns:1fr}
+    .lv-date-row{grid-template-columns:1fr 1fr}
+    .lv-balance-strip{grid-template-columns:repeat(2,1fr)}
+    .sub-quota-banner{gap:10px}
+    .sub-quota-num{font-size:26px}
+  }
+  @media(max-width:480px){
+    .lv-date-row{grid-template-columns:1fr}
+    .lv-balance-strip{grid-template-columns:repeat(2,1fr)}
   }
   /* Notice + filter tabs */
   .att-view-tab{padding:8px 16px;font-size:12px;font-weight:700;border:none;border-right:1px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
   .att-view-tab:last-child{border-right:none}
   .att-view-tab.active{background:var(--teal);color:#fff}
   .att-view-tab:hover:not(.active){background:var(--surface2)}
+  /* Student filter bar (shared with HOD) */
+  .sf-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px}
+  .sf-group{display:flex;align-items:center;gap:6px}
+  .sf-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+  .sf-chip{padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+  .sf-chip.sf-active,.sf-chip:hover{background:var(--teal);border-color:var(--teal);color:#fff}
+  .sf-select{padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--deep);background:#fff;cursor:pointer;outline:none;transition:border-color .15s}
+  .sf-select:focus{border-color:var(--teal)}
+  .stu-table{width:100%;border-collapse:collapse}
+  .stu-table thead th{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+  .stu-table tbody tr.stu-row{cursor:pointer;transition:background .12s}
+  .stu-table tbody tr.stu-row:hover{background:rgba(13,115,119,.05)}
+  .stu-table td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+  .stu-table tbody tr:last-child td{border-bottom:none}
+  .stu-roll{font-size:12px;font-weight:700;color:var(--teal);font-family:'Outfit',sans-serif}
+  .stu-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:11px;font-weight:900;flex-shrink:0}
 </style>
 {% endblock %}
 
@@ -277,13 +360,13 @@
       </div>
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Professional Details</div>
-    <div class="summary-list">
-      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
-      <div class="summary-item"><span>Qualification</span><strong>{{ faculty.qualification }}</strong></div>
-      <div class="summary-item"><span>Experience</span><strong>{{ faculty.experience_years }} years</strong></div>
-      <div class="summary-item"><span>Department</span><strong>{{ faculty.department.name }} ({{ faculty.department.code }})</strong></div>
-      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
-      <div class="summary-item"><span>Username</span><strong style="color:var(--muted)">{{ request.user.username }}</strong></div>
+    <div class="fac-profile-grid">
+      <div class="fac-profile-row"><span class="fac-profile-lbl">Email</span><span class="fac-profile-val">{{ request.user.email|default:"Not set" }}</span></div>
+      <div class="fac-profile-row"><span class="fac-profile-lbl">Qualification</span><span class="fac-profile-val">{{ faculty.qualification }}</span></div>
+      <div class="fac-profile-row"><span class="fac-profile-lbl">Experience</span><span class="fac-profile-val">{{ faculty.experience_years }} years</span></div>
+      <div class="fac-profile-row"><span class="fac-profile-lbl">Department</span><span class="fac-profile-val">{{ faculty.department.name }} ({{ faculty.department.code }})</span></div>
+      <div class="fac-profile-row"><span class="fac-profile-lbl">College</span><span class="fac-profile-val">{{ college.name }}</span></div>
+      <div class="fac-profile-row"><span class="fac-profile-lbl">Username</span><span class="fac-profile-val" style="color:var(--muted)">{{ request.user.username }}</span></div>
     </div>
   </div>
 </section>
@@ -656,29 +739,78 @@
 
         <!-- Lesson Plan -->
         <div class="course-pane" id="cc-fs{{ fid }}-content">
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <a href="{% url 'faculty_lesson_plans' subj.id %}" class="btn-sm btn-sm-teal"><i class="fas fa-plus"></i> Manage Lesson Plans</a>
-          </div>
+
+          {# Existing entries #}
           {% if item.lesson_plans %}
-          <div class="table-scroll">
-            <table class="dtable">
-              <thead><tr><th>#</th><th>Topic</th><th>Planned</th><th>Actual</th><th>Status</th></tr></thead>
-              <tbody>
-                {% for lp in item.lesson_plans %}
-                <tr>
-                  <td style="color:var(--muted);font-size:12px">{{ forloop.counter }}</td>
-                  <td style="font-weight:600;color:var(--deep)">{{ lp.topic }}</td>
-                  <td style="color:var(--muted);font-size:12px">{{ lp.planned_date|date:"d M Y" }}</td>
-                  <td style="color:var(--muted);font-size:12px">{{ lp.actual_date|date:"d M Y"|default:"&mdash;" }}</td>
-                  <td>{% if lp.status == 'COMPLETED' %}<span class="dbadge dbadge-active">Done</span>{% elif lp.status == 'IN_PROGRESS' %}<span class="dbadge dbadge-warning">In Progress</span>{% else %}<span class="dbadge" style="background:#f1f5f9;color:#64748b">Planned</span>{% endif %}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div style="margin-bottom:14px">
+            {% for lp in item.lesson_plans %}
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface2)">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">U{{ lp.unit_number }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ lp.unit_title }}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">
+                  <i class="fas fa-calendar" style="font-size:10px"></i> Planned: {{ lp.planned_date|date:"d M Y" }}
+                  &nbsp;<i class="fas fa-clock" style="font-size:10px"></i> {{ lp.planned_hours }}h
+                  {% if lp.actual_date %}&nbsp;<i class="fas fa-check" style="color:#059669;font-size:10px"></i> Done: {{ lp.actual_date|date:"d M Y" }}{% endif %}
+                </div>
+                {% if lp.topics %}<div style="font-size:11px;color:var(--muted);margin-top:3px">{{ lp.topics|truncatechars:120 }}</div>{% endif %}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:{% if lp.status == 'APPROVED' %}#d1fae5{% elif lp.status == 'SUBMITTED' %}rgba(13,115,119,.1){% else %}#f1f5f9{% endif %};color:{% if lp.status == 'APPROVED' %}#065f46{% elif lp.status == 'SUBMITTED' %}var(--teal){% else %}#64748b{% endif %}">{{ lp.get_status_display }}</span>
+                {% if not lp.actual_date %}
+                <form method="POST" action="{% url 'faculty_lesson_plans' subj.id %}" style="margin:0">
+                  {% csrf_token %}<input type="hidden" name="action" value="mark_done"/><input type="hidden" name="plan_id" value="{{ lp.pk }}"/>
+                  <button type="submit" style="padding:3px 8px;border-radius:6px;background:rgba(5,150,105,.1);color:#059669;font-size:10px;font-weight:700;border:none;cursor:pointer" title="Mark as completed"><i class="fas fa-check"></i></button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{% url 'faculty_lesson_plans' subj.id %}" style="margin:0" onsubmit="return confirm('Delete this entry?')">
+                  {% csrf_token %}<input type="hidden" name="action" value="delete"/><input type="hidden" name="plan_id" value="{{ lp.pk }}"/>
+                  <button type="submit" style="padding:3px 8px;border-radius:6px;background:rgba(239,68,68,.08);color:var(--red);font-size:10px;font-weight:700;border:none;cursor:pointer" title="Delete"><i class="fas fa-trash"></i></button>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
           </div>
           {% else %}
-          <div class="empty" style="padding:20px 0"><i class="fas fa-list-ul"></i>No lesson plans yet.</div>
+          <div style="text-align:center;padding:16px 0;color:var(--muted);font-size:12px;margin-bottom:12px"><i class="fas fa-list-ul" style="display:block;font-size:20px;margin-bottom:6px"></i>No lesson plans yet.</div>
           {% endif %}
+
+          {# Inline add form #}
+          <div style="border:1.5px dashed var(--border);border-radius:10px;padding:14px 16px;background:#fafbfc">
+            <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:12px"><i class="fas fa-plus"></i> Add Lesson Plan Entry</div>
+            <form method="POST" action="{% url 'faculty_lesson_plans' subj.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="add"/>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+                <div>
+                  <label class="fac-lbl">Unit No. <span style="color:var(--red)">*</span></label>
+                  <input type="number" name="unit_number" min="1" value="1" required class="fac-input" style="padding:7px 10px"/>
+                </div>
+                <div>
+                  <label class="fac-lbl">Planned Hours</label>
+                  <input type="number" name="planned_hours" min="1" value="1" class="fac-input" style="padding:7px 10px"/>
+                </div>
+                <div>
+                  <label class="fac-lbl">Planned Date <span style="color:var(--red)">*</span></label>
+                  <input type="date" name="planned_date" required class="fac-input" style="padding:7px 10px"/>
+                </div>
+              </div>
+              <div style="margin-bottom:10px">
+                <label class="fac-lbl">Unit Title <span style="color:var(--red)">*</span></label>
+                <input type="text" name="unit_title" required class="fac-input" placeholder="e.g. Introduction to Sorting Algorithms" style="padding:7px 10px"/>
+              </div>
+              <div style="margin-bottom:10px">
+                <label class="fac-lbl">Topics to Cover <span style="color:var(--red)">*</span></label>
+                <textarea name="topics" rows="2" required class="fac-input" style="resize:vertical;padding:7px 10px" placeholder="List topics, subtopics, or learning outcomes..."></textarea>
+              </div>
+              <div style="margin-bottom:12px">
+                <label class="fac-lbl">Remarks</label>
+                <input type="text" name="remarks" class="fac-input" placeholder="Optional notes..." style="padding:7px 10px"/>
+              </div>
+              <button type="submit" class="btn-sm btn-sm-teal"><i class="fas fa-plus"></i> Add Entry</button>
+            </form>
+          </div>
+
         </div>
 
       </div>
@@ -694,33 +826,36 @@
 <!-- LEAVE -->
 <section data-dashboard-pane="leave" class="dashboard-pane">
 
-  <!-- Leave quota summary -->
+  {# ── Leave balance strip ── #}
   {% if leave_quota %}
-  <div class="d-card" style="padding:14px 18px;margin-bottom:0">
-    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Leave Balance (This Year)</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">
-      {% for code, data in leave_quota.items %}
-      <div style="padding:10px 12px;border-radius:10px;border:1px solid {% if data.remaining == 0 %}rgba(239,68,68,.3){% elif data.remaining <= 2 %}rgba(230,168,23,.3){% else %}var(--border){% endif %};background:{% if data.remaining == 0 %}rgba(239,68,68,.04){% elif data.remaining <= 2 %}rgba(230,168,23,.04){% else %}var(--surface2){% endif %}">
-        <div style="font-size:18px;font-weight:900;color:{% if data.remaining == 0 %}var(--red){% elif data.remaining <= 2 %}#b88510{% else %}var(--teal){% endif %}">{{ data.remaining }}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">{{ code }} remaining</div>
-        <div style="font-size:10px;color:var(--muted)">{{ data.used }}/{{ data.max }} used</div>
-      </div>
-      {% endfor %}
+  <div class="lv-balance-strip">
+    {% for code, data in leave_quota.items %}
+    <div class="lv-bal-card {% if data.remaining == 0 %}lv-bal-danger{% elif data.remaining <= 2 %}lv-bal-warn{% endif %}">
+      <div class="lv-bal-num">{{ data.remaining }}</div>
+      <div class="lv-bal-label">{{ code }} left</div>
+      <div class="lv-bal-sub">{{ data.used }}/{{ data.max }} used</div>
     </div>
+    {% endfor %}
   </div>
   {% endif %}
 
-  <div class="two-col">
+  {# ── Main grid ── #}
+  <div class="lv-grid">
 
-    <!-- Apply form (inline — no page navigation) -->
-    <div>
+    {# Left: Apply + Affected slots #}
+    <div class="lv-col-main">
       <div class="d-card">
-        <div class="d-title"><i class="fas fa-file-signature"></i> New Leave Application</div>
+        <div class="lv-form-head">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="fas fa-file-signature"></i></div>
+          <div>
+            <div style="font-family:Outfit,sans-serif;font-size:15px;font-weight:800;color:var(--deep)">New Leave Application</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Submit to HOD for approval</div>
+          </div>
+        </div>
         <form method="POST" action="{% url 'faculty_leave_apply' %}">
           {% csrf_token %}
           <input type="hidden" name="action" value="apply"/>
-
-          <div style="margin-bottom:14px">
+          <div class="lv-field">
             <label class="fac-lbl">Leave Type <span style="color:var(--red)">*</span></label>
             <select name="leave_type" class="fac-input">
               <option value="CL">Casual Leave (CL)</option>
@@ -730,128 +865,60 @@
               <option value="OTHER">Other</option>
             </select>
           </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-            <div>
-              <label class="fac-lbl">From Date <span style="color:var(--red)">*</span></label>
-              <input type="date" name="from_date" required class="fac-input"
-                     id="leave-from" min="{{ now|date:'Y-m-d' }}" onchange="calcLeaveDays()"/>
+          <div class="lv-date-row">
+            <div class="lv-field">
+              <label class="fac-lbl">From <span style="color:var(--red)">*</span></label>
+              <input type="date" name="from_date" required class="fac-input" id="leave-from" min="{{ now|date:'Y-m-d' }}" onchange="calcLeaveDays()"/>
             </div>
-            <div>
-              <label class="fac-lbl">To Date <span style="color:var(--red)">*</span></label>
-              <input type="date" name="to_date" required class="fac-input"
-                     id="leave-to" min="{{ now|date:'Y-m-d' }}" onchange="calcLeaveDays()"/>
+            <div class="lv-field">
+              <label class="fac-lbl">To <span style="color:var(--red)">*</span></label>
+              <input type="date" name="to_date" required class="fac-input" id="leave-to" min="{{ now|date:'Y-m-d' }}" onchange="calcLeaveDays()"/>
             </div>
           </div>
-          <div id="leave-days-preview" style="margin:-6px 0 14px"></div>
-
-          <div style="margin-bottom:14px">
+          <div id="leave-days-preview" style="margin:-4px 0 12px"></div>
+          <div class="lv-field">
             <label class="fac-lbl">Reason <span style="color:var(--red)">*</span></label>
-            <textarea name="reason" rows="3" required class="fac-input" style="resize:vertical"
-                      placeholder="Briefly explain the reason for leave&hellip;"></textarea>
+            <textarea name="reason" rows="3" required class="fac-input" style="resize:vertical" placeholder="Briefly explain the reason for leave..."></textarea>
           </div>
-
-          <div style="margin-bottom:18px">
+          <div class="lv-field">
             <label class="fac-lbl">Suggest Substitute <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
             <select name="suggested_substitute" class="fac-input">
-              <option value="">&mdash; No suggestion &mdash;</option>
+              <option value="">No suggestion</option>
               {% for f in dept_faculty_list %}
               <option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }} ({{ f.designation }})</option>
               {% endfor %}
             </select>
-            <div style="font-size:11px;color:var(--muted);margin-top:5px">
-              <i class="fas fa-info-circle"></i> HOD will confirm the substitution after approving your leave.
-            </div>
+            <div class="lv-hint"><i class="fas fa-info-circle"></i> HOD will confirm the substitution after approving your leave.</div>
           </div>
-
-          <button type="submit" class="qa-btn qa-teal">
-            <i class="fas fa-paper-plane"></i> Submit to HOD
-          </button>
+          <button type="submit" class="lv-submit-btn"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
         </form>
       </div>
 
       {% if all_week_slots %}
-      <div class="d-card" style="margin-top:14px">
-        <div class="d-title" style="color:var(--gold)">
-          <i class="fas fa-triangle-exclamation"></i> Classes That Will Be Affected
+      <div class="d-card lv-affected">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <i class="fas fa-triangle-exclamation" style="color:#d97706;font-size:14px"></i>
+          <span style="font-size:13px;font-weight:700;color:#92400e">Classes That Will Be Affected</span>
         </div>
-        <div class="section-meta">These slots will need substitution coverage during your leave.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">These slots will need substitution coverage during your leave.</div>
         {% for slot in all_week_slots %}
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px">
-          <span style="font-size:11px;font-weight:700;color:var(--teal);width:36px;flex-shrink:0">{{ slot.day_of_week }}</span>
-          <span style="font-size:12px;color:var(--muted);width:120px;flex-shrink:0">{{ slot.start_time|time:"g:i A" }} &ndash; {{ slot.end_time|time:"g:i A" }}</span>
-          <span style="flex:1;font-weight:600;color:var(--deep)">{{ slot.subject.name }} <span style="color:var(--muted);font-size:11px">{{ slot.subject.code }}</span></span>
-          {% if slot.classroom %}<span style="font-size:11px;color:var(--muted);background:var(--border);padding:2px 8px;border-radius:6px">{{ slot.classroom.room_number }}</span>{% endif %}
+        <div class="lv-slot-row">
+          <span class="lv-slot-day">{{ slot.day_of_week }}</span>
+          <span class="lv-slot-time">{{ slot.start_time|time:"g:i A" }}&ndash;{{ slot.end_time|time:"g:i A" }}</span>
+          <span class="lv-slot-subj">{{ slot.subject.name }} <span style="color:var(--muted);font-size:11px">{{ slot.subject.code }}</span></span>
+          {% if slot.classroom %}<span class="lv-slot-room">{{ slot.classroom.room_number }}</span>{% endif %}
         </div>
         {% endfor %}
       </div>
       {% endif %}
-    </div>
 
-    <!-- Leave history -->
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-list-check"></i> My Leave History</div>
-      {% if leave_history %}
-      <div class="content-scroll">
-        {% for leave in leave_history %}
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:3px">{{ leave.get_leave_type_display }}</div>
-              <div style="font-size:13px;font-weight:700;color:var(--deep)">
-                {{ leave.from_date|date:"d M Y" }} &rarr; {{ leave.to_date|date:"d M Y" }}
-                <span style="font-size:11px;color:var(--muted);font-weight:400">({{ leave.days }} day{{ leave.days|pluralize }})</span>
-              </div>
-              {% if leave.reason %}<div style="font-size:12px;color:var(--muted);margin-top:3px">{{ leave.reason|truncatechars:80 }}</div>{% endif %}
-              {% if leave.suggested_substitute %}
-              <div style="font-size:11px;color:var(--muted);margin-top:3px">
-                <i class="fas fa-user-check" style="color:var(--teal)"></i>
-                Suggested sub: {{ leave.suggested_substitute.user.get_full_name }}
-              </div>
-              {% endif %}
-              {% if leave.hod_remarks %}
-              <div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">
-                <i class="fas fa-comment"></i> HOD: {{ leave.hod_remarks }}
-              </div>
-              {% endif %}
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
-              <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap;
-                background:{% if leave.status == 'APPROVED' %}#d1fae5{% elif leave.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};
-                color:{% if leave.status == 'APPROVED' %}#065f46{% elif leave.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">
-                {{ leave.get_status_display }}
-              </span>
-              {% if leave.status == 'PENDING' %}
-              <form method="POST" action="{% url 'faculty_leave_apply' %}" style="margin:0"
-                    onsubmit="return confirm('Withdraw this application?')">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="cancel"/>
-                <input type="hidden" name="leave_id" value="{{ leave.pk }}"/>
-                <button type="submit" style="padding:3px 9px;border-radius:6px;background:rgba(239,68,68,.08);color:var(--red);font-size:11px;font-weight:600;border:none;cursor:pointer">
-                  <i class="fas fa-times"></i> Withdraw
-                </button>
-              </form>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty"><i class="fas fa-calendar-check"></i>No leave applications yet.</div>
-      {% endif %}
-    </div>
-
-  </div>
-  <!-- HOD Requests (merged) -->
-  <div class="d-card" style="margin-top:16px">
-    <div class="d-title"><i class="fas fa-paper-plane"></i> Other Requests to HOD</div>
-    <div class="section-meta">Event approvals, course requests, or any other HOD approval needed.</div>
-    <div class="two-col">
-      <div>
+      {# HOD Requests #}
+      <div class="d-card" style="margin-top:0">
+        <div class="d-title"><i class="fas fa-paper-plane"></i> Other Requests to HOD</div>
+        <div class="section-meta">Event approvals, course requests, or any other HOD approval needed.</div>
         <form method="POST" action="{% url 'faculty_request_add' %}">
           {% csrf_token %}
-          <div style="margin-bottom:10px">
+          <div class="lv-field">
             <label class="fac-lbl">Request Type</label>
             <select name="approval_type" class="fac-input">
               <option value="EVENT">Event Approval</option>
@@ -859,16 +926,50 @@
               <option value="OTHER">Other</option>
             </select>
           </div>
-          <div style="margin-bottom:12px">
+          <div class="lv-field">
             <label class="fac-lbl">Details *</label>
             <textarea name="description" rows="3" required class="fac-input" style="resize:vertical" placeholder="Describe your request..."></textarea>
           </div>
-          <button type="submit" class="qa-btn qa-teal"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
+          <button type="submit" class="lv-submit-btn"><i class="fas fa-paper-plane"></i> Submit to HOD</button>
         </form>
       </div>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Recent Requests</div>
-        {% if my_requests %}
+    </div>
+
+    {# Right: History + Recent requests #}
+    <div class="lv-col-side">
+      <div class="d-card">
+        <div class="d-title"><i class="fas fa-list-check"></i> My Leave History</div>
+        {% if leave_history %}
+        <div class="lv-history-list">
+          {% for leave in leave_history %}
+          <div class="lv-hist-item">
+            <div class="lv-hist-top">
+              <span class="lv-hist-type">{{ leave.get_leave_type_display }}</span>
+              <span class="lv-status-badge lv-status-{{ leave.status|lower }}">{{ leave.get_status_display }}</span>
+            </div>
+            <div class="lv-hist-dates">{{ leave.from_date|date:"d M Y" }} &rarr; {{ leave.to_date|date:"d M Y" }} <span style="color:var(--muted);font-size:11px">({{ leave.days }} day{{ leave.days|pluralize }})</span></div>
+            {% if leave.reason %}<div class="lv-hist-reason">{{ leave.reason|truncatechars:80 }}</div>{% endif %}
+            {% if leave.suggested_substitute %}<div class="lv-hist-meta"><i class="fas fa-user-check" style="color:var(--teal)"></i> Sub: {{ leave.suggested_substitute.user.get_full_name }}</div>{% endif %}
+            {% if leave.hod_remarks %}<div class="lv-hist-meta" style="color:#6366f1"><i class="fas fa-comment"></i> HOD: {{ leave.hod_remarks }}</div>{% endif %}
+            {% if leave.status == 'PENDING' %}
+            <form method="POST" action="{% url 'faculty_leave_apply' %}" style="margin-top:8px" onsubmit="return confirm('Withdraw this application?')">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="cancel"/>
+              <input type="hidden" name="leave_id" value="{{ leave.pk }}"/>
+              <button type="submit" class="lv-withdraw-btn"><i class="fas fa-times"></i> Withdraw</button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><i class="fas fa-calendar-check"></i>No leave applications yet.</div>
+        {% endif %}
+      </div>
+
+      {% if my_requests %}
+      <div class="d-card" style="margin-top:0">
+        <div class="d-title"><i class="fas fa-inbox"></i> Recent HOD Requests</div>
         {% for req in my_requests %}
         <div class="req-card">
           <div>
@@ -876,236 +977,172 @@
             <div class="req-desc">{{ req.description|truncatechars:80 }}</div>
             <div class="req-meta">{{ req.created_at|date:"d M Y" }}</div>
           </div>
-          <span style="padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap;background:{% if req.status == 'APPROVED' %}#d1fae5{% elif req.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %};color:{% if req.status == 'APPROVED' %}#065f46{% elif req.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %}">{{ req.get_status_display }}</span>
+          <span class="lv-status-badge lv-status-{{ req.status|lower }}">{{ req.get_status_display }}</span>
         </div>
         {% endfor %}
-        {% else %}
-        <div class="empty" style="padding:12px 0"><i class="fas fa-paper-plane"></i>No requests yet.</div>
-        {% endif %}
       </div>
-    </div>
-  </div>
-
-</section>
-
-<!-- SUBSTITUTION -->
-<section data-dashboard-pane="substitution" class="dashboard-pane">
-
-  <!-- Substitution quota -->
-  {% if sub_quota %}
-  <div class="d-card" style="padding:14px 18px;margin-bottom:0">
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-      <div style="padding:10px 16px;border-radius:10px;border:1px solid {% if sub_quota.remaining == 0 %}rgba(239,68,68,.3){% elif sub_quota.remaining <= 2 %}rgba(230,168,23,.3){% else %}var(--border){% endif %};background:{% if sub_quota.remaining == 0 %}rgba(239,68,68,.04){% elif sub_quota.remaining <= 2 %}rgba(230,168,23,.04){% else %}var(--surface2){% endif %}">
-        <div style="font-size:22px;font-weight:900;color:{% if sub_quota.remaining == 0 %}var(--red){% elif sub_quota.remaining <= 2 %}#b88510{% else %}var(--teal){% endif %}">{{ sub_quota.remaining }}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">Substitutions remaining this semester</div>
-        <div style="font-size:10px;color:var(--muted)">{{ sub_quota.used }}/{{ sub_quota.max }} used</div>
-      </div>
-      {% if sub_quota.remaining == 0 %}
-      <div style="font-size:13px;color:var(--red);font-weight:600"><i class="fas fa-triangle-exclamation"></i> You have used all your substitution quota for this semester.</div>
       {% endif %}
     </div>
+
+  </div>
+</section>
+
+<section data-dashboard-pane="substitution" class="dashboard-pane">
+
+  {# ── Quota banner ── #}
+  {% if sub_quota %}
+  <div class="sub-quota-banner {% if sub_quota.remaining == 0 %}sub-quota-danger{% elif sub_quota.remaining <= 2 %}sub-quota-warn{% endif %}">
+    <div class="sub-quota-num">{{ sub_quota.remaining }}</div>
+    <div>
+      <div style="font-size:13px;font-weight:700">Substitutions remaining this semester</div>
+      <div style="font-size:11px;opacity:.75;margin-top:2px">{{ sub_quota.used }} of {{ sub_quota.max }} used</div>
+    </div>
+    {% if sub_quota.remaining == 0 %}
+    <div style="margin-left:auto;font-size:12px;font-weight:600;color:var(--red)"><i class="fas fa-triangle-exclamation"></i> Quota exhausted</div>
+    {% endif %}
   </div>
   {% endif %}
 
-  <div class="two-col">
+  <div class="lv-grid">
 
-    <!-- Assign substitute form -->
-    <div class="d-card">
-      <div class="d-title"><i class="fas fa-people-arrows"></i> Request Substitution</div>
-      <div class="section-meta">Can't take a class? Select your slot and date — only free faculty are shown.</div>
-
-      {% if all_week_slots %}
-      <!-- Embed pre-computed free faculty data -->
-      <script id="sub-faculty-data" type="application/json">{{ sub_faculty_json|safe }}</script>
-
-      <form method="POST" action="{% url 'faculty_assign_substitution' %}" style="margin-top:14px" id="sub-form">
-        {% csrf_token %}
-
-        <div style="margin-bottom:14px">
-          <label class="fac-lbl">My Timetable Slot *</label>
-          <select name="timetable_slot" class="fac-input" required id="sub-slot-select" onchange="subUpdateFaculty()">
-            {% for slot in all_week_slots %}
-            <option value="{{ slot.pk }}" data-day="{{ slot.day_of_week }}"{% if forloop.first %} selected{% endif %}>
-              {{ slot.get_day_of_week_display }} &middot; {{ slot.start_time|time:"g:i A" }}–{{ slot.end_time|time:"g:i A" }} &middot; {{ slot.subject.name }} ({{ slot.subject.code }}){% if slot.classroom %} &middot; {{ slot.classroom.room_number }}{% endif %}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div style="margin-bottom:14px">
-          <label class="fac-lbl">Date *</label>
-          <input type="date" name="date" class="fac-input" required id="sub-date-input"
-                 value="" min="{{ now|date:'Y-m-d' }}" onchange="subUpdateFaculty()"/>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px" id="sub-day-hint"></div>
-        </div>
-
-        <div style="margin-bottom:14px">
-          <label class="fac-lbl">Note <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-          <input type="text" name="note" class="fac-input" maxlength="500"
-                 placeholder="e.g. Attending conference, medical appointment…"
-                 style="width:100%;box-sizing:border-box"/>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Shown to the substitute so they know why you need coverage.</div>
-        </div>
-
-        <div style="margin-bottom:18px">
-          <label class="fac-lbl">Substitute Faculty *</label>
-          <select name="substitute_faculty" class="fac-input" required id="sub-fac-select" onchange="subOnFacChange()">
-            <option value="">— Select a slot first —</option>
-          </select>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px" id="sub-fac-hint">
-            <i class="fas fa-info-circle"></i> Only faculty free at that time are shown.
+    {# Left: Request form #}
+    <div class="lv-col-main">
+      <div class="d-card">
+        <div class="lv-form-head">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><i class="fas fa-people-arrows"></i></div>
+          <div>
+            <div style="font-family:Outfit,sans-serif;font-size:15px;font-weight:800;color:var(--deep)">Request Substitution</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Can't take a class? Only free faculty are shown.</div>
           </div>
-          <div id="sub-smart-card" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(13,115,119,.06);border:1px solid rgba(13,115,119,.2);border-radius:8px;font-size:12px;color:var(--teal)"></div>
         </div>
 
-        <button type="submit" class="qa-btn qa-teal" id="sub-submit-btn" disabled
-                onclick="return confirm('Send substitution request to the selected faculty?')">
-          <i class="fas fa-paper-plane"></i> Send Request
-        </button>
-      </form>
-      {% else %}
-      <div class="empty" style="margin-top:16px"><i class="fas fa-calendar-xmark"></i>No timetable slots assigned to you yet.</div>
-      {% endif %}
+        {% if all_week_slots %}
+        <script id="sub-faculty-data" type="application/json">{{ sub_faculty_json|safe }}</script>
+        <form method="POST" action="{% url 'faculty_assign_substitution' %}" id="sub-form">
+          {% csrf_token %}
+          <div class="lv-field">
+            <label class="fac-lbl">My Timetable Slot *</label>
+            <select name="timetable_slot" class="fac-input" required id="sub-slot-select" onchange="subUpdateFaculty()">
+              {% for slot in all_week_slots %}
+              <option value="{{ slot.pk }}" data-day="{{ slot.day_of_week }}"{% if forloop.first %} selected{% endif %}>
+                {{ slot.get_day_of_week_display }} &middot; {{ slot.start_time|time:"g:i A" }}&ndash;{{ slot.end_time|time:"g:i A" }} &middot; {{ slot.subject.name }} ({{ slot.subject.code }}){% if slot.classroom %} &middot; {{ slot.classroom.room_number }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="lv-field">
+            <label class="fac-lbl">Date *</label>
+            <input type="date" name="date" class="fac-input" required id="sub-date-input" value="" min="{{ now|date:'Y-m-d' }}" onchange="subUpdateFaculty()"/>
+            <div class="lv-hint" id="sub-day-hint"></div>
+          </div>
+          <div class="lv-field">
+            <label class="fac-lbl">Note <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <input type="text" name="note" class="fac-input" maxlength="500" placeholder="e.g. Attending conference, medical appointment..." style="width:100%;box-sizing:border-box"/>
+            <div class="lv-hint">Shown to the substitute so they know why you need coverage.</div>
+          </div>
+          <div class="lv-field">
+            <label class="fac-lbl">Substitute Faculty *</label>
+            <select name="substitute_faculty" class="fac-input" required id="sub-fac-select" onchange="subOnFacChange()">
+              <option value="">Select a slot first</option>
+            </select>
+            <div class="lv-hint" id="sub-fac-hint"><i class="fas fa-info-circle"></i> Only faculty free at that time are shown.</div>
+            <div id="sub-smart-card" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(13,115,119,.06);border:1px solid rgba(13,115,119,.2);border-radius:8px;font-size:12px;color:var(--teal)"></div>
+          </div>
+          <button type="submit" class="lv-submit-btn" id="sub-submit-btn" disabled onclick="return confirm('Send substitution request to the selected faculty?')">
+            <i class="fas fa-paper-plane"></i> Send Request
+          </button>
+        </form>
+        {% else %}
+        <div class="empty" style="margin-top:16px"><i class="fas fa-calendar-xmark"></i>No timetable slots assigned to you yet.</div>
+        {% endif %}
+      </div>
     </div>
 
-    <!-- Right column: pending requests + duties -->
-    <div>
+    {# Right: Requests for me + duties + covered #}
+    <div class="lv-col-side">
 
-      <!-- Pending requests I need to respond to -->
-      {% with pending_for_me=faculty.substitute_slots.filter %}
+      {# Pending requests I need to respond to #}
       {% with my_pending=faculty.substitute_slots.all %}
       {% if my_pending %}
-      <div class="d-card" style="margin-bottom:16px">
-        <div class="d-title" style="color:#6366f1"><i class="fas fa-bell"></i> Substitution Requests for You</div>
-        {% for sub in my_pending %}
-        {% if sub.status == 'PENDING' %}
-        <div style="border:1.5px solid rgba(99,102,241,.3);border-radius:12px;padding:14px;margin-bottom:10px;background:rgba(99,102,241,.03)">
-          <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
-            <div style="flex:1;min-width:0">
+      {% for sub in my_pending %}{% if sub.status == 'PENDING' %}
+      {% if forloop.first %}
+      <div class="d-card sub-requests-card">
+        <div class="d-title" style="color:#6366f1"><i class="fas fa-bell"></i> Requests for You</div>
+      {% endif %}
+        <div class="sub-req-item">
+          <div class="sub-req-top">
+            <div>
               <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ sub.timetable_slot.subject.name }}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:3px">
-                {{ sub.date|date:"D, d M Y" }} &middot;
-                {{ sub.timetable_slot.start_time|time:"g:i A" }}–{{ sub.timetable_slot.end_time|time:"g:i A" }}
-                {% if sub.timetable_slot.classroom %} &middot; {{ sub.timetable_slot.classroom.room_number }}{% endif %}
-              </div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">
-                Requested by: <strong>{{ sub.original_faculty.user.get_full_name }}</strong>
-              </div>
-              {% if sub.note %}
-              <div style="font-size:11px;color:#6366f1;margin-top:4px;padding:5px 8px;background:rgba(99,102,241,.06);border-radius:6px"><i class="fas fa-comment-dots"></i> {{ sub.note }}</div>
-              {% endif %}
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ sub.date|date:"D, d M Y" }} &middot; {{ sub.timetable_slot.start_time|time:"g:i A" }}&ndash;{{ sub.timetable_slot.end_time|time:"g:i A" }}{% if sub.timetable_slot.classroom %} &middot; {{ sub.timetable_slot.classroom.room_number }}{% endif %}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">By: <strong>{{ sub.original_faculty.user.get_full_name }}</strong></div>
+              {% if sub.note %}<div style="font-size:11px;color:#6366f1;margin-top:4px;padding:4px 8px;background:rgba(99,102,241,.06);border-radius:6px"><i class="fas fa-comment-dots"></i> {{ sub.note }}</div>{% endif %}
             </div>
-            <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(230,168,23,.1);color:#b88510;white-space:nowrap">Pending</span>
+            <span style="padding:3px 9px;border-radius:99px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0">Pending</span>
           </div>
-          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <div class="sub-req-actions">
             <form method="POST" action="{% url 'faculty_substitution_respond' sub.pk %}" style="margin:0">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="accept"/>
-              <button type="submit" class="btn-sm btn-sm-teal"
-                      onclick="return confirm('Accept substitution for {{ sub.timetable_slot.subject.name }} on {{ sub.date }}?')">
-                <i class="fas fa-check"></i> Accept
-              </button>
+              {% csrf_token %}<input type="hidden" name="action" value="accept"/>
+              <button type="submit" class="btn-sm btn-sm-teal" onclick="return confirm('Accept substitution for {{ sub.timetable_slot.subject.name }} on {{ sub.date }}?')"><i class="fas fa-check"></i> Accept</button>
             </form>
-            <button class="btn-sm" style="background:rgba(239,68,68,.08);color:var(--red)"
-                    onclick="toggleRejectForm('rf-{{ sub.pk }}')">
-              <i class="fas fa-times"></i> Reject
-            </button>
+            <button class="btn-sm" style="background:rgba(239,68,68,.08);color:var(--red)" onclick="toggleRejectForm('rf-{{ sub.pk }}')"><i class="fas fa-times"></i> Reject</button>
           </div>
-          <!-- Reject form (hidden by default) -->
-          <div id="rf-{{ sub.pk }}" style="display:none;margin-top:10px">
+          <div id="rf-{{ sub.pk }}" style="display:none;margin-top:8px">
             <form method="POST" action="{% url 'faculty_substitution_respond' sub.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="reject"/>
-              <input type="text" name="rejection_reason" placeholder="Reason for rejection (optional)"
-                     style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:8px;box-sizing:border-box"/>
-              <button type="submit" class="btn-sm" style="background:var(--red);color:#fff">
-                <i class="fas fa-times"></i> Confirm Reject
-              </button>
+              {% csrf_token %}<input type="hidden" name="action" value="reject"/>
+              <input type="text" name="rejection_reason" placeholder="Reason (optional)" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;margin-bottom:6px;box-sizing:border-box"/>
+              <button type="submit" class="btn-sm" style="background:var(--red);color:#fff"><i class="fas fa-times"></i> Confirm Reject</button>
             </form>
           </div>
         </div>
-        {% endif %}
-        {% endfor %}
-      </div>
+      {% if forloop.last %}</div>{% endif %}
+      {% endif %}{% endfor %}
       {% endif %}
       {% endwith %}
-      {% endwith %}
 
-      <!-- My substitution duties (accepted) -->
-      <div class="d-card" style="margin-bottom:16px">
+      {# My upcoming duties #}
+      <div class="d-card">
         <div class="d-title"><i class="fas fa-chalkboard-teacher"></i> My Upcoming Duties</div>
         <div class="section-meta">Classes you are covering for others.</div>
         {% with sub_duties=faculty.substitute_slots.all %}
-        {% if sub_duties %}
         {% for sub in sub_duties %}
         {% if sub.status == 'ACCEPTED' and sub.date >= now.date %}
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6">
-          <div style="width:36px;height:36px;border-radius:9px;background:rgba(99,102,241,.1);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
-            <i class="fas fa-chalkboard-teacher"></i>
-          </div>
+        <div class="sub-duty-row">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ sub.timetable_slot.subject.name }}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">
-              {{ sub.date|date:"D, d M Y" }} &middot;
-              {{ sub.timetable_slot.start_time|time:"g:i A" }}–{{ sub.timetable_slot.end_time|time:"g:i A" }}
-              {% if sub.timetable_slot.classroom %} &middot; {{ sub.timetable_slot.classroom.room_number }}{% endif %}
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">
-              Covering for: <strong>{{ sub.original_faculty.user.get_full_name }}</strong>
-            </div>
-            {% if sub.topic_covered %}
-            <div style="font-size:11px;color:#059669;margin-top:3px"><i class="fas fa-book-open"></i> Topic: {{ sub.topic_covered }}</div>
-            {% elif sub.date == now.date %}
-            <div style="font-size:11px;color:#b88510;margin-top:3px"><i class="fas fa-triangle-exclamation"></i> Enter topic before marking attendance</div>
-            {% endif %}
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ sub.date|date:"D, d M Y" }} &middot; {{ sub.timetable_slot.start_time|time:"g:i A" }}&ndash;{{ sub.timetable_slot.end_time|time:"g:i A" }}{% if sub.timetable_slot.classroom %} &middot; {{ sub.timetable_slot.classroom.room_number }}{% endif %}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Covering for: <strong>{{ sub.original_faculty.user.get_full_name }}</strong></div>
           </div>
-          {% if sub.date == now.date %}
-          <a href="{% url 'faculty_mark_attendance' sub.timetable_slot.subject.id %}"
-             style="font-size:11px;font-weight:700;color:#fff;background:#6366f1;padding:5px 11px;border-radius:7px;text-decoration:none;white-space:nowrap;flex-shrink:0">
-            <i class="fas fa-calendar-check"></i> Mark
-          </a>
-          {% endif %}
+          {% if sub.date == now.date %}<a href="{% url 'faculty_mark_attendance' sub.timetable_slot.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:#6366f1;padding:5px 11px;border-radius:7px;text-decoration:none;white-space:nowrap;flex-shrink:0"><i class="fas fa-calendar-check"></i> Mark</a>{% endif %}
         </div>
         {% endif %}
         {% endfor %}
-        {% else %}
-        <div class="empty" style="padding:16px 0"><i class="fas fa-user-check"></i>No upcoming duties.</div>
+        {% if not sub_duties %}
+        <div class="empty" style="padding:12px 0"><i class="fas fa-user-check"></i>No upcoming duties.</div>
         {% endif %}
         {% endwith %}
       </div>
 
-      <!-- My slots covered by others -->
+      {# My slots being covered #}
       <div class="d-card">
         <div class="d-title"><i class="fas fa-calendar-check"></i> My Slots Being Covered</div>
         {% with my_covered=faculty.original_slots.all %}
-        {% if my_covered %}
         {% for sub in my_covered %}
         {% if sub.date >= now.date %}
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div class="sub-covered-row">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ sub.timetable_slot.subject.name }}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">
-              {{ sub.date|date:"D, d M Y" }} &middot;
-              {{ sub.timetable_slot.start_time|time:"g:i A" }}–{{ sub.timetable_slot.end_time|time:"g:i A" }}
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ sub.date|date:"D, d M Y" }} &middot; {{ sub.timetable_slot.start_time|time:"g:i A" }}&ndash;{{ sub.timetable_slot.end_time|time:"g:i A" }}</div>
+            <div style="font-size:11px;margin-top:3px">
+              {% if sub.status == 'ACCEPTED' %}<span style="color:#059669"><i class="fas fa-check-circle"></i> Accepted by <strong>{{ sub.substitute_faculty.user.get_full_name }}</strong></span>
+              {% elif sub.status == 'PENDING' %}<span style="color:#b88510"><i class="fas fa-clock"></i> Pending &mdash; <strong>{{ sub.substitute_faculty.user.get_full_name }}</strong></span>
+              {% elif sub.status == 'REJECTED' %}<span style="color:var(--red)"><i class="fas fa-times-circle"></i> Rejected by <strong>{{ sub.substitute_faculty.user.get_full_name }}</strong></span>{% endif %}
             </div>
-            <div style="font-size:11px;margin-top:2px">
-              {% if sub.status == 'ACCEPTED' %}
-              <span style="color:#059669"><i class="fas fa-check-circle"></i> Accepted by <strong>{{ sub.substitute_faculty.user.get_full_name }}</strong></span>
-              {% elif sub.status == 'PENDING' %}
-              <span style="color:#b88510"><i class="fas fa-clock"></i> Pending — <strong>{{ sub.substitute_faculty.user.get_full_name }}</strong></span>
-              {% elif sub.status == 'REJECTED' %}
-              <span style="color:var(--red)"><i class="fas fa-times-circle"></i> Rejected by <strong>{{ sub.substitute_faculty.user.get_full_name }}</strong>{% if sub.rejection_reason %} — {{ sub.rejection_reason }}{% endif %}</span>
-              {% endif %}
-            </div>
-            {% if sub.topic_covered %}
-            <div style="font-size:11px;color:#059669;margin-top:2px"><i class="fas fa-book-open"></i> Topic covered: {{ sub.topic_covered }}</div>
-            {% endif %}
           </div>
         </div>
         {% endif %}
         {% endfor %}
-        {% else %}
-        <div style="font-size:12px;color:var(--muted);padding:10px 0"><i class="fas fa-check-circle" style="color:#059669"></i> No substitutions from your slots.</div>
+        {% if not my_covered %}
+        <div style="font-size:12px;color:var(--muted);padding:8px 0"><i class="fas fa-check-circle" style="color:#059669"></i> No substitutions from your slots.</div>
         {% endif %}
         {% endwith %}
       </div>
@@ -1114,105 +1151,121 @@
   </div>
 </section>
 
-<!-- HOD REQUESTS -->
-<!-- MY STUDENTS -->
 <section data-dashboard-pane="students" class="dashboard-pane">
-  <div class="d-card" style="padding:14px 18px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <input id="stu-search" type="text" placeholder="Search name or roll no..." oninput="filterStudents()"
-        style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;outline:none;flex:1;min-width:160px">
-      <select id="stu-filter-subject" onchange="filterStudents()"
-        style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;background:#fff;outline:none">
+
+  {# ── Filter bar ── #}
+  <div class="d-card" style="padding:12px 16px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="sf-chip sf-active" id="fsfAllBtn" onclick="fsfSetAll()" style="flex-shrink:0">ALL</button>
+      <select id="fsfSubj" class="sf-select" style="flex:1;min-width:140px;max-width:220px">
         <option value="">All Subjects</option>
-        {% for item in subject_cards %}
-        <option value="{{ item.subject.id }}">{{ item.subject.name }}</option>
+        {% for s in fac_subjects %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
         {% endfor %}
       </select>
-      <select id="stu-filter-risk" onchange="filterStudents()"
-        style="border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;background:#fff;outline:none">
-        <option value="">All</option>
-        <option value="top">Top Performers</option>
+      <select id="fsfRisk" class="sf-select" style="min-width:110px">
+        <option value="">All Status</option>
         <option value="at_risk">At Risk</option>
-        <option value="absent">Recently Absent</option>
+        <option value="ok">On Track</option>
       </select>
-      <span id="stu-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
-    </div>
-  </div>
-  <div class="d-card" id="stu-top-card">
-    <div class="d-title"><i class="fas fa-trophy"></i> Top Performers</div>
-    <div class="section-meta">Highest marks average across your subjects.</div>
-    {% if top_performers %}
-    <div style="display:grid;gap:8px">
-      {% for row in top_performers %}
-      <div class="stu-row" data-name="{{ row.student.user.get_full_name|lower|default:row.student.user.username|lower }}" data-roll="{{ row.student.roll_number|lower }}" data-risk="top"
-           style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:{% if forloop.counter <= 3 %}rgba(13,115,119,.03){% else %}#fff{% endif %}">
-        <div style="width:28px;height:28px;border-radius:50%;background:{% if forloop.counter == 1 %}#fbbf24{% elif forloop.counter == 2 %}#94a3b8{% elif forloop.counter == 3 %}#b45309{% else %}var(--surface2){% endif %};color:{% if forloop.counter <= 3 %}#fff{% else %}var(--muted){% endif %};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">{{ forloop.counter }}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ row.student.roll_number }}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:var(--teal)">{{ row.avg_marks_pct }}%</div>
-          <div style="font-size:10px;color:var(--muted)">{{ row.overall_pct }}% att.</div>
-        </div>
+      <div style="position:relative;flex:1;min-width:140px;max-width:220px">
+        <i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)"></i>
+        <input id="fsfSearch" type="text" placeholder="Search name or roll..."
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px 10px 6px 28px;font-size:12px;outline:none;background:var(--surface2);box-sizing:border-box">
       </div>
-      {% endfor %}
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0">
+        <span id="fsfCount">{{ analytics_students|length }}</span> of {{ analytics_students|length }} students
+      </span>
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-trophy"></i>No marks data yet.</div>
-    {% endif %}
   </div>
-  <div class="d-card" id="stu-risk-card">
-    <div class="d-title"><i class="fas fa-circle-exclamation"></i> At-Risk Students</div>
-    <div class="section-meta">Low attendance (&lt;75%) or low marks (&lt;40%).</div>
-    {% if at_risk_students %}
-    <div style="display:grid;gap:8px">
-      {% for row in at_risk_students %}
-      <div class="stu-row" data-name="{{ row.student.user.get_full_name|lower|default:row.student.user.username|lower }}" data-roll="{{ row.student.roll_number|lower }}" data-risk="at_risk"
-           style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(239,68,68,.2);border-radius:10px;background:rgba(239,68,68,.02)">
-        <div style="width:36px;height:36px;border-radius:50%;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-user-slash"></i></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ row.student.roll_number }}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:{% if row.overall_pct < 60 %}rgba(239,68,68,.12);color:var(--red){% else %}rgba(230,168,23,.12);color:#b88510{% endif %}">{{ row.overall_pct }}% att.</span>
-          {% if row.avg_marks_pct %}<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:{% if row.avg_marks_pct < 40 %}rgba(239,68,68,.12);color:var(--red){% else %}rgba(230,168,23,.12);color:#b88510{% endif %}">{{ row.avg_marks_pct }}% marks</span>{% endif %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div style="padding:16px;text-align:center;background:#f0fdf4;border-radius:12px">
-      <i class="fas fa-circle-check" style="font-size:22px;color:var(--teal);display:block;margin-bottom:6px"></i>
-      <div style="font-size:13px;font-weight:700;color:var(--teal)">All students on track.</div>
-    </div>
-    {% endif %}
+
+  <div class="d-card" style="padding:0;overflow:hidden">
+    <table class="stu-table" id="fsfTable">
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Roll No</th>
+          <th>Name</th>
+          <th style="text-align:center">Sem</th>
+          <th style="text-align:center">Section</th>
+          <th style="text-align:center">Attendance</th>
+          <th style="text-align:center">Marks Avg</th>
+          <th style="text-align:center">Status</th>
+        </tr>
+      </thead>
+      <tbody id="fsfBody">
+        {% regroup analytics_students by student.current_semester as sem_groups %}
+        {% for sem_group in sem_groups %}
+        {# Semester separator row #}
+        <tr class="fsf-sem-row" data-sem="{{ sem_group.grouper }}" style="background:rgba(13,115,119,.06);pointer-events:none">
+          <td colspan="8" style="padding:7px 14px;font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)">
+            <i class="fas fa-layer-group" style="margin-right:6px"></i>Semester {{ sem_group.grouper }}
+            <span style="font-weight:400;color:var(--muted);margin-left:6px">&mdash; {{ sem_group.list|length }} student{{ sem_group.list|length|pluralize }}</span>
+          </td>
+        </tr>
+        {% for row in sem_group.list %}
+        <tr class="stu-row fac-stu-row"
+            data-name="{{ row.student.user.get_full_name|lower|default:row.student.user.username|lower }}"
+            data-roll="{{ row.student.roll_number|lower }}"
+            data-sem="{{ row.student.current_semester }}"
+            data-sec="{{ row.student.section|lower }}"
+            data-risk="{% if row.is_at_risk %}at_risk{% else %}ok{% endif %}"
+            onclick="facStuModal({{ row.student.pk }})">
+          <td class="fsf-idx" style="color:var(--muted);font-size:11px"></td>
+          <td><span class="stu-roll">{{ row.student.roll_number }}</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="stu-avatar">{{ row.student.user.first_name|first|upper }}{{ row.student.user.last_name|first|upper }}</div>
+              <span style="font-size:13px;font-weight:600;color:var(--deep)">{{ row.student.user.get_full_name|default:row.student.user.username }}</span>
+            </div>
+          </td>
+          <td style="text-align:center">
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(13,115,119,.08);color:var(--teal)">{{ row.student.current_semester }}</span>
+          </td>
+          <td style="text-align:center">
+            <span style="font-size:11px;color:var(--muted)">{{ row.student.section|default:"&mdash;" }}</span>
+          </td>
+          <td style="text-align:center">
+            <span style="font-size:12px;font-weight:700;color:{% if row.overall_pct >= 75 %}var(--teal){% elif row.overall_pct >= 60 %}#d97706{% else %}var(--red){% endif %}">{{ row.overall_pct }}%</span>
+          </td>
+          <td style="text-align:center">
+            {% if row.avg_marks_pct is not None %}
+            <span style="font-size:12px;font-weight:700;color:{% if row.avg_marks_pct >= 60 %}var(--teal){% elif row.avg_marks_pct >= 40 %}#d97706{% else %}var(--red){% endif %}">{{ row.avg_marks_pct }}%</span>
+            {% else %}<span style="color:var(--muted);font-size:12px">--</span>{% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if row.is_at_risk %}
+            <span style="padding:2px 8px;border-radius:99px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700">At Risk</span>
+            {% else %}
+            <span style="padding:2px 8px;border-radius:99px;background:#d1fae5;color:#065f46;font-size:10px;font-weight:700">On Track</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">No student data yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  <div class="d-card" id="stu-absent-card">
-    <div class="d-title"><i class="fas fa-calendar-xmark"></i> Recently Absent</div>
-    <div class="section-meta">Absences in the last 7 days.</div>
-    {% if recent_absent %}
-    <div class="table-scroll">
-      <table class="dtable">
-        <thead><tr><th>Student</th><th>Subject</th><th style="text-align:center">Date</th></tr></thead>
-        <tbody>
-          {% for rec in recent_absent %}
-          <tr class="stu-row" data-name="{{ rec.student.user.get_full_name|lower|default:rec.student.user.username|lower }}" data-roll="{{ rec.student.roll_number|lower }}" data-risk="absent" data-subject="{{ rec.session.subject.id }}">
-            <td><div style="font-weight:600;color:var(--deep)">{{ rec.student.user.get_full_name|default:rec.student.user.username }}</div><div style="font-size:11px;color:var(--muted)">{{ rec.student.roll_number }}</div></td>
-            <td style="font-size:12px;color:var(--muted)">{{ rec.session.subject.name }}</td>
-            <td style="text-align:center;font-size:12px;color:var(--muted)">{{ rec.session.date|date:"d M Y" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+
+</section>
+
+<section data-dashboard-pane="library" class="dashboard-pane">
+  <div class="d-card" style="text-align:center;padding:48px 24px">
+    <div style="width:64px;height:64px;border-radius:16px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px">
+      <i class="fas fa-book-open-reader"></i>
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-calendar-check"></i>No absences in the last 7 days.</div>
-    {% endif %}
+    <div style="font-family:Outfit,sans-serif;font-size:18px;font-weight:800;color:var(--deep);margin-bottom:8px">Library</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto">
+      The library module is currently under development. Book catalogue, borrowing history, and fine management will be available here soon.
+    </div>
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:99px;background:rgba(13,115,119,.08);color:var(--teal);font-size:12px;font-weight:700">
+      <i class="fas fa-clock"></i> Coming Soon
+    </span>
   </div>
 </section>
-<!-- NOTICES -->
+
 <section data-dashboard-pane="notices" class="dashboard-pane">
   <div class="d-card">
     <div class="d-title"><i class="fas fa-bell"></i> Notices</div>
@@ -1247,9 +1300,93 @@
     {% endif %}
   </div>
 </section>
+
+{% include "_inbox_pane.html" %}
 {% endblock %}{# dashboard_content #}
 
+{% block quick_nav %}
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#dashboard"    data-section-target="dashboard"    data-mob-nav="dashboard"><i class="fas fa-home"></i>Home</a>
+  <a href="#subjects"     data-section-target="subjects"     data-mob-nav="subjects"><i class="fas fa-book"></i>Subjects</a>
+  <a href="#substitution" data-section-target="substitution" data-mob-nav="substitution"><i class="fas fa-people-arrows"></i>Sub.</a>
+  <a href="#leave"        data-section-target="leave"        data-mob-nav="leave"><i class="fas fa-calendar-minus"></i>Leave</a>
+  <a href="#profile"      data-section-target="profile"      data-mob-nav="profile"><i class="fas fa-id-badge"></i>Profile</a>
+</nav>
+{% endblock %}
+
 {% block extra_js %}
+/* ── Faculty student modal ── */
+var _facStuModal = null;
+function _facCreateModal() {
+  if (_facStuModal) return;
+  var el = document.createElement('div');
+  el.id = 'facStuModal';
+  el.innerHTML =
+    '<div id="facStuModalBg" style="position:fixed;inset:0;background:rgba(7,30,38,.5);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px">'
+    + '<div style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(7,30,38,.3);overflow:hidden">'
+    + '<div id="facStuModalLoad" style="padding:60px 24px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>'
+    + '<div id="facStuModalContent" style="display:none;flex:1;overflow-y:auto"></div>'
+    + '</div></div>';
+  document.body.appendChild(el);
+  document.getElementById('facStuModalBg').addEventListener('click', function(e) {
+    if (e.target === this) facCloseStuModal();
+  });
+  _facStuModal = el;
+}
+function facStuModal(pk) {
+  _facCreateModal();
+  var bg = document.getElementById('facStuModalBg');
+  var ld = document.getElementById('facStuModalLoad');
+  var ct = document.getElementById('facStuModalContent');
+  bg.style.display = 'flex';
+  ld.style.display = 'block'; ct.style.display = 'none'; ct.innerHTML = '';
+  fetch('/dashboard/faculty/student/' + pk + '/profile/', {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(html) { ct.innerHTML = html; ld.style.display = 'none'; ct.style.display = 'block'; })
+    .catch(function(err) { ld.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center">' + err.message + '</div>'; });
+}
+function facCloseStuModal() {
+  var bg = document.getElementById('facStuModalBg');
+  if (bg) bg.style.display = 'none';
+}
+/* ── Faculty student filter ── */
+(function() {
+  function fsfApply() {
+    var subj = document.getElementById('fsfSubj') ? document.getElementById('fsfSubj').value : '';
+    var risk = document.getElementById('fsfRisk') ? document.getElementById('fsfRisk').value : '';
+    var q    = document.getElementById('fsfSearch') ? document.getElementById('fsfSearch').value.toLowerCase().trim() : '';
+    var rows = document.querySelectorAll('#fsfBody .fac-stu-row');
+    var count = 0, idx = 0;
+    rows.forEach(function(r) {
+      var riskOk  = !risk || r.dataset.risk === risk;
+      var srchOk  = !q   || r.dataset.roll.indexOf(q) !== -1 || r.dataset.name.indexOf(q) !== -1;
+      var show    = riskOk && srchOk;
+      r.style.display = show ? '' : 'none';
+      if (show) { idx++; var ic = r.querySelector('.fsf-idx'); if(ic) ic.textContent = idx; count++; }
+    });
+    var cnt = document.getElementById('fsfCount'); if(cnt) cnt.textContent = count;
+    /* hide semester separator rows that have no visible students */
+    document.querySelectorAll('#fsfBody .fsf-sem-row').forEach(function(sep) {
+      var sem = sep.dataset.sem;
+      var hasVisible = false;
+      document.querySelectorAll('#fsfBody .fac-stu-row[data-sem="' + sem + '"]').forEach(function(r) {
+        if (r.style.display !== 'none') hasVisible = true;
+      });
+      sep.style.display = hasVisible ? '' : 'none';
+    });
+  }
+  window.fsfSetAll = function() {
+    var s = document.getElementById('fsfSubj'), r = document.getElementById('fsfRisk');
+    if(s) s.value = ''; if(r) r.value = ''; fsfApply();
+  };
+  var s = document.getElementById('fsfSubj'), r = document.getElementById('fsfRisk'), q = document.getElementById('fsfSearch');
+  if(s) s.addEventListener('change', fsfApply);
+  if(r) r.addEventListener('change', fsfApply);
+  if(q) q.addEventListener('input', fsfApply);
+  /* number rows */
+  var rows = document.querySelectorAll('#fsfBody .fac-stu-row'), i = 0;
+  rows.forEach(function(r) { var ic = r.querySelector('.fsf-idx'); if(ic) ic.textContent = ++i; });
+})();
 // My Students filters
 function filterStudents() {
   var q      = (document.getElementById('stu-search').value || '').toLowerCase();

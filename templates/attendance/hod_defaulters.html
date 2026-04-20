@@ -48,7 +48,8 @@
       </thead>
       <tbody>
         {% for row in rows %}
-        <tr style="{% if not row.eligible %}background:#fff8f8{% endif %}">
+        <tr style="{% if not row.eligible %}background:#fff8f8{% endif %};cursor:pointer"
+            onclick="hodStuModalFromDefaulters({{ row.student.pk }})">
           <td style="font-weight:600;color:var(--teal)">{{ row.student.roll_number }}</td>
           <td>{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
           <td style="text-align:center">{{ row.student.current_semester }}</td>
@@ -86,4 +87,32 @@
   <a href="{% url 'hod_exemptions' %}" class="qa-btn qa-teal" style="font-size:12px"><i class="fas fa-file-medical"></i> Review Exemption Requests</a>
 </div>
 </section>
+
+{# Student profile modal — same as dashboard #}
+<div id="defStuModalBg" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.5);z-index:99998;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(7,30,38,.3);overflow:hidden">
+    <div id="defStuModalLoad" style="padding:60px 24px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin" style="font-size:22px;display:block;margin-bottom:10px"></i>Loading...</div>
+    <div id="defStuModalContent" style="display:none;flex:1;overflow-y:auto"></div>
+  </div>
+</div>
+
+<script>
+function hodStuModalFromDefaulters(pk) {
+  var bg = document.getElementById('defStuModalBg');
+  var ld = document.getElementById('defStuModalLoad');
+  var ct = document.getElementById('defStuModalContent');
+  bg.style.display = 'flex';
+  ld.style.display = 'block'; ct.style.display = 'none'; ct.innerHTML = '';
+  fetch('/dashboard/hod/student/' + pk + '/?modal=1', {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(html) { ct.innerHTML = html; ld.style.display = 'none'; ct.style.display = 'block'; })
+    .catch(function(err) { ld.innerHTML = '<div style="padding:24px;color:#ef4444;text-align:center">' + err.message + '</div>'; });
+}
+document.getElementById('defStuModalBg').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { var bg = document.getElementById('defStuModalBg'); if(bg) bg.style.display = 'none'; }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,199 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}College Settings — {{ college.name }}{% endblock %}
+{% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
+{% block page_title %}College Settings{% endblock %}
+{% block page_sub %}Configure rules, quotas, evaluation scheme, and feature toggles for {{ college.name }}{% endblock %}
+
+{% block sidebar_links %}{% with active_section='settings' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+
+{% block dashboard_content %}
+<section class="dashboard-pane active" style="display:block">
+
+{% if messages %}
+{% for msg in messages %}
+<div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;
+  background:{% if 'success' in msg.tags %}#f0fdf4;border:1px solid #bbf7d0;color:#166534{% else %}rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#dc2626{% endif %}">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+{# ── Quick links ── #}
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px">
+  <a href="{% url 'admin_attendance_rules' %}"  class="qa-btn qa-teal"  style="font-size:12px"><i class="fas fa-sliders"></i> Attendance Rules</a>
+  <a href="{% url 'admin_regulations' %}"        class="qa-btn qa-deep"  style="font-size:12px"><i class="fas fa-scroll"></i> Regulations &amp; Curriculum</a>
+  <a href="{% url 'admin_sections' %}"           class="qa-btn qa-deep"  style="font-size:12px"><i class="fas fa-layer-group"></i> Sections</a>
+  <a href="{% url 'admin_ssf_map' %}"            class="qa-btn qa-deep"  style="font-size:12px"><i class="fas fa-diagram-project"></i> Student-Faculty Mapping</a>
+  <a href="{% url 'admin_elective_pools' %}"     class="qa-btn qa-deep"  style="font-size:12px"><i class="fas fa-list-check"></i> Elective Pools</a>
+  <a href="{% url 'admin_semester_results' %}"   class="qa-btn qa-gold"  style="font-size:12px"><i class="fas fa-square-poll-horizontal"></i> Semester Results</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+{# ── LEFT COLUMN ── #}
+<div>
+
+{# 1. Evaluation Scheme / CGPA #}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-calculator"></i> Evaluation Scheme &amp; CGPA</div>
+  <div class="section-meta">Defines how CIE (internal) and SEE (end-sem) combine into final marks and CGPA.</div>
+  <form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="scheme"/>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Scheme Name</label>
+      <input type="text" name="scheme_name" value="{{ scheme.name|default:'Default Scheme' }}"
+        style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box"/>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Grading Type</label>
+      <select name="grading_type" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:#fff">
+        {% for val, lbl in grading_choices %}
+        <option value="{{ val }}" {% if scheme.grading_type == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Credit-based = CGPA (10-point). Absolute = fixed % cutoffs.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">CIE Tests / Semester</label>
+        <input type="number" name="cie_count" value="{{ scheme.cie_count|default:2 }}" min="1" max="5"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">Best of N Tests</label>
+        <input type="number" name="cie_best_of" value="{{ scheme.cie_best_of|default:2 }}" min="1" max="5"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">Max Marks / CIE Test</label>
+        <input type="number" name="cie_max_per_test" value="{{ scheme.cie_max_per_test|default:25 }}" min="1"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">CIE Total Max</label>
+        <input type="number" name="cie_total_max" value="{{ scheme.cie_total_max|default:50 }}" min="1"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">SEE Max Marks</label>
+        <input type="number" name="see_max" value="{{ scheme.see_max|default:100 }}" min="1"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">SEE Scaled To</label>
+        <input type="number" name="see_scaled_to" value="{{ scheme.see_scaled_to|default:50 }}" min="1"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">SEE Passing Min</label>
+        <input type="number" name="see_passing_min" value="{{ scheme.see_passing_min|default:20 }}" min="0"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">Overall Passing Min (%)</label>
+        <input type="number" name="overall_passing_min" value="{{ scheme.overall_passing_min|default:40 }}" min="0" max="100"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+    </div>
+    <div style="background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+      <strong style="color:var(--teal)">CGPA Formula:</strong>
+      CGPA = Σ(Grade Point × Credits) ÷ Σ(Credits) across all semesters.<br>
+      Grade points: O=10, A+=9, A=8, B+=7, B=6, C=5, P=4, F=0
+    </div>
+    <button type="submit" class="qa-btn qa-teal" style="font-size:13px"><i class="fas fa-save"></i> Save Evaluation Scheme</button>
+  </form>
+</div>
+
+{# 2. Leave & Substitution Quotas #}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-calendar-minus"></i> Leave &amp; Substitution Quotas</div>
+  <div class="section-meta">Per-year limits for faculty leave types and substitutions per semester.</div>
+  <form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="quotas"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      {% for field, lbl, val in leave_fields %}
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">{{ lbl }} (days/yr)</label>
+        <input type="number" name="{{ field }}" value="{{ val }}" min="0" max="365"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+      {% endfor %}
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px">Max Substitutions (per sem)</label>
+        <input type="number" name="max_substitutions" value="{{ cfg.max_substitutions }}" min="0" max="100"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;outline:none"/>
+      </div>
+    </div>
+    <button type="submit" class="qa-btn qa-teal" style="font-size:13px"><i class="fas fa-save"></i> Save Quotas</button>
+  </form>
+</div>
+
+</div>{# end left column #}
+
+{# ── RIGHT COLUMN ── #}
+<div>
+
+{# 3. Attendance Rules summary #}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-sliders"></i> Attendance Rules
+    <a href="{% url 'admin_attendance_rule_add' %}" style="margin-left:auto;font-size:11px;font-weight:600;color:var(--teal);text-decoration:none"><i class="fas fa-plus"></i> Add</a>
+  </div>
+  <div class="section-meta">Hall ticket eligibility thresholds per department/semester.</div>
+  {% if att_rules %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead>
+        <tr><th>Dept</th><th>Sem</th><th style="text-align:center">Min Overall</th><th style="text-align:center">Min Subject</th><th style="text-align:center">Alert</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for rule in att_rules %}
+        <tr>
+          <td style="font-size:12px;font-weight:600">{{ rule.department.code|default:"All" }}</td>
+          <td style="text-align:center;font-size:12px">{{ rule.semester|default:"All" }}</td>
+          <td style="text-align:center;font-weight:700;color:var(--teal)">{{ rule.min_overall_pct }}%</td>
+          <td style="text-align:center">{{ rule.min_subject_pct }}%</td>
+          <td style="text-align:center;color:var(--gold)">{{ rule.alert_below_pct }}%</td>
+          <td>
+            <a href="{% url 'admin_attendance_rule_edit' rule.pk %}" style="font-size:11px;color:var(--teal)"><i class="fas fa-pen"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-sliders"></i>No rules yet. <a href="{% url 'admin_attendance_rule_add' %}" style="color:var(--teal)">Add one →</a></div>
+  {% endif %}
+</div>
+
+{# 4. Feature Toggles #}
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-toggle-on"></i> Feature Toggles</div>
+  <div class="section-meta">Enable or disable modules college-wide.</div>
+  <form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="features"/>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      {% for field, lbl, desc, is_on in feature_toggles %}
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--surface2);border-radius:9px;cursor:pointer">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ lbl }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ desc }}</div>
+        </div>
+        <input type="checkbox" name="{{ field }}" {% if is_on %}checked{% endif %}
+          style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0"/>
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="qa-btn qa-teal" style="font-size:13px"><i class="fas fa-save"></i> Save Feature Settings</button>
+  </form>
+</div>
+
+</div>{# end right column #}
+</div>
+
+</section>
+{% endblock %}

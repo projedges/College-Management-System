@@ -196,7 +196,9 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # ── Static / Media ────────────────────────────────────────────────────────────
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Use CompressedStaticFilesStorage (no manifest hashing) so CSS changes are
+# picked up immediately without running collectstatic every time.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 

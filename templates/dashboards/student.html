@@ -1,4 +1,4 @@
-﻿{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Student Dashboard - EduTrack{% endblock %}
 {% block role_label %}Student{% endblock %}
 {% block role_label_foot %}Student{% endblock %}
@@ -22,6 +22,11 @@
 
 {% block extra_css %}
 <style>
+  /* Stat card navigation */
+  .stat-card-link{display:flex;flex-direction:column;position:relative;transition:box-shadow .18s,transform .18s,border-color .18s}
+  .stat-card-link:hover{box-shadow:0 6px 24px rgba(13,115,119,.13);transform:translateY(-2px);border-color:var(--teal)!important}
+  .stat-nav-hint{font-size:10px;font-weight:700;color:var(--teal);margin-top:auto;padding-top:8px;opacity:0;transition:opacity .18s;letter-spacing:.3px}
+  .stat-card-link:hover .stat-nav-hint{opacity:1}
   /* Attendance redesign */
   .att-summary-bar{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:18px}
   .att-donut-wrap{position:relative;width:100px;height:100px;flex-shrink:0}
@@ -122,6 +127,14 @@
   .tt-modal-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
   .tt-modal-row:last-child{border-bottom:none}
   .tt-modal-row-lbl{color:var(--muted);font-weight:600;min-width:80px;font-size:12px}
+  /* Profile view rows */
+  .profile-row{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+  .profile-row:last-child{border-bottom:none}
+  .profile-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;min-width:110px;flex-shrink:0}
+  .profile-val{color:var(--deep);flex:1;word-break:break-word}
+  @media(max-width:860px){
+    .profile-lbl{min-width:90px}
+  }
   /* Predictor pill */
   .pred-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-top:4px}
   .pred-safe{background:#d1fae5;color:#065f46}
@@ -198,33 +211,41 @@
     .sem-tab{padding:6px 10px;font-size:11px}
     #att-search,#att-cal-search{width:140px}
   }
+
 </style>
 {% endblock %}
 
 {% block dashboard_content %}
 <section data-dashboard-pane="dashboard" class="dashboard-pane active">
   <div class="stat-grid">
-    <div class="stat-card">
+    <a href="#attendance" data-section-target="attendance" class="stat-card stat-card-link" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-calendar-check"></i></div>
       <div class="s-val">{% if overall_attendance %}{{ overall_attendance }}%{% else %}-{% endif %}</div>
       <div class="s-lbl">Overall Attendance</div>
-    </div>
-    <div class="stat-card">
+      <div class="stat-nav-hint"><i class="fas fa-arrow-right"></i> View Details</div>
+    </a>
+    <a href="#academic-track" data-section-target="academic-track" class="stat-card stat-card-link" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-star"></i></div>
       <div class="s-val">{% if cgpa %}{{ cgpa }}{% else %}-{% endif %}</div>
       <div class="s-lbl">CGPA</div>
-    </div>
-    <div class="stat-card">
+      <div class="stat-nav-hint"><i class="fas fa-arrow-right"></i> View Results</div>
+    </a>
+    <a href="#timetable" data-section-target="timetable" class="stat-card stat-card-link" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-file-alt"></i></div>
       <div class="s-val">{{ pending_assignments|length }}</div>
       <div class="s-lbl">Pending Assignments</div>
-    </div>
-    <div class="stat-card">
+      <div class="stat-nav-hint"><i class="fas fa-arrow-right"></i> View Courses</div>
+    </a>
+    <a href="#fees" data-section-target="fees" class="stat-card stat-card-link" style="text-decoration:none;cursor:pointer">
       <div class="s-icon" style="background:rgba(239,68,68,.08);color:var(--red)"><i class="fas fa-indian-rupee-sign"></i></div>
       <div class="s-val">{% if fee %}{{ fee.status }}{% else %}-{% endif %}</div>
       <div class="s-lbl">Fee Status</div>
-    </div>
+      <div class="stat-nav-hint"><i class="fas fa-arrow-right"></i> View Fees</div>
+    </a>
   </div>
+
+
+
 
   <div class="two-col">
     <div class="d-card">
@@ -314,21 +335,21 @@
       <div class="two-col">
         <div>
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Personal</div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">College Email</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email|default:"Not added" }}{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Personal Email</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Date of Birth</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Gender</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Blood Group</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Aadhaar</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} ****{% else %}Not added{% endif %} <span style="font-size:10px;color:var(--muted)">(admin only)</span></div></div></div>
+          <div class="profile-row"><span class="profile-lbl">College Email</span><span class="profile-val">{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email|default:"Not added" }}{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Personal Email</span><span class="profile-val">{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Date of Birth</span><span class="profile-val">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Gender</span><span class="profile-val">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Blood Group</span><span class="profile-val">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Aadhaar</span><span class="profile-val">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} **** <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</span></div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Contact &amp; Family</div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Mobile</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.phone_number %}{{ profile.phone_number }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Alternate Mobile</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if profile and profile.alternate_phone %}{{ profile.alternate_phone }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Address</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}) <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Parent Phone</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if parent and parent.phone_number %}{{ parent.phone_number }} <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</div></div></div>
-          <div class="res-row"><div><div style="font-size:11px;color:var(--muted)">Emergency Contact</div><div style="font-size:13px;font-weight:600;color:var(--deep)">{% if emergency_contact %}{{ emergency_contact.name }} &middot; {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</div></div></div>
+          <div class="profile-row"><span class="profile-lbl">Mobile</span><span class="profile-val">{% if profile and profile.phone_number %}{{ profile.phone_number }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Alt. Mobile</span><span class="profile-val">{% if profile and profile.alternate_phone %}{{ profile.alternate_phone }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Address</span><span class="profile-val">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Parent</span><span class="profile-val">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}) <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Parent Phone</span><span class="profile-val">{% if parent and parent.phone_number %}{{ parent.phone_number }} <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+          <div class="profile-row"><span class="profile-lbl">Emergency</span><span class="profile-val">{% if emergency_contact %}{{ emergency_contact.name }} &middot; {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</span></div>
         </div>
       </div>
     </div>
@@ -364,17 +385,17 @@
             <label style="{{ lbl }}">College Email</label>
             <input type="email" value="{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email }}{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Institutional email â€” managed by admin</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Institutional email &mdash; managed by admin</div>
           </div>
           <div>
             <label style="{{ lbl }}">Personal Email</label>
-            <input type="email" value="{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}â€”{% endif %}" readonly
+            <input type="email" value="{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}&mdash;{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
           <div>
             <label style="{{ lbl }}">Father's Name</label>
-            <input type="text" value="{% if parent and parent.parent_type == 'FATHER' %}{{ parent.name }}{% else %}â€”{% endif %}" readonly
+            <input type="text" value="{% if parent and parent.parent_type == 'FATHER' %}{{ parent.name }}{% else %}&mdash;{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
@@ -398,13 +419,13 @@
           </div>
           <div>
             <label style="{{ lbl }}">Gender</label>
-            <input type="text" value="{% if profile and profile.gender %}{{ profile.gender }}{% else %}â€”{% endif %}" readonly
+            <input type="text" value="{% if profile and profile.gender %}{{ profile.gender }}{% else %}&mdash;{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
           <div>
             <label style="{{ lbl }}">Blood Group</label>
-            <input type="text" value="{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}â€”{% endif %}" readonly
+            <input type="text" value="{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}&mdash;{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
@@ -1327,7 +1348,7 @@
           <i class="fas fa-circle-check" style="font-size:28px;color:var(--teal);display:block;margin-bottom:8px"></i>
           <div style="font-size:13px;font-weight:700;color:var(--teal)">No backlogs to register for</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">
-            {% if not supply_latest_exam %}No supply exam scheduled yet.{% else %}All subjects cleared â€” no supply exam needed.{% endif %}
+            {% if not supply_latest_exam %}No supply exam scheduled yet.{% else %}All subjects cleared &mdash; no supply exam needed.{% endif %}
           </div>
         </div>
       {% endif %}
@@ -1375,7 +1396,7 @@
 
     <!-- What's New tab -->
     <div class="inbox-pane inbox-pane-active" id="inbox-whats-new">
-      <div class="section-meta" style="margin-bottom:12px">Assignments, quizzes, and notices from the last 7 days.</div>
+      <div class="section-meta" style="margin-bottom:12px">New assignments and quizzes from the last 7 days.</div>
       {% if new_assignments %}
       <div style="margin-bottom:16px">
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--teal);margin-bottom:8px"><i class="fas fa-file-alt"></i> New Assignments</div>
@@ -1405,32 +1426,49 @@
         {% endfor %}
       </div>
       {% endif %}
-      {% if new_announcements %}
-      <div>
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px"><i class="fas fa-bell"></i> Recent Notices</div>
-        {% for ann in new_announcements %}
-        <div style="padding:9px 0;border-bottom:1px solid #f3f4f6">
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ ann.created_at|date:"d M Y" }}</div>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-      {% if not new_assignments and not new_quizzes and not new_announcements %}
-      <div class="empty"><i class="fas fa-check-circle"></i>All caught up &mdash; nothing new in the last 7 days.</div>
+      {% if not new_assignments and not new_quizzes %}
+      <div class="empty"><i class="fas fa-check-circle"></i>All caught up &mdash; no new assignments or quizzes.</div>
       {% endif %}
     </div>
 
     <!-- Notices tab -->
     <div class="inbox-pane" id="inbox-notices">
-      <div class="section-meta" style="margin-bottom:12px">College announcements and circulars.</div>
+      <div class="section-meta" style="margin-bottom:12px">Announcements from HOD, Principal, and college administration.</div>
       {% if announcements %}
       <div class="content-scroll">
         {% for ann in announcements %}
-        <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
-          <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
+        <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+              background:{% if ann.created_by.hods.exists %}rgba(99,102,241,.1){% else %}rgba(13,115,119,.1){% endif %}">
+              <i class="fas {% if ann.created_by.hods.exists %}fa-user-tie{% else %}fa-building{% endif %}"
+                style="font-size:13px;color:{% if ann.created_by.hods.exists %}#6366f1{% else %}var(--teal){% endif %}"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:3px">{{ ann.title }}</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:5px">{{ ann.message|truncatechars:200 }}</div>
+              {% if ann.attachment %}
+                {% with fname=ann.attachment.name|lower %}
+                {% if '.jpg' in fname or '.jpeg' in fname or '.png' in fname or '.gif' in fname or '.webp' in fname %}
+                <div style="margin:8px 0">
+                  <img src="{{ ann.attachment.url }}" alt="Notice attachment"
+                    style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--border);cursor:pointer;object-fit:cover"
+                    onclick="window.open('{{ ann.attachment.url }}','_blank')"/>
+                </div>
+                {% else %}
+                <a href="{{ ann.attachment.url }}" target="_blank"
+                  style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--teal);text-decoration:none;padding:3px 9px;border-radius:6px;background:rgba(13,115,119,.07);margin-bottom:4px">
+                  <i class="fas fa-file-arrow-down"></i> Download Attachment
+                </a>
+                {% endif %}
+                {% endwith %}
+              {% endif %}
+              <div style="font-size:11px;color:var(--muted)">
+                {{ ann.created_at|date:"d M Y" }}
+                &middot; {{ ann.created_by.get_full_name|default:ann.created_by.username }}
+              </div>
+            </div>
+          </div>
         </div>
         {% endfor %}
       </div>
@@ -1518,10 +1556,10 @@
       <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:10px"><i class="fas fa-circle-info" style="color:var(--teal)"></i> Instructions to be followed before downloading the hall ticket</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.8">
         <p style="margin-bottom:8px">The following penalties are imposed for students who indulge in malpractice during examinations.</p>
-        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code A:</strong> If a student is found in possession of any study material, mobile phone or smart devices during exams â€” the student will receive an "F" grade in the respective subject.</p>
-        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code B:</strong> If found for a second time â€” all subjects in that semester will be awarded "F" grade.</p>
-        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code C:</strong> If found for a third time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after six months from the last date of the examination of that semester.</p>
-        <p style="margin-bottom:0"><strong style="color:var(--deep)">Code D:</strong> If found for a fourth time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after one year from the last date of the examination of that semester.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code A:</strong> If a student is found in possession of any study material, mobile phone or smart devices during exams &mdash; the student will receive an "F" grade in the respective subject.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code B:</strong> If found for a second time &mdash; all subjects in that semester will be awarded "F" grade.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code C:</strong> If found for a third time &mdash; all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after six months from the last date of the examination of that semester.</p>
+        <p style="margin-bottom:0"><strong style="color:var(--deep)">Code D:</strong> If found for a fourth time &mdash; all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after one year from the last date of the examination of that semester.</p>
       </div>
     </div>
 
@@ -1531,10 +1569,10 @@
       <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:10px"><i class="fas fa-circle-info" style="color:var(--teal)"></i> Instructions to be followed before downloading the hall ticket</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.8">
         <p style="margin-bottom:8px">The following penalties are imposed for students who indulge in malpractice during examinations.</p>
-        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code A:</strong> If a student is found in possession of any study material, mobile phone or smart devices during exams â€” the student will receive an "F" grade in the respective subject.</p>
-        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code B:</strong> If found for a second time â€” all subjects in that semester will be awarded "F" grade.</p>
-        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code C:</strong> If found for a third time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after six months from the last date of the examination of that semester.</p>
-        <p style="margin-bottom:0"><strong style="color:var(--deep)">Code D:</strong> If found for a fourth time â€” all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after one year from the last date of the examination of that semester.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code A:</strong> If a student is found in possession of any study material, mobile phone or smart devices during exams &mdash; the student will receive an "F" grade in the respective subject.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code B:</strong> If found for a second time &mdash; all subjects in that semester will be awarded "F" grade.</p>
+        <p style="margin-bottom:6px"><strong style="color:var(--deep)">Code C:</strong> If found for a third time &mdash; all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after six months from the last date of the examination of that semester.</p>
+        <p style="margin-bottom:0"><strong style="color:var(--deep)">Code D:</strong> If found for a fourth time &mdash; all subjects will be awarded "F" grade and the student will be allowed to appear for examinations after one year from the last date of the examination of that semester.</p>
       </div>
     </div>
     {% endif %}
@@ -1542,54 +1580,17 @@
 </section>
 
 <section data-dashboard-pane="library" class="dashboard-pane">
-  <div class="d-card">
-    <div class="d-title"><i class="fas fa-book-open-reader"></i> Library</div>
-    <div class="section-meta">Your library membership, borrowed books, fines, and dues.</div>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px">
-      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
-        <div style="font-size:28px;font-weight:900;color:var(--teal)"><i class="fas fa-book" style="font-size:22px"></i></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Books Borrowed</div>
-      </div>
-      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
-        <div style="font-size:28px;font-weight:900;color:var(--gold)"><i class="fas fa-clock" style="font-size:22px"></i></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Due Returns</div>
-      </div>
-      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
-        <div style="font-size:28px;font-weight:900;color:var(--red)"><i class="fas fa-indian-rupee-sign" style="font-size:20px"></i></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Pending Fines</div>
-      </div>
-      <div style="padding:16px;background:var(--surface2);border-radius:12px;text-align:center">
-        <div style="font-size:28px;font-weight:900;color:var(--teal)"><i class="fas fa-id-card" style="font-size:20px"></i></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">Membership</div>
-      </div>
+  <div class="d-card" style="text-align:center;padding:48px 24px">
+    <div style="width:64px;height:64px;border-radius:16px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px">
+      <i class="fas fa-book-open-reader"></i>
     </div>
-
-    <div style="background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:12px;padding:20px;text-align:center">
-      <i class="fas fa-book-open-reader" style="font-size:32px;color:var(--teal);display:block;margin-bottom:10px"></i>
-      <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:6px">Library Management System</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        Access the full library portal to search books, view your borrowing history, check due dates, and pay fines.
-      </div>
-      <a href="{% url 'student_library' %}" class="mini-btn mini-btn-teal" style="display:inline-flex">
-        <i class="fas fa-arrow-right"></i> Open Library Portal
-      </a>
+    <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep);margin-bottom:8px">Library</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto">
+      The library module is currently under development. Book catalogue, borrowing history, and fine management will be available here soon.
     </div>
-
-    <div style="margin-top:16px">
-      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Quick Actions</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a href="{% url 'student_library' %}?tab=borrow" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border)">
-          <i class="fas fa-book-bookmark"></i> My Borrowed Books
-        </a>
-        <a href="{% url 'student_library' %}?tab=search" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border)">
-          <i class="fas fa-magnifying-glass"></i> Search Catalogue
-        </a>
-        <a href="{% url 'student_library' %}?tab=fines" class="mini-btn" style="background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2)">
-          <i class="fas fa-indian-rupee-sign"></i> Pay Fines
-        </a>
-      </div>
-    </div>
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:99px;background:rgba(13,115,119,.08);color:var(--teal);font-size:12px;font-weight:700">
+      <i class="fas fa-clock"></i> Coming Soon
+    </span>
   </div>
 </section>
 
@@ -1767,7 +1768,7 @@
         </div>
         {% for subj in cat_group.list %}
         {% if subj.category == 'PE' or subj.category == 'OE' %}
-        {# Elective â€” find pool and show select button #}
+        {# Elective &mdash; find pool and show select button #}
         {% with found_pool=None %}
         {% for item in pool_data %}
         {% for ps in item.pool.subjects.all %}{% if ps.pk == subj.pk %}
@@ -2055,13 +2056,37 @@
 
 {% endblock %}{# dashboard_content #}
 
+{% block quick_nav %}
+<!-- Mobile bottom navigation bar (student portal) -->
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#dashboard" data-section-target="dashboard" data-mob-nav="dashboard">
+    <i class="fas fa-home"></i>Home
+  </a>
+  <a href="#attendance" data-section-target="attendance" data-mob-nav="attendance">
+    <i class="fas fa-calendar-check"></i>Attend.
+  </a>
+  <a href="#academic-track" data-section-target="academic-track" data-mob-nav="academic-track">
+    <i class="fas fa-chart-line"></i>Results
+  </a>
+  <a href="#timetable" data-section-target="timetable" data-mob-nav="timetable">
+    <i class="fas fa-clock"></i>Courses
+  </a>
+  <a href="#fees" data-section-target="fees" data-mob-nav="fees">
+    <i class="fas fa-indian-rupee-sign"></i>Fees
+  </a>
+</nav>
+{% endblock %}
+
 {% block extra_js %}
 (function() {
-  // Mark notifications read when inbox alerts tab is opened
+  // Mark notifications read when inbox section or alerts tab is opened
+  var _notifMarked = false;
   var inboxLink = document.querySelector('a[data-section-target="inbox"]');
   var inboxBadge = inboxLink ? inboxLink.querySelector('span') : null;
 
   function markNotificationsRead() {
+    if (_notifMarked) return;
+    _notifMarked = true;
     fetch("{% url 'student_mark_notifications_read' %}", {
       method: 'POST',
       headers: { 'X-CSRFToken': '{{ csrf_token }}' }
@@ -2078,6 +2103,9 @@
     if (btn && btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf('notifications') !== -1) {
       markNotificationsRead();
     }
+    // Also fire when inbox sidebar link is clicked
+    var link = e.target.closest('[data-section-target="inbox"]');
+    if (link) setTimeout(markNotificationsRead, 300);
   });
 })();
 
@@ -2107,6 +2135,7 @@ function switchInbox(key, btn) {
   var pane = document.getElementById('inbox-' + key);
   if (pane) pane.classList.add('inbox-pane-active');
   btn.classList.add('inbox-tab-active');
+  if (key === 'notifications') markNotificationsRead();
 }
 
 function toggleBacklogs() {

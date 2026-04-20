@@ -14,7 +14,7 @@
 <a href="#hods" data-section-target="hods" class="sb-link"><i class="fas fa-building-columns"></i> HODs</a>
 <a href="#fees" data-section-target="fees" class="sb-link"><i class="fas fa-indian-rupee-sign"></i> Fee Overview</a>
 <a href="#attendance" data-section-target="attendance" class="sb-link"><i class="fas fa-calendar-check"></i> Attendance Health</a>
-<a href="#notices" data-section-target="notices" class="sb-link"><i class="fas fa-bell"></i> Notices</a>
+<a href="#inbox" data-section-target="inbox" class="sb-link"><i class="fas fa-bell"></i> Inbox{% if notifications %} <span style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px">{{ notifications|length }}</span>{% endif %}</a>
 {% endblock %}
 
 {% block extra_css %}
@@ -116,12 +116,12 @@
       </div>
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Professional Details</div>
-    <div class="summary-list">
-      <div class="summary-item"><span>Email</span><strong>{{ request.user.email|default:"Not set" }}</strong></div>
-      <div class="summary-item"><span>Qualification</span><strong>{{ principal.qualification }}</strong></div>
-      <div class="summary-item"><span>Experience</span><strong>{{ principal.experience_years }} years</strong></div>
-      <div class="summary-item"><span>College</span><strong>{{ college.name }}</strong></div>
-      <div class="summary-item"><span>Username</span><strong style="color:var(--muted)">{{ request.user.username }}</strong></div>
+    <div>
+      <div class="profile-row"><span class="profile-lbl">Email</span><span class="profile-val">{{ request.user.email|default:"Not set" }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Qualification</span><span class="profile-val">{{ principal.qualification }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Experience</span><span class="profile-val">{{ principal.experience_years }} years</span></div>
+      <div class="profile-row"><span class="profile-lbl">College</span><span class="profile-val">{{ college.name }}</span></div>
+      <div class="profile-row"><span class="profile-lbl">Username</span><span class="profile-val" style="color:var(--muted)">{{ request.user.username }}</span></div>
     </div>
   </div>
 </section>
@@ -366,4 +366,16 @@
     {% endif %}
   </div>
 </section>
+
+{% include "_inbox_pane.html" %}
+
+{% block quick_nav %}
+<nav class="mob-bottom-nav" id="mob-bottom-nav" aria-label="Quick navigation">
+  <a href="#dashboard"   data-section-target="dashboard"   data-mob-nav="dashboard"><i class="fas fa-home"></i>Home</a>
+  <a href="#departments" data-section-target="departments" data-mob-nav="departments"><i class="fas fa-building"></i>Depts</a>
+  <a href="#faculty"     data-section-target="faculty"     data-mob-nav="faculty"><i class="fas fa-chalkboard-teacher"></i>Faculty</a>
+  <a href="#attendance"  data-section-target="attendance"  data-mob-nav="attendance"><i class="fas fa-calendar-check"></i>Attend.</a>
+  <a href="#fees"        data-section-target="fees"        data-mob-nav="fees"><i class="fas fa-indian-rupee-sign"></i>Fees</a>
+</nav>
+{% endblock %}
 {% endblock %}

@@ -279,9 +279,19 @@ class Announcement(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True, related_name='announcements')
     title = models.CharField(max_length=200)
     message = models.TextField()
-
+    attachment = models.FileField(upload_to='announcements/', null=True, blank=True,
+                                  help_text='Optional PDF or image attachment')
+    # Target audience
+    TARGET_CHOICES = [
+        ('all', 'Everyone (Faculty + Students)'),
+        ('faculty', 'Faculty Only'),
+        ('students', 'Students Only'),
+    ]
+    target = models.CharField(max_length=10, choices=TARGET_CHOICES, default='all')
+    department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='dept_announcements',
+                                   help_text='Limit to a specific department (leave blank for college-wide)')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -291,11 +301,15 @@ class Announcement(models.Model):
 # NOTIFICATIONS
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-
     message = models.TextField()
     is_read = models.BooleanField(default=False)
-
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_read'], name='notif_user_read_idx'),
+            models.Index(fields=['user', '-created_at'], name='notif_user_date_idx'),
+        ]
 
     def __str__(self):
         return f"{self.user.username} Notification"
@@ -1421,6 +1435,10 @@ class Substitution(models.Model):
 
     class Meta:
         unique_together = ('timetable_slot', 'date')
+        indexes = [
+            models.Index(fields=['original_faculty', 'date', 'status'], name='sub_orig_date_status_idx'),
+            models.Index(fields=['substitute_faculty', 'date', 'status'], name='sub_sub_date_status_idx'),
+        ]
 
     def __str__(self):
         return f"Sub: {self.substitute_faculty} for {self.original_faculty} on {self.date} [{self.status}]"
@@ -1578,6 +1596,10 @@ class AttendanceSession(models.Model):
 
     class Meta:
         unique_together = ('subject', 'date', 'section')  # one session per subject+section per day
+        indexes = [
+            models.Index(fields=['faculty', 'date'], name='attsess_faculty_date_idx'),
+            models.Index(fields=['subject', 'date'], name='attsess_subject_date_idx'),
+        ]
 
     def __str__(self):
         sec = f" [{self.section}]" if self.section else ""
@@ -1930,6 +1952,12 @@ class LeaveApplication(models.Model):
     hod_remarks = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['faculty', 'status'], name='leave_faculty_status_idx'),
+            models.Index(fields=['faculty', 'from_date'], name='leave_faculty_date_idx'),
+        ]
 
     @property
     def days(self):

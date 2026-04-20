@@ -68,7 +68,12 @@ class SessionTimeoutMiddleware:
         request.session_idle_timeout  = self.IDLE_TIMEOUT
         request.session_warning_before = self.WARNING_BEFORE
 
-        return self.get_response(request)
+        response = self.get_response(request)
+        # Prevent browser from caching authenticated pages — stops back-button 403
+        if request.user.is_authenticated:
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+        return response
 
 
 class CollegeScopeMiddleware:

@@ -91,6 +91,7 @@ urlpatterns = [
     path('dashboard/admin/electives/<int:pk>/selections/', views.admin_elective_pool_selections, name='admin_elective_pool_selections'),
     path('dashboard/admin/course-registration/toggle/', views.admin_course_registration_toggle, name='admin_course_registration_toggle'),
     path('dashboard/admin/leave-quotas/', views.admin_leave_quotas, name='admin_leave_quotas'),
+    path('dashboard/admin/settings/', views.admin_college_settings, name='admin_college_settings'),
 
     # Student elective selection
     path('dashboard/student/electives/', views.student_elective_select, name='student_elective_select'),
@@ -133,9 +134,12 @@ urlpatterns = [
     path('dashboard/hod/hall-tickets/', views.hod_hall_tickets, name='hod_hall_tickets'),
     path('dashboard/hod/hall-tickets/<int:exam_id>/', views.hod_exam_hall_tickets, name='hod_exam_hall_tickets'),
     path('dashboard/hod/student/<int:pk>/', views.hod_student_profile, name='hod_student_profile'),
+    path('dashboard/hod/student/<int:pk>/quick/', views.hod_student_quick_json, name='hod_student_quick_json'),
     path('dashboard/hod/faculty/<int:pk>/', views.hod_faculty_profile, name='hod_faculty_profile'),
+    path('dashboard/hod/notice/post/', views.hod_post_notice, name='hod_post_notice'),
     path('dashboard/principal/', views.principal_dashboard, name='principal_dashboard'),
     path('dashboard/faculty/', views.faculty_dashboard, name='faculty_dashboard'),
+    path('dashboard/faculty/student/<int:pk>/profile/', views.faculty_student_profile_fragment, name='faculty_student_profile_fragment'),
     path('dashboard/faculty/requests/add/', views.faculty_request_add, name='faculty_request_add'),
     path('dashboard/faculty/attendance/<int:subject_id>/', views.faculty_mark_attendance, name='faculty_mark_attendance'),
     path('dashboard/faculty/marks/<int:subject_id>/<int:exam_id>/', views.faculty_enter_marks, name='faculty_enter_marks'),

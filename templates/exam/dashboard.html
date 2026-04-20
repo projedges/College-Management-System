@@ -163,4 +163,49 @@
   {% endfor %}
 </div>
 {% endif %}
+
+{# ── Inbox ── #}
+<div class="d-card" style="margin-top:24px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div class="d-title" style="margin:0"><i class="fas fa-bell"></i> Inbox</div>
+    <div style="display:flex;gap:6px">
+      <button class="inbox-tab inbox-tab-active" onclick="switchInbox('notices',this)"><i class="fas fa-bullhorn"></i> Notices</button>
+      <button class="inbox-tab" onclick="switchInbox('notifications',this)"><i class="fas fa-inbox"></i> Alerts{% if notifications %} <span style="background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:3px">{{ notifications|length }}</span>{% endif %}</button>
+    </div>
+  </div>
+  <div class="inbox-pane inbox-pane-active" id="inbox-notices">
+    {% if announcements %}
+    <div class="content-scroll">
+      {% for ann in announcements %}
+      <div style="padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ ann.title }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">{{ ann.message|truncatechars:160 }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ann.created_at|date:"d M Y" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty"><i class="fas fa-bell-slash"></i>No notices.</div>{% endif %}
+  </div>
+  <div class="inbox-pane" id="inbox-notifications">
+    {% if notifications %}
+    <div class="content-scroll">
+      {% for notif in notifications %}
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;margin-top:5px"></div>
+        <div><div style="font-size:13px;color:var(--deep)">{{ notif.message }}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">{{ notif.created_at|date:"d M Y H:i" }}</div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty"><i class="fas fa-check-circle"></i>No new alerts.</div>{% endif %}
+  </div>
+</div>
+<style>
+.inbox-tab{padding:5px 13px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.inbox-tab:hover{border-color:var(--teal);color:var(--teal)}
+.inbox-tab-active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.inbox-pane{display:none}.inbox-pane-active{display:block}
+</style>
+<script>
+function switchInbox(tab,btn){document.querySelectorAll('.inbox-tab').forEach(function(b){b.classList.remove('inbox-tab-active')});document.querySelectorAll('.inbox-pane').forEach(function(p){p.classList.remove('inbox-pane-active')});btn.classList.add('inbox-tab-active');document.getElementById('inbox-'+tab).classList.add('inbox-pane-active');}
+</script>
 {% endblock %}
