@@ -1,9 +1,9 @@
 {% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}Add HOD &mdash; Admin{% endblock %}
+{% block title %}{{ action|default:'Add' }} HOD &mdash; Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
-{% block page_title %}Add HOD{% endblock %}
-{% block page_sub %}Assign a Head of Department{% endblock %}
+{% block page_title %}{{ action|default:'Add' }} HOD{% endblock %}
+{% block page_sub %}{% if action == 'Edit' %}Update head of department details{% else %}Assign a Head of Department{% endif %}{% endblock %}
 
 {% block sidebar_links %}{% with active_section='faculty' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
@@ -14,38 +14,40 @@
     {% csrf_token %}
     <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Personal Details</div>
     <div class="form-row">
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">First Name *</label><input type="text" name="first_name" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Last Name *</label><input type="text" name="last_name" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">First Name *</label><input type="text" name="first_name" value="{{ hod.user.first_name|default:'' }}" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Last Name *</label><input type="text" name="last_name" value="{{ hod.user.last_name|default:'' }}" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     </div>
     <div class="form-row">
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Username *</label><input type="text" id="hod-username" name="username" placeholder="Auto-filled from employee ID" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Email *</label><input type="email" name="email" placeholder="hod@college.edu" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Username *</label><input type="text" id="hod-username" name="username" value="{{ hod.user.username|default:'' }}" placeholder="Auto-filled from employee ID" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Email *</label><input type="email" name="email" value="{{ hod.user.email|default:'' }}" placeholder="hod@college.edu" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     </div>
+    {% if action != 'Edit' %}
     <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Temporary Password</label><input type="text" name="password" placeholder="Leave blank to auto-generate" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/><div style="font-size:11px;color:var(--muted);margin-top:4px">Use this only when you need to set the one-time starter password yourself.</div></div>
+    {% endif %}
     <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Professional Details</div>
     <div class="form-row">
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Employee ID *</label><input type="text" id="hod-employee-id" name="employee_id" placeholder="e.g. HOD001" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Department *</label><select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"><option value="">Select Department</option>{% for d in departments %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}</select></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Employee ID *</label><input type="text" id="hod-employee-id" name="employee_id" value="{{ hod.employee_id|default:'' }}" placeholder="e.g. HOD001" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Department *</label><select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"><option value="">Select Department</option>{% for d in departments %}<option value="{{ d.pk }}" {% if hod.department_id == d.pk %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>{% endfor %}</select></div>
     </div>
     <div class="form-row">
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Qualification *</label><input type="text" name="qualification" placeholder="e.g. Ph.D Computer Science" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Experience (Years)</label><input type="number" name="experience_years" value="0" min="0" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Qualification *</label><input type="text" name="qualification" value="{{ hod.qualification|default:'' }}" placeholder="e.g. Ph.D Computer Science" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Experience (Years)</label><input type="number" name="experience_years" value="{{ hod.experience_years|default:0 }}" min="0" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     </div>
-    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Phone Number</label><input type="text" name="phone_number" placeholder="10-digit mobile" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Phone Number</label><input type="text" name="phone_number" value="{{ hod.phone_number|default:'' }}" placeholder="10-digit mobile" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     <div class="form-row">
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Designation</label><input type="text" name="designation" value="Head of Department" placeholder="e.g. Professor &amp; Head" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
-      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Joined Date</label><input type="date" name="joined_date" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Designation</label><input type="text" name="designation" value="{{ hod.designation|default:'Head of Department' }}" placeholder="e.g. Professor &amp; Head" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Joined Date</label><input type="date" name="joined_date" value="{% if hod.joined_date %}{{ hod.joined_date|date:'Y-m-d' }}{% endif %}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     </div>
-    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Specialization</label><input type="text" name="specialization" placeholder="e.g. Machine Learning, VLSI Design" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/><div style="font-size:11px;color:var(--muted);margin-top:4px">Research or teaching specialization areas.</div></div>
+    <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Specialization</label><input type="text" name="specialization" value="{{ hod.specialization|default:'' }}" placeholder="e.g. Machine Learning, VLSI Design" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/><div style="font-size:11px;color:var(--muted);margin-top:4px">Research or teaching specialization areas.</div></div>
     <div style="margin-bottom:20px;padding:14px 16px;background:rgba(13,115,119,.05);border:1.5px solid rgba(13,115,119,.2);border-radius:var(--r)">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-        <input type="checkbox" name="can_take_classes" id="can-take-classes" style="width:16px;height:16px;accent-color:var(--teal)"/>
+        <input type="checkbox" name="can_take_classes" id="can-take-classes" {% if hod.can_take_classes %}checked{% endif %} style="width:16px;height:16px;accent-color:var(--teal)"/>
         <span style="font-size:13px;font-weight:600">This HOD also teaches classes (like a faculty member)</span>
       </label>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;margin-left:26px">Enabling this will auto-create a Faculty profile so subjects and timetable slots can be assigned.</div>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Add HOD</button>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> {{ action|default:'Add' }} HOD</button>
       <a href="{% url 'admin_dashboard' %}#faculty" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>

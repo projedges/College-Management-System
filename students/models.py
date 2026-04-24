@@ -3009,6 +3009,7 @@ class SemesterResultBatch(models.Model):
                                       related_name='approved_semester_result_batches')
 
     class Meta:
+        unique_together = ('college', 'department', 'academic_year', 'semester')
         ordering = ['-uploaded_at', '-id']
 
     def __str__(self):

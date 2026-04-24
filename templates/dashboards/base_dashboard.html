@@ -20,6 +20,13 @@
 
 {% block body %}
 <div class="db-layout">
+  <div id="global-dashboard-loader" style="display:flex;position:fixed;inset:0;background:rgba(7,30,38,.24);backdrop-filter:blur(2px);z-index:10050;align-items:center;justify-content:center;padding:20px">
+    <div style="min-width:240px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 28px;text-align:center">
+      <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:globalDashboardSpin .8s linear infinite"></div>
+      <div id="global-dashboard-loader-title" style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Page</div>
+      <div id="global-dashboard-loader-sub" style="font-size:12px;color:var(--muted);margin-top:4px">Please wait...</div>
+    </div>
+  </div>
 
   <!-- Sidebar overlay (mobile) -->
   <div class="sb-overlay" id="sb-overlay"></div>
@@ -213,6 +220,7 @@ body{overflow:hidden}
 .sb-link:hover,.sb-link.active{background:rgba(255,255,255,.08);color:#fff}
 .sb-link.active{background:rgba(255,255,255,.15);color:#fff;border-left:3px solid var(--teal);padding-left:9px}
 .sb-link i{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+@keyframes globalDashboardSpin{to{transform:rotate(360deg)}}
 
 /* ---- Shared dashboard components ---- */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:16px}
@@ -358,6 +366,19 @@ body{overflow:hidden}
   var aliasesRaw = '{% block dashboard_section_aliases %}{}{% endblock %}';
   var aliases = {};
   try { aliases = JSON.parse(aliasesRaw); } catch(e){}
+  var globalLoader = document.getElementById('global-dashboard-loader');
+  var globalLoaderTitle = document.getElementById('global-dashboard-loader-title');
+  var globalLoaderSub = document.getElementById('global-dashboard-loader-sub');
+
+  function showGlobalLoader(title, subtitle) {
+    if (globalLoaderTitle && title) globalLoaderTitle.textContent = title;
+    if (globalLoaderSub && subtitle) globalLoaderSub.textContent = subtitle;
+    if (globalLoader) globalLoader.style.display = 'flex';
+  }
+
+  function hideGlobalLoader() {
+    if (globalLoader) globalLoader.style.display = 'none';
+  }
 
   function closeSidebar() {
     var sb = document.getElementById('db-sidebar');
@@ -390,7 +411,11 @@ body{overflow:hidden}
       var href = link.getAttribute('href') || '';
       if (href.charAt(0) !== '#') return;
       e.preventDefault();
-      activateSection(link.getAttribute('data-section-target'));
+      showGlobalLoader('Loading Section', 'Opening ' + (link.textContent || 'section').trim() + '...');
+      setTimeout(function () {
+        activateSection(link.getAttribute('data-section-target'));
+        hideGlobalLoader();
+      }, 180);
     });
   });
 
@@ -412,6 +437,32 @@ body{overflow:hidden}
   if (hamBtn)   hamBtn.addEventListener('click', openSidebar);
   if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
   if (overlay)  overlay.addEventListener('click', closeSidebar);
+
+  document.querySelectorAll('a[href]').forEach(function (link) {
+    link.addEventListener('click', function (event) {
+      if (event.defaultPrevented) return;
+      if (link.target && link.target !== '_self') return;
+      if (link.hasAttribute('download')) return;
+      var href = link.getAttribute('href') || '';
+      if (!href || href.charAt(0) === '#') return;
+      if (href.indexOf('javascript:') === 0) return;
+      showGlobalLoader('Loading Page', 'Please wait...');
+    });
+  });
+
+  document.querySelectorAll('form').forEach(function (form) {
+    form.addEventListener('submit', function () {
+      showGlobalLoader('Loading Page', 'Please wait...');
+    });
+  });
+
+  window.addEventListener('beforeunload', function () {
+    showGlobalLoader('Loading Page', 'Please wait...');
+  });
+
+  window.addEventListener('load', function () {
+    setTimeout(hideGlobalLoader, 220);
+  });
 })();
 /* ---- Session countdown ---- */
 (function() {

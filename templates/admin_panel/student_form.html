@@ -15,7 +15,7 @@
   {% if action == 'Add' %}
   <div class="hint-box" style="margin-bottom:18px">Choose department and admission year first &mdash; roll number and username are auto-generated.</div>
   {% endif %}
-  <form method="POST">
+  <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     {% if intake_request %}<input type="hidden" name="request_id" value="{{ intake_request.pk }}"/>{% endif %}
     <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Personal Details</div>
@@ -104,6 +104,174 @@
                style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
       </div>
     </div>
+
+    {% if action == 'Edit' %}
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Profile Details</div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Profile Photo</label>
+        <input type="file" name="profile_photo" accept="image/*" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Date of Birth</label>
+        <input type="date" name="date_of_birth" value="{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Phone Number</label>
+        <input type="text" name="phone_number" value="{{ profile.phone_number|default:'' }}" maxlength="10" pattern="[0-9]{10}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Alternate Phone</label>
+        <input type="text" name="alternate_phone" value="{{ profile.alternate_phone|default:'' }}" maxlength="10" pattern="[0-9]{10}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Gender</label>
+        <select name="gender" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Select Gender</option>
+          <option value="Male" {% if profile.gender == 'Male' %}selected{% endif %}>Male</option>
+          <option value="Female" {% if profile.gender == 'Female' %}selected{% endif %}>Female</option>
+          <option value="Other" {% if profile.gender == 'Other' %}selected{% endif %}>Other</option>
+          <option value="Not Specified" {% if profile.gender == 'Not Specified' %}selected{% endif %}>Not Specified</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Aadhaar Number</label>
+        <input type="text" name="aadhaar_number" value="{{ profile.aadhaar_number|default:'' }}" maxlength="12" pattern="[0-9]{12}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,12)" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Blood Group</label>
+        <input type="text" name="blood_group" value="{{ profile.blood_group|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Nationality</label>
+        <input type="text" name="nationality" value="{{ profile.nationality|default:'Indian' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Category</label>
+        <input type="text" name="category" value="{{ profile.category|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">College Email</label>
+        <input type="email" name="college_email" value="{{ profile.college_email|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Personal Email</label>
+      <input type="email" name="personal_email" value="{{ profile.personal_email|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Academic History</div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Intermediate College Name</label>
+      <input type="text" name="inter_college_name" value="{{ profile.inter_college_name|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Intermediate Passed Year</label>
+        <input type="number" name="inter_passed_year" value="{{ profile.inter_passed_year|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Intermediate Percentage</label>
+        <input type="number" step="0.01" min="0" max="100" name="inter_percentage" value="{{ profile.inter_percentage|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">School Name</label>
+      <input type="text" name="school_name" value="{{ profile.school_name|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">School Passed Year</label>
+        <input type="number" name="school_passed_year" value="{{ profile.school_passed_year|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">School Percentage</label>
+        <input type="number" step="0.01" min="0" max="100" name="school_percentage" value="{{ profile.school_percentage|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Address</div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Street</label>
+      <textarea name="street" rows="2" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical">{{ address.street|default:'' }}</textarea>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">City</label>
+        <input type="text" name="city" value="{{ address.city|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">State</label>
+        <input type="text" name="state" value="{{ address.state|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Pincode</label>
+        <input type="text" name="pincode" value="{{ address.pincode|default:'' }}" maxlength="6" pattern="[0-9]{6}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Country</label>
+        <input type="text" name="country" value="{{ address.country|default:'India' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Parent / Guardian</div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Parent Type</label>
+        <select name="parent_type" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Select Parent Type</option>
+          <option value="FATHER" {% if parent.parent_type == 'FATHER' %}selected{% endif %}>Father</option>
+          <option value="MOTHER" {% if parent.parent_type == 'MOTHER' %}selected{% endif %}>Mother</option>
+          <option value="GUARDIAN" {% if parent.parent_type == 'GUARDIAN' %}selected{% endif %}>Guardian</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Parent Name</label>
+        <input type="text" name="parent_name" value="{{ parent.name|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Parent Phone</label>
+        <input type="text" name="parent_phone_number" value="{{ parent.phone_number|default:'' }}" maxlength="10" pattern="[0-9]{10}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Parent Email</label>
+        <input type="email" name="parent_email" value="{{ parent.email|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Parent Occupation</label>
+      <input type="text" name="parent_occupation" value="{{ parent.occupation|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 14px">Emergency Contact</div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Contact Name</label>
+        <input type="text" name="emergency_name" value="{{ emergency_contact.name|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Relation</label>
+        <input type="text" name="emergency_relation" value="{{ emergency_contact.relation|default:'' }}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Emergency Phone</label>
+      <input type="text" name="emergency_phone_number" value="{{ emergency_contact.phone_number|default:'' }}" maxlength="10" pattern="[0-9]{10}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/>
+    </div>
+    {% endif %}
+
     <div style="display:flex;gap:10px;margin-top:8px">
       <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Save Student</button>
       <a href="{% url 'admin_dashboard' %}#students" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>

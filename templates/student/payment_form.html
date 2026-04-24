@@ -88,6 +88,17 @@
         </div>
         <span style="font-size:12px;font-weight:700;color:#16a34a;background:#dcfce7;padding:3px 10px;border-radius:99px">PAID</span>
       </div>
+      {% elif exam_fee_block_reason %}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;border:1.5px solid #fecaca;border-radius:10px;background:#fef2f2">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <i class="fas fa-lock" style="color:#dc2626;font-size:15px;margin-top:2px"></i>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#991b1b">Exam Fee</div>
+            <div style="font-size:11px;color:#b91c1c;margin-top:2px">{{ exam_fee_block_reason }}</div>
+          </div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:#b91c1c;background:#fee2e2;padding:3px 10px;border-radius:99px">LOCKED</span>
+      </div>
       {% else %}
       <label style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff" id="comp_label_EXAM">
         <div style="display:flex;align-items:center;gap:10px">
@@ -103,6 +114,19 @@
       {% endif %}
       {% endif %}
       {% endfor %}
+
+      {% if exam_fee_subjects %}
+      <div style="padding:12px 14px;background:#f8fafc;border:1px solid var(--border);border-radius:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--deep);margin-bottom:8px">Current semester courses covered by exam fee</div>
+        <div style="display:grid;gap:6px">
+          {% for subject in exam_fee_subjects %}
+          <div style="font-size:12px;color:var(--deep);padding:8px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px">
+            <strong>{{ subject.code }}</strong> - {{ subject.name }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
       <!-- LIBRARY FEE — editable amount + reason dropdown, always payable multiple times -->
       {% for key, label, amount in fee_components_display %}

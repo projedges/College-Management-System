@@ -105,9 +105,16 @@
     <div class="d-card">
       <div class="d-title"><i class="fas fa-download"></i> Download Template</div>
       <div class="section-meta">The template is CSV so it opens in Excel without extra libraries on the server.</div>
-      <a href="{% url 'admin_semester_result_template' %}?academic_year={{ academic_year }}&department={{ selected_department.pk }}&semester={{ semester }}" class="qa-btn qa-deep">
-        <i class="fas fa-file-arrow-down"></i> Download Cohort Template
-      </a>
+      <div class="sr-actions">
+        <a href="{% url 'admin_semester_result_template' %}?academic_year={{ academic_year }}&department={{ selected_department.pk }}&semester={{ semester }}" class="qa-btn qa-deep">
+          <i class="fas fa-file-arrow-down"></i> Download Cohort Template
+        </a>
+        {% if current_batch and current_batch.source_file %}
+        <a href="{% url 'admin_semester_result_source_download' current_batch.pk %}" class="sr-btn sr-btn-view">
+          <i class="fas fa-file-csv"></i> Last Uploaded File
+        </a>
+        {% endif %}
+      </div>
       <div class="sr-mini-note">Subjects included</div>
       <div class="sr-subject-chips">
         {% for subject in selected_subjects %}
@@ -135,7 +142,7 @@
 </div>
 
 <div class="d-card">
-  <div class="d-title"><i class="fas fa-file-lines"></i> Uploaded Batches For This Cohort</div>
+      <div class="d-title"><i class="fas fa-file-lines"></i> Batch For This Cohort</div>
   {% if selected_batches %}
   <div class="table-scroll">
     <table class="dtable">

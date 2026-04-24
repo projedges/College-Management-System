@@ -127,13 +127,27 @@
   .tt-modal-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
   .tt-modal-row:last-child{border-bottom:none}
   .tt-modal-row-lbl{color:var(--muted);font-weight:600;min-width:80px;font-size:12px}
-  /* Profile view rows */
-  .profile-row{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
-  .profile-row:last-child{border-bottom:none}
-  .profile-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;min-width:110px;flex-shrink:0}
-  .profile-val{color:var(--deep);flex:1;word-break:break-word}
+  /* Profile card */
+  .profile-hero{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;padding:0 0 18px;border-bottom:1px solid var(--border);margin-bottom:18px}
+  .profile-avatar{width:86px;height:86px;border-radius:24px;object-fit:cover;border:3px solid rgba(13,115,119,.18);box-shadow:0 10px 24px rgba(13,115,119,.12);background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:#fff;flex-shrink:0}
+  .profile-name{font-family:'Outfit',sans-serif;font-size:34px;font-weight:800;line-height:1;color:var(--deep);letter-spacing:-.04em}
+  .profile-roll{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:6px 12px;border-radius:999px;background:rgba(13,115,119,.08);color:var(--teal);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .profile-subline{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
+  .profile-subchip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e6edf3}
+  .profile-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .profile-panel{background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);border:1px solid #e8eef5;border-radius:18px;padding:18px}
+  .profile-panel-title{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:var(--deep);letter-spacing:-.02em;margin-bottom:14px}
+  .profile-stack{display:grid;gap:10px}
+  .profile-row{display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:start;padding:10px 0;border-bottom:1px solid #edf2f7}
+  .profile-row:last-child{border-bottom:none;padding-bottom:0}
+  .profile-lbl{font-size:10px;font-weight:800;color:#6b7b88;text-transform:uppercase;letter-spacing:.14em;line-height:1.4}
+  .profile-val{color:var(--deep);font-size:14px;font-weight:600;line-height:1.5;word-break:break-word}
+  .profile-muted{font-size:11px;color:var(--muted);font-weight:600}
   @media(max-width:860px){
-    .profile-lbl{min-width:90px}
+    .profile-hero{grid-template-columns:1fr;text-align:left}
+    .profile-name{font-size:28px}
+    .profile-panels{grid-template-columns:1fr}
+    .profile-row{grid-template-columns:1fr}
   }
   /* Predictor pill */
   .pred-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-top:4px}
@@ -317,39 +331,68 @@
 
     <!-- VIEW MODE -->
     <div id="profile-view">
-      <div style="display:flex;align-items:center;gap:18px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap">
+      <div class="profile-hero">
         {% if profile and profile.profile_photo %}
-          <img src="{{ profile.profile_photo.url }}" alt="Photo" style="width:76px;height:76px;border-radius:50%;object-fit:cover;border:3px solid var(--teal);flex-shrink:0"/>
+          <img src="{{ profile.profile_photo.url }}" alt="Photo" class="profile-avatar"/>
         {% else %}
-          <div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;flex-shrink:0">
+          <div class="profile-avatar">
             {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
           </div>
         {% endif %}
         <div style="flex:1;min-width:0">
-          <div style="font-size:19px;font-weight:800;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
-          <div style="font-size:13px;color:var(--teal);font-weight:600;margin-top:2px">{{ student.roll_number }}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px">{{ student.department.name }} &middot; Semester {{ student.current_semester }}</div>
-          {% if profile and profile.phone_number %}<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="fas fa-phone" style="font-size:10px;margin-right:4px"></i>{{ profile.phone_number }}</div>{% endif %}
+          <div class="profile-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="profile-roll">{{ student.roll_number }}</div>
+          <div class="profile-subline">
+            <span class="profile-subchip"><i class="fas fa-building-columns" style="font-size:11px"></i>{{ student.department.name }}</span>
+            <span class="profile-subchip"><i class="fas fa-layer-group" style="font-size:11px"></i>Semester {{ student.current_semester }}</span>
+            {% if profile and profile.phone_number %}<span class="profile-subchip"><i class="fas fa-phone" style="font-size:11px"></i>{{ profile.phone_number }}</span>{% endif %}
+          </div>
         </div>
       </div>
-      <div class="two-col">
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Personal</div>
-          <div class="profile-row"><span class="profile-lbl">College Email</span><span class="profile-val">{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email|default:"Not added" }}{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Personal Email</span><span class="profile-val">{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Date of Birth</span><span class="profile-val">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Gender</span><span class="profile-val">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Blood Group</span><span class="profile-val">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Aadhaar</span><span class="profile-val">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} **** <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+      <div class="profile-panels">
+        <div class="profile-panel">
+          <div class="profile-panel-title">Personal Information</div>
+          <div class="profile-stack">
+            <div class="profile-row"><span class="profile-lbl">Date of Birth</span><span class="profile-val">{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:"d M Y" }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Gender</span><span class="profile-val">{% if profile and profile.gender %}{{ profile.gender }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Blood Group</span><span class="profile-val">{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Nationality</span><span class="profile-val">{% if profile and profile.nationality %}{{ profile.nationality }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Aadhaar</span><span class="profile-val">{% if profile and profile.aadhaar_number %}{{ profile.aadhaar_number|slice:":4" }} **** <span class="profile-muted">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Category</span><span class="profile-val">{% if profile and profile.category %}{{ profile.category }}{% else %}Not added{% endif %}</span></div>
+          </div>
         </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Contact &amp; Family</div>
-          <div class="profile-row"><span class="profile-lbl">Mobile</span><span class="profile-val">{% if profile and profile.phone_number %}{{ profile.phone_number }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Alt. Mobile</span><span class="profile-val">{% if profile and profile.alternate_phone %}{{ profile.alternate_phone }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Address</span><span class="profile-val">{% if address %}{{ address.city }}, {{ address.state }}{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Parent</span><span class="profile-val">{% if parent %}{{ parent.name }} ({{ parent.get_parent_type_display }}) <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Parent Phone</span><span class="profile-val">{% if parent and parent.phone_number %}{{ parent.phone_number }} <span style="font-size:10px;color:var(--muted)">(admin only)</span>{% else %}Not added{% endif %}</span></div>
-          <div class="profile-row"><span class="profile-lbl">Emergency</span><span class="profile-val">{% if emergency_contact %}{{ emergency_contact.name }} &middot; {{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</span></div>
+        <div class="profile-panel">
+          <div class="profile-panel-title">Contact Information</div>
+          <div class="profile-stack">
+            <div class="profile-row"><span class="profile-lbl">College Email</span><span class="profile-val">{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email|default:"Not added" }}{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Personal Email</span><span class="profile-val">{% if profile and profile.personal_email %}{{ profile.personal_email }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Mobile</span><span class="profile-val">{% if profile and profile.phone_number %}{{ profile.phone_number }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Alternate Mobile</span><span class="profile-val">{% if profile and profile.alternate_phone %}{{ profile.alternate_phone }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Address</span><span class="profile-val">{% if address %}{{ address.street }}{% if address.city %}, {{ address.city }}{% endif %}{% if address.state %}, {{ address.state }}{% endif %}{% if address.pincode %} - {{ address.pincode }}{% endif %}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Country</span><span class="profile-val">{% if address and address.country %}{{ address.country }}{% else %}Not added{% endif %}</span></div>
+          </div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-panel-title">Academic History</div>
+          <div class="profile-stack">
+            <div class="profile-row"><span class="profile-lbl">Intermediate College</span><span class="profile-val">{% if profile and profile.inter_college_name %}{{ profile.inter_college_name }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Intermediate Year</span><span class="profile-val">{% if profile and profile.inter_passed_year %}{{ profile.inter_passed_year }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Intermediate Percentage</span><span class="profile-val">{% if profile and profile.inter_percentage or profile.inter_percentage == 0 %}{{ profile.inter_percentage }}%{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">School Name</span><span class="profile-val">{% if profile and profile.school_name %}{{ profile.school_name }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">School Year</span><span class="profile-val">{% if profile and profile.school_passed_year %}{{ profile.school_passed_year }}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">School Percentage</span><span class="profile-val">{% if profile and profile.school_percentage or profile.school_percentage == 0 %}{{ profile.school_percentage }}%{% else %}Not added{% endif %}</span></div>
+          </div>
+        </div>
+        <div class="profile-panel">
+          <div class="profile-panel-title">Family &amp; Emergency</div>
+          <div class="profile-stack">
+            <div class="profile-row"><span class="profile-lbl">Parent Name</span><span class="profile-val">{% if parent %}{{ parent.name }} <span class="profile-muted">({{ parent.get_parent_type_display }} • admin only)</span>{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Parent Phone</span><span class="profile-val">{% if parent and parent.phone_number %}{{ parent.phone_number }} <span class="profile-muted">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Parent Email</span><span class="profile-val">{% if parent and parent.email %}{{ parent.email }} <span class="profile-muted">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Occupation</span><span class="profile-val">{% if parent and parent.occupation %}{{ parent.occupation }} <span class="profile-muted">(admin only)</span>{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Emergency Contact</span><span class="profile-val">{% if emergency_contact %}{{ emergency_contact.name }}{% if emergency_contact.relation %} <span class="profile-muted">({{ emergency_contact.relation }})</span>{% endif %}{% else %}Not added{% endif %}</span></div>
+            <div class="profile-row"><span class="profile-lbl">Emergency Phone</span><span class="profile-val">{% if emergency_contact and emergency_contact.phone_number %}{{ emergency_contact.phone_number }}{% else %}Not added{% endif %}</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -455,12 +498,20 @@
         </div>
 
         {% if parent %}
-        <!-- Parent email/occupation only (name/phone = admin only) -->
+        <!-- Parent details are managed by admin only -->
         <div style="padding-top:12px;border-top:1px solid #f3f4f6;margin-bottom:14px">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Parent Details <span style="font-weight:400;text-transform:none;font-size:10px">(name &amp; phone managed by admin)</span></div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Parent Details <span style="font-weight:400;text-transform:none;font-size:10px">(managed by admin)</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div><label style="{{ lbl }}">Parent Email</label><input type="email" name="parent_email" value="{% if parent %}{{ parent.email }}{% endif %}" placeholder="Optional" style="{{ s }}"/></div>
-            <div><label style="{{ lbl }}">Parent Occupation</label><input type="text" name="parent_occupation" value="{% if parent %}{{ parent.occupation }}{% endif %}" placeholder="Optional" style="{{ s }}"/></div>
+            <div>
+              <label style="{{ lbl }}">Parent Email</label>
+              <input type="text" value="{% if parent and parent.email %}{{ parent.email }}{% else %}&mdash;{% endif %}" readonly
+                     style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            </div>
+            <div>
+              <label style="{{ lbl }}">Parent Occupation</label>
+              <input type="text" value="{% if parent and parent.occupation %}{{ parent.occupation }}{% else %}&mdash;{% endif %}" readonly
+                     style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            </div>
           </div>
         </div>
         {% endif %}
@@ -667,14 +718,14 @@
       {% if result_breakdown %}
       <div style="position:relative;display:inline-block">
         <button onclick="toggleSemTranscriptMenu()" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border);cursor:pointer">
-          <i class="fas fa-download"></i> Semester Transcript <i class="fas fa-chevron-down" style="font-size:10px;margin-left:4px"></i>
+          <i class="fas fa-download"></i> Semester Results <i class="fas fa-chevron-down" style="font-size:10px;margin-left:4px"></i>
         </button>
-        <div id="sem-transcript-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;min-width:160px;padding:6px 0">
+        <div id="sem-transcript-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;min-width:220px;padding:6px 0">
           {% for item in result_breakdown %}
-          <a href="{% url 'student_transcript_sem_pdf' item.semester %}"
+          <a href="{% if item.transcript %}{% url 'student_semester_transcript_download' item.transcript.pk %}{% else %}{% url 'student_transcript_sem_pdf' item.semester %}{% endif %}"
              style="display:block;padding:8px 16px;font-size:13px;font-weight:600;color:var(--deep);text-decoration:none;white-space:nowrap"
              onmouseover="this.style.background='#f0fdfa'" onmouseout="this.style.background=''">
-            <i class="fas fa-file-pdf" style="color:var(--teal);margin-right:6px"></i> Semester {{ item.semester }}
+            <i class="fas {% if item.transcript %}fa-file-lines{% else %}fa-file-pdf{% endif %}" style="color:var(--teal);margin-right:6px"></i> Semester {{ item.semester }}
             {% if item.result %}<span style="font-size:11px;color:var(--muted);margin-left:4px">{{ item.result.gpa }} SGPA</span>{% endif %}
           </a>
           {% endfor %}
@@ -821,7 +872,7 @@
             <tr>
               <td style="font-weight:600;color:var(--deep)">{{ mark.subject.name }}</td>
               <td style="font-size:12px;color:var(--muted)">{{ mark.subject.code }}</td>
-              <td style="font-size:12px;color:var(--muted)">{{ mark.exam.name }}</td>
+              <td style="font-size:12px;color:var(--muted)">{% if mark.exam %}{{ mark.exam.name }}{% else %}Semester Transcript{% endif %}</td>
               <td style="font-weight:700;color:{% if spct >= 40 %}var(--teal){% else %}var(--red){% endif %}">
                 {{ mark.marks_obtained|floatformat:0 }}/{{ mark.max_marks|floatformat:0 }}
               </td>
@@ -839,10 +890,12 @@
                 </div>
               </td>
               <td>
+                {% if mark.exam %}
                 {% if mark.grade == 'F' or spct < 40 %}
                 <a href="{% url 'student_reval_fee_pay' mark.pk %}" style="font-size:11px;padding:4px 8px;border-radius:6px;background:rgba(239,68,68,.1);color:#dc2626;text-decoration:none;font-weight:600;white-space:nowrap">
                   <i class="fas fa-rotate-right"></i> Reval
                 </a>
+                {% endif %}
                 {% endif %}
               </td>
             </tr>
@@ -1299,7 +1352,7 @@
       <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:12px">
         <i class="fas fa-file-circle-exclamation" style="color:var(--red)"></i> Supply / Backlog Exam Registration
       </div>
-      {% if supply_existing_reg and supply_existing_reg.status == 'PAID' %}
+        {% if supply_existing_reg and supply_existing_reg.status == 'PAID' and supply_existing_reg_matches_current %}
         <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-weight:600;margin-bottom:10px">
           <i class="fas fa-check-circle"></i> Already registered for <strong>{{ supply_existing_reg.exam.name }}</strong>
         </div>
@@ -1313,36 +1366,13 @@
         <div style="font-size:12px;color:#713f12;background:#fef9c3;padding:8px 12px;border-radius:7px;margin-bottom:12px">
           <i class="fas fa-info-circle"></i> <strong>{{ supply_latest_exam.name }}</strong> &mdash; Rs {{ supply_fee_per_subject|floatformat:0 }} per subject
         </div>
-        <form method="POST" action="{% url 'student_supply_exam_register' %}" id="fee-supply-form">
-          {% csrf_token %}
-          {% for sem, marks in supply_backlog_grouped %}
-          <div style="margin-bottom:12px">
-            <div style="font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Semester {{ sem }}</div>
-            {% for m in marks %}
-            <label style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;background:#fff;margin-bottom:5px" id="fee_supply_lbl_{{ m.subject.pk }}">
-              <div style="display:flex;align-items:center;gap:10px">
-                <input type="checkbox" name="subjects" value="{{ m.subject.pk }}"
-                       onchange="feeSupplyRecalc()"
-                       style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0">
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ m.subject.code }} &mdash; {{ m.subject.name }}</div>
-                  <div style="font-size:10px;color:#dc2626">{{ m.marks_obtained|floatformat:0 }}/{{ m.max_marks|floatformat:0 }} &middot; Pass: {% widthratio m.max_marks 100 40 %}</div>
-                </div>
-              </div>
-              <span style="font-size:12px;font-weight:700;color:var(--teal);flex-shrink:0">Rs {{ supply_fee_per_subject|floatformat:0 }}</span>
-            </label>
-            {% endfor %}
-          </div>
-          {% endfor %}
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:9px;margin-bottom:10px">
-            <div style="font-size:12px;color:var(--muted)"><span id="fee_supply_count">0</span> subject(s) &times; Rs {{ supply_fee_per_subject|floatformat:0 }}</div>
-            <span style="font-size:18px;font-weight:900;color:var(--teal)" id="fee_supply_total">Rs 0</span>
-          </div>
-          <button type="submit" id="fee_supply_submit" disabled
-                  style="background:var(--red);color:#fff;width:100%;font-size:13px;padding:11px;border:none;border-radius:9px;cursor:pointer;font-weight:700;font-family:'Inter',sans-serif">
-            <i class="fas fa-arrow-right"></i> Proceed to Payment
-          </button>
-        </form>
+        <div style="padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ backlog_count }} backlog subject{{ backlog_count|pluralize }} ready for registration</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Open the dedicated supply registration page to choose subjects and proceed to payment.</div>
+        </div>
+        <a href="{% url 'student_supply_exam_register' %}" class="qa-btn" style="background:var(--red);color:#fff;width:100%;justify-content:center;font-size:13px;padding:11px">
+          <i class="fas fa-arrow-right"></i> Open Supply Registration
+        </a>
       {% else %}
         <div style="text-align:center;padding:20px 0">
           <i class="fas fa-circle-check" style="font-size:28px;color:var(--teal);display:block;margin-bottom:8px"></i>
@@ -1367,11 +1397,22 @@
         <div style="width:36px;height:36px;border-radius:50%;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-check"></i></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--deep)">Rs {{ entry.payment.amount|floatformat:0 }}</div>
+          <div style="font-size:11px;color:var(--teal);font-weight:700;margin-top:2px">
+            {% if entry.payment.payment_type == 'SUPPLY_EXAM' %}
+              Supply Exam Fee
+            {% elif entry.payment.payment_type == 'REVALUATION' %}
+              Revaluation Fee
+            {% elif entry.payment.payment_type == 'SEM_FEE' %}
+              Semester Fee
+            {% else %}
+              {{ entry.payment.payment_type|title }}
+            {% endif %}
+          </div>
           <div style="font-size:11px;color:var(--muted)">{{ entry.payment.payment_method }} &middot; {{ entry.payment.transaction_id }} &middot; {{ entry.payment.paid_at|default:entry.payment.created_at|date:"d M Y" }}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;font-weight:700;color:var(--teal)">Total paid: Rs {{ entry.running_total|floatformat:0 }}</div>
-          {% if fee %}<div style="font-size:10px;color:var(--muted)">Balance: Rs {{ fee.balance_due|floatformat:0 }}</div>{% endif %}
+          {% if fee and entry.payment.fee_id %}<div style="font-size:10px;color:var(--muted)">Balance: Rs {{ fee.balance_due|floatformat:0 }}</div>{% endif %}
         </div>
         <a href="{% url 'student_payment_receipt' entry.payment.pk %}" class="mini-btn mini-btn-teal" style="padding:5px 10px;font-size:11px"><i class="fas fa-eye"></i></a>
       </div>
@@ -1693,7 +1734,7 @@
     {% if backlog_count > 0 %}
     <div id="supply-panel" style="display:none;margin-bottom:20px;padding:16px;background:rgba(239,68,68,.04);border:1.5px solid rgba(239,68,68,.2);border-radius:12px">
       <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:12px"><i class="fas fa-file-circle-exclamation" style="color:var(--red)"></i> Supply / Backlog Exam Registration</div>
-      {% if supply_existing_reg and supply_existing_reg.status == 'PAID' %}
+        {% if supply_existing_reg and supply_existing_reg.status == 'PAID' and supply_existing_reg_matches_current %}
         <div style="padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-weight:600;margin-bottom:10px">
           <i class="fas fa-check-circle"></i> Already registered for <strong>{{ supply_existing_reg.exam.name }}</strong>
         </div>
@@ -1707,36 +1748,13 @@
         <div style="font-size:12px;color:#713f12;background:#fef9c3;padding:8px 12px;border-radius:7px;margin-bottom:12px">
           <i class="fas fa-info-circle"></i> <strong>{{ supply_latest_exam.name }}</strong> &mdash; Rs {{ supply_fee_per_subject|floatformat:0 }} per subject
         </div>
-        <form method="POST" action="{% url 'student_supply_exam_register' %}" id="supply-form">
-          {% csrf_token %}
-          {% for sem, marks in supply_backlog_grouped %}
-          <div style="margin-bottom:12px">
-            <div style="font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Semester {{ sem }}</div>
-            {% for m in marks %}
-            <label style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;background:#fff;margin-bottom:5px" id="supply_lbl_{{ m.subject.pk }}" data-sem="{{ sem }}">
-              <div style="display:flex;align-items:center;gap:10px">
-                <input type="checkbox" name="subjects" value="{{ m.subject.pk }}" data-sem="{{ sem }}"
-                       onchange="supplyRecalc();supplyHighlight(this)"
-                       style="accent-color:var(--teal);width:15px;height:15px;flex-shrink:0">
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:var(--deep)">{{ m.subject.code }} &mdash; {{ m.subject.name }}</div>
-                  <div style="font-size:10px;color:#dc2626">{{ m.marks_obtained|floatformat:0 }}/{{ m.max_marks|floatformat:0 }} &middot; Pass: {% widthratio m.max_marks 100 40 %}</div>
-                </div>
-              </div>
-              <span style="font-size:12px;font-weight:700;color:var(--teal);flex-shrink:0">Rs {{ supply_fee_per_subject|floatformat:0 }}</span>
-            </label>
-            {% endfor %}
-          </div>
-          {% endfor %}
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:9px;margin-bottom:10px">
-            <div style="font-size:12px;color:var(--muted)"><span id="supply_count">0</span> subject(s) &times; Rs {{ supply_fee_per_subject|floatformat:0 }}</div>
-            <span style="font-size:18px;font-weight:900;color:var(--teal)" id="supply_total">Rs 0</span>
-          </div>
-          <button type="submit" class="qa-btn" id="supply_submit" disabled
-                  style="background:var(--red);color:#fff;width:100%;font-size:13px;padding:11px">
-            <i class="fas fa-arrow-right"></i> Proceed to Payment
-          </button>
-        </form>
+        <div style="padding:12px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ backlog_count }} backlog subject{{ backlog_count|pluralize }} ready for registration</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Continue in the dedicated supply registration page to select subjects and pay the fee.</div>
+        </div>
+        <a href="{% url 'student_supply_exam_register' %}" class="qa-btn" style="background:var(--red);color:#fff;width:100%;justify-content:center;font-size:13px;padding:11px">
+          <i class="fas fa-arrow-right"></i> Open Supply Registration
+        </a>
       {% else %}
         <div style="font-size:13px;color:var(--muted);text-align:center;padding:16px">No upcoming supply exam scheduled. Contact the exam department.</div>
       {% endif %}
