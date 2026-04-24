@@ -17,7 +17,7 @@
     <div style="font-size:14px;color:var(--muted)">No upcoming supply exam found. Check back later or contact the exam department.</div>
   </div>
 
-  {% elif existing_reg and existing_reg.status == 'PAID' %}
+  {% elif existing_reg and existing_reg.status == 'PAID' and existing_reg_matches_current %}
   <div class="d-card">
     <div style="padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534;font-weight:600;margin-bottom:16px">
       <i class="fas fa-check-circle"></i> Already registered for <strong>{{ latest_exam.name }}</strong>

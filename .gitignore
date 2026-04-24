@@ -12,3 +12,6 @@ _debug_sub.py
 _scan_fix.py
 seed_exam_results.py
 seed_data.py
+__pycache__/
+*.py[cod]
+*.pyc.*

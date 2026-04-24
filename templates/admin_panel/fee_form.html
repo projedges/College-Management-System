@@ -3,31 +3,131 @@
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}{{ action }} Fee Record{% endblock %}
-{% block page_sub %}{% if action == 'Edit' %}Update fee for {{ fee.student.roll_number }}{% else %}Create a new fee record{% endif %}{% endblock %}
+{% block page_sub %}{% if action == 'Edit' %}Update fee for {{ fee.student.roll_number }}{% else %}Create fee records by year and department{% endif %}{% endblock %}
 
 {% block sidebar_links %}{% with active_section='finance' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
 {% block form_content %}
-<div class="d-card" style="max-width:640px">
+<div class="d-card" style="max-width:900px">
+  {% if action == 'Add' %}
+  <form method="GET" style="margin-bottom:18px">
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Student Selection</div>
+    <div class="form-row">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Admission Year *</label>
+        <select name="year" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif">
+          <option value="">Select Year</option>
+          {% for year in year_options %}
+          <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Department *</label>
+        <select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif">
+          <option value="">Select Department</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="submit" class="qa-btn qa-deep"><i class="fas fa-filter"></i> Show Students</button>
+      {% if selected_year or selected_department %}
+      <a href="{% url 'admin_fee_add' %}" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if selected_year and selected_department %}
+  <div style="padding:12px 16px;background:var(--surface2);border-radius:var(--r);margin-bottom:18px;font-size:13px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div><span style="color:var(--muted)">Selected Students:</span> <strong style="color:var(--deep)">{{ preview_count }}</strong></div>
+    <div><span style="color:var(--muted)">Fee Semester:</span> <strong style="color:var(--deep)">Each student's current semester</strong></div>
+  </div>
+
+  {% if preview_students %}
+  <div style="margin-bottom:18px">
+    <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:8px">Students Preview</div>
+    <div class="table-scroll" style="max-height:260px;overflow-y:auto">
+      <table class="dtable">
+        <thead><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Semester</th><th>Existing Fee</th></tr></thead>
+        <tbody>
+          {% for s in preview_students %}
+          <tr>
+            <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
+            <td>{{ s.name }}</td>
+            <td>{{ s.department_code }}</td>
+            <td>Sem {{ s.semester }}</td>
+            <td>{% if s.has_fee_record %}<span class="dbadge dbadge-warning">Will Update</span>{% else %}<span class="dbadge dbadge-active">Will Create</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <form method="POST">
     {% csrf_token %}
+    <input type="hidden" name="year" value="{{ selected_year }}">
+    <input type="hidden" name="department" value="{{ selected_department }}">
 
-    {% if action == 'Add' %}
+    <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Fee Details</div>
     <div style="margin-bottom:16px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Student *</label>
-      <select name="student" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif">
-        <option value="">Select Student</option>
-        {% for s in students %}
-        <option value="{{ s.pk }}">{{ s.roll_number }} - {{ s.user.get_full_name|default:s.user.username }} ({{ s.department.code }})</option>
-        {% endfor %}
-      </select>
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Academic Year *</label>
+      <input type="text" name="academic_year" value="{{ preview_academic_year }}"
+             placeholder="e.g. 2024-25" required
+             style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif"/>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">These fee records will appear in each selected student's portal.</div>
     </div>
-    {% else %}
+
+    <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--deep)">Fee Components (Rs)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
+      Set the common fee amounts for this selected batch. The same component structure will be applied to all shown students, using each student's current semester.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    {% for key, label, current_val in fee_components %}
+      <div style="padding:12px;border:1px solid var(--border);border-radius:8px;background:#fafafa">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--deep);margin-bottom:6px">{{ label }}</label>
+        <input type="number" name="comp_{{ key }}" min="0" step="1"
+               value="{{ current_val }}"
+               placeholder="0"
+               style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif"
+               data-component="{{ key }}" oninput="recalcTotal()">
+      </div>
+    {% endfor %}
+    </div>
+
+    <div style="padding:14px 16px;background:var(--surface2);border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600;color:var(--deep)">Total Fee Amount</span>
+      <span style="font-size:20px;font-weight:800;color:var(--teal)" id="total_display">Rs 0</span>
+      <input type="hidden" name="total_amount" id="total_amount_input" value="0">
+    </div>
+
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px">
+      Existing records for the same student and semester will be updated. New ones will be created automatically.
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Create Fee Records</button>
+      <a href="{% url 'admin_dashboard' %}#finance" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty"><i class="fas fa-user-graduate"></i>No active students found for the selected year and department.</div>
+  {% endif %}
+  {% else %}
+  <div class="empty"><i class="fas fa-filter"></i>Select admission year and department to load students for bulk fee creation.</div>
+  {% endif %}
+
+  {% else %}
+  <form method="POST">
+    {% csrf_token %}
     <div style="padding:12px 16px;background:var(--surface2);border-radius:var(--r);margin-bottom:18px;font-size:13px">
       <span style="color:var(--muted)">Student:</span>
       <strong style="color:var(--deep)">{{ fee.student.roll_number }} - {{ fee.student.user.get_full_name }}</strong>
     </div>
-    {% endif %}
 
     <div class="form-row">
       <div style="margin-bottom:16px">
@@ -47,13 +147,7 @@
       </div>
     </div>
 
-    <!-- Fee Component Breakdown -->
     <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--deep)">Fee Components (Rs)</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">
-      Set the amount for each applicable component. Leave 0 for components that do not apply to this branch/semester.
-      The total is calculated automatically.
-    </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
     {% for key, label, current_val in fee_components %}
       <div style="padding:12px;border:1px solid var(--border);border-radius:8px;background:#fafafa">
@@ -64,7 +158,7 @@
                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif"
                data-component="{{ key }}" oninput="recalcTotal()">
       </div>
-      {% endfor %}
+    {% endfor %}
     </div>
 
     <div style="padding:14px 16px;background:var(--surface2);border-radius:8px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
@@ -77,11 +171,6 @@
       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Already Paid (Rs)</label>
       <input type="number" name="paid_amount" value="{{ fee.paid_amount|default:0 }}" min="0" step="0.01"
              style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif"/>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Enter amount already collected (cash/DD/offline). Leave 0 for new records.</div>
-    </div>
-
-    <div style="font-size:11px;color:var(--muted);margin-bottom:16px">
-      Fee status (Pending / Partial / Paid) is calculated automatically from the amounts above.
     </div>
 
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -89,6 +178,7 @@
       <a href="{% url 'admin_dashboard' %}#finance" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
+  {% endif %}
 </div>
 
 <script>
@@ -98,10 +188,11 @@ function recalcTotal() {
   componentInputs.forEach(function(inp) {
     total += parseFloat(inp.value) || 0;
   });
-  document.getElementById('total_display').textContent = 'Rs ' + total.toLocaleString('en-IN');
-  document.getElementById('total_amount_input').value = total;
+  var display = document.getElementById('total_display');
+  var hidden = document.getElementById('total_amount_input');
+  if (display) display.textContent = 'Rs ' + total.toLocaleString('en-IN');
+  if (hidden) hidden.value = total;
 }
-// Init on load
 recalcTotal();
 </script>
 {% endblock %}

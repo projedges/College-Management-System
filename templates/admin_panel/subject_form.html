@@ -1,10 +1,11 @@
 {% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}Add Subject &mdash; Admin{% endblock %}
+{% block title %}{{ action|default:'Add' }} Subject &mdash; Admin{% endblock %}
+{% block nav_subjects %}on{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
-{% block page_title %}Add Subject{% endblock %}
-{% block page_sub %}Add a new subject to a department{% endblock %}
-{% block sidebar_links %}{% with active_section='departments' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+{% block page_title %}{{ action|default:'Add' }} Subject{% endblock %}
+{% block page_sub %}{% if action == 'Edit' %}Update subject details{% else %}Add a new subject to a department{% endif %}{% endblock %}
+{% block sidebar_links %}{% with active_section='subjects' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
 {% block form_content %}
 <div class="d-card" style="max-width:600px">
@@ -13,11 +14,11 @@
     <div class="form-row">
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Subject Name *</label>
-        <input type="text" name="name" placeholder="e.g. Data Structures" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        <input type="text" name="name" value="{{ subject.name|default:'' }}" placeholder="e.g. Data Structures" maxlength="100" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       </div>
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Subject Code *</label>
-        <input type="text" name="code" placeholder="e.g. 19ECS701" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+        <input type="text" name="code" value="{{ subject.code|default:'' }}" placeholder="e.g. 19ECS701" maxlength="20" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Must be unique within the selected department</div>
       </div>
     </div>
@@ -26,13 +27,13 @@
         <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Department *</label>
         <select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
           <option value="">Select Department</option>
-          {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}
+          {% for d in departments %}<option value="{{ d.pk }}" {% if selected_dept == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>{% endfor %}
         </select>
       </div>
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Semester *</label>
         <select name="semester" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
-          {% for i in "12345678" %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
+          {% for i in "12345678" %}<option value="{{ i }}" {% if selected_semester == i|stringformat:'s' %}selected{% endif %}>Semester {{ i }}</option>{% endfor %}
         </select>
       </div>
     </div>
@@ -41,17 +42,17 @@
     <div style="margin-bottom:16px">
       <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Category</label>
       <select name="category" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
-        <option value="PC">PC &mdash; Program Core</option>
-        <option value="PE">PE &mdash; Program Elective</option>
-        <option value="OE">OE &mdash; Open Elective</option>
-        <option value="BS">BS &mdash; Basic Science</option>
-        <option value="PC/BS">PC/BS &mdash; Program Core / Basic Science</option>
-        <option value="MC">MC &mdash; Mandatory Course</option>
-        <option value="PW">PW &mdash; Project Work</option>
-        <option value="AC">AC &mdash; Audit Course</option>
-        <option value="HS">HS &mdash; Humanities &amp; Social Science</option>
-        <option value="ES">ES &mdash; Engineering Science</option>
-        <option value="OTHER">Other</option>
+        <option value="PC" {% if subject.category|default:'PC' == 'PC' %}selected{% endif %}>PC &mdash; Program Core</option>
+        <option value="PE" {% if subject.category == 'PE' %}selected{% endif %}>PE &mdash; Program Elective</option>
+        <option value="OE" {% if subject.category == 'OE' %}selected{% endif %}>OE &mdash; Open Elective</option>
+        <option value="BS" {% if subject.category == 'BS' %}selected{% endif %}>BS &mdash; Basic Science</option>
+        <option value="PC/BS" {% if subject.category == 'PC/BS' %}selected{% endif %}>PC/BS &mdash; Program Core / Basic Science</option>
+        <option value="MC" {% if subject.category == 'MC' %}selected{% endif %}>MC &mdash; Mandatory Course</option>
+        <option value="PW" {% if subject.category == 'PW' %}selected{% endif %}>PW &mdash; Project Work</option>
+        <option value="AC" {% if subject.category == 'AC' %}selected{% endif %}>AC &mdash; Audit Course</option>
+        <option value="HS" {% if subject.category == 'HS' %}selected{% endif %}>HS &mdash; Humanities &amp; Social Science</option>
+        <option value="ES" {% if subject.category == 'ES' %}selected{% endif %}>ES &mdash; Engineering Science</option>
+        <option value="OTHER" {% if subject.category == 'OTHER' %}selected{% endif %}>Other</option>
       </select>
     </div>
 
@@ -64,26 +65,26 @@
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
         <div>
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-align:center">L</label>
-          <input type="number" name="lecture_hours" value="3" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+          <input type="number" name="lecture_hours" value="{{ subject.lecture_hours|default:3 }}" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
         </div>
         <div>
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-align:center">T</label>
-          <input type="number" name="tutorial_hours" value="0" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+          <input type="number" name="tutorial_hours" value="{{ subject.tutorial_hours|default:0 }}" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
         </div>
         <div>
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-align:center">P</label>
-          <input type="number" name="practical_hours" value="0" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+          <input type="number" name="practical_hours" value="{{ subject.practical_hours|default:0 }}" min="0" max="10" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;outline:none;text-align:center" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
         </div>
         <div>
           <label style="font-size:11px;color:var(--teal);font-weight:700;display:block;margin-bottom:4px;text-align:center">C (Credits)</label>
-          <input type="number" name="credits" value="3" min="0" max="20" style="width:100%;padding:9px 12px;border:1.5px solid var(--teal);border-radius:var(--r);font-size:16px;font-weight:900;font-family:'Outfit',sans-serif;outline:none;text-align:center;color:var(--teal)" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--teal)'"/>
+          <input type="number" name="credits" value="{{ subject.credits|default:3 }}" min="0" max="20" style="width:100%;padding:9px 12px;border:1.5px solid var(--teal);border-radius:var(--r);font-size:16px;font-weight:900;font-family:'Outfit',sans-serif;outline:none;text-align:center;color:var(--teal)" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--teal)'"/>
         </div>
       </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> Add Subject</button>
-      <a href="{% url 'admin_subjects' %}" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
+      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-save"></i> {{ action|default:'Add' }} Subject</button>
+      <a href="{{ cancel_url }}" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
     </div>
   </form>
 </div>

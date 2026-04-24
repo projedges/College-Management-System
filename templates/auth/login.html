@@ -60,6 +60,7 @@
   .btn-signin{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,#0d7377,#0a5c60);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(13,115,119,.35);font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
   .btn-signin:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(13,115,119,.45)}
   .btn-signin:active{transform:translateY(0)}
+  @keyframes loginSpin{to{transform:rotate(360deg)}}
 
   .divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#d1d5db;font-size:12px}
   .divider::before,.divider::after{content:'';flex:1;height:1px;background:#f3f4f6}
@@ -86,6 +87,14 @@
 {% endblock %}
 
 {% block body %}
+<div id="login-loader" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.28);backdrop-filter:blur(2px);z-index:10050;align-items:center;justify-content:center;padding:20px">
+  <div style="min-width:240px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 28px;text-align:center">
+    <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:#0d7377;margin:0 auto 12px;animation:loginSpin .8s linear infinite"></div>
+    <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:#071e26">Signing In</div>
+    <div style="font-size:12px;color:#6b7280;margin-top:4px">Loading your dashboard...</div>
+  </div>
+</div>
+
 <div class="login-shell">
 
   <!-- Left brand panel -->
@@ -149,7 +158,7 @@
       </div>
       {% endfor %}
 
-      <form method="POST" action="{% url 'login' %}">
+      <form id="login-form" method="POST" action="{% url 'login' %}">
         {% csrf_token %}
 
         <div class="fgroup">
@@ -218,5 +227,15 @@ function togglePw(id, btn) {
   icon.classList.toggle('fa-eye', show);
   icon.classList.toggle('fa-eye-slash', !show);
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  var loginForm = document.getElementById('login-form');
+  var loginLoader = document.getElementById('login-loader');
+  if (loginForm && loginLoader) {
+    loginForm.addEventListener('submit', function () {
+      loginLoader.style.display = 'flex';
+    });
+  }
+});
 </script>
 {% endblock %}

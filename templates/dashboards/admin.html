@@ -13,7 +13,8 @@
 <a href="#workflow"      data-section-target="workflow"       class="sb-link"><i class="fas fa-compass"></i> Start Here</a>
 
 <p class="sb-nav-label" style="margin-top:12px">Manage</p>
-<a href="#departments"   data-section-target="departments"   class="sb-link"><i class="fas fa-building"></i> Departments &amp; Subjects</a>
+<a href="#departments"   data-section-target="departments"   class="sb-link"><i class="fas fa-building"></i> Departments</a>
+<a href="{% url 'admin_subjects' %}" class="sb-link"><i class="fas fa-book"></i> Subjects</a>
 <a href="#requests"      data-section-target="requests"      class="sb-link"><i class="fas fa-inbox"></i> Invite &amp; Requests{% if pending_requests %} <span style="margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ pending_requests }}</span>{% endif %}</a>
 <a href="#students"      data-section-target="students"      class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="#bulk"          data-section-target="bulk"          class="sb-link"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
@@ -54,6 +55,7 @@
   .btn-sm{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .2s;border:none;cursor:pointer}
   .btn-sm-teal{background:var(--teal);color:#fff}.btn-sm-teal:hover{background:var(--teal-dk)}
   .btn-sm-deep{background:var(--deep);color:#fff}.btn-sm-deep:hover{background:var(--deep2)}
+  @keyframes dashboardSpin { to { transform: rotate(360deg); } }
   @media(max-width:860px){
     .panel-grid{grid-template-columns:1fr}
     .focus-card{padding:16px}
@@ -70,6 +72,22 @@
 {% endblock %}
 
 {% block dashboard_content %}
+<div id="dashboard-page-loader" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.22);backdrop-filter:blur(2px);z-index:10040;align-items:center;justify-content:center;padding:20px">
+  <div style="min-width:240px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 28px;text-align:center">
+    <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:dashboardSpin .8s linear infinite"></div>
+    <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Page</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px">Please wait...</div>
+  </div>
+</div>
+
+<div id="student-loader" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.18);backdrop-filter:blur(2px);z-index:10030;align-items:center;justify-content:center;padding:20px">
+  <div style="min-width:220px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 26px;text-align:center">
+    <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:dashboardSpin .8s linear infinite"></div>
+    <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Students</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px">Applying student filters...</div>
+  </div>
+</div>
+
 <!-- OVERVIEW -->
 <section data-dashboard-pane="overview" class="dashboard-pane active">
   <div class="stat-grid">
@@ -299,39 +317,97 @@
 <section data-dashboard-pane="students" class="dashboard-pane">
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
-      <div class="d-card-title" style="margin:0"><i class="fas fa-user-graduate"></i> Students{% if all_students_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_students_total }})</span>{% endif %}</div>
+      <div class="d-card-title" style="margin:0"><i class="fas fa-user-graduate"></i> Students{% if student_year_filter or student_dept_filter or student_sem_filter %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">({{ all_students_filtered_total }} filtered of {{ all_students_total }})</span>{% else %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">({{ all_students_total }} total)</span>{% endif %}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="{% url 'admin_student_add' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Student</a>
         <a href="{% url 'admin_bulk_import' %}" class="qa-btn qa-indigo" style="font-size:12px;padding:7px 14px"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
-        <a href="{% url 'admin_students_export_csv' %}" class="qa-btn qa-deep" style="font-size:12px;padding:7px 14px"><i class="fas fa-file-csv"></i> Export CSV</a>
+        <a href="{% url 'admin_students_export_csv' %}?year={{ student_year_filter }}&dept={{ student_dept_filter }}&sem={{ student_sem_filter }}" class="qa-btn qa-deep" style="font-size:12px;padding:7px 14px"><i class="fas fa-file-csv"></i> Export CSV</a>
       </div>
     </div>
-    {% if all_students_full %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <form id="student-filter-form" method="GET" action="{% url 'admin_dashboard' %}#students" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1">
+        <select name="year" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Years</option>
+          {% for year in student_year_options %}
+          <option value="{{ year }}" {% if student_year_filter == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+        <select name="dept" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Departments</option>
+          {% for d in all_departments %}
+          <option value="{{ d.pk }}" {% if student_dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>
+          {% endfor %}
+        </select>
+        <select name="sem" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Semesters</option>
+          {% for i in "12345678" %}
+          <option value="{{ i }}" {% if student_sem_filter == i %}selected{% endif %}>Sem {{ i }}</option>
+          {% endfor %}
+        </select>
+        {% if student_year_filter or student_dept_filter or student_sem_filter %}
+        <a href="{% url 'admin_dashboard' %}#students" style="padding:7px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>
+        {% endif %}
+      </form>
       <input type="text" id="stu-search" placeholder="Search by name or roll no&hellip;" oninput="filterTable('stu-search','stu-tbody','stu-count')"
         style="flex:1;min-width:200px;max-width:300px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
       <span id="stu-count" style="font-size:12px;color:var(--muted)"></span>
     </div>
+    {% if all_students_full %}
     <div class="table-scroll" style="max-height:420px;overflow-y:auto">
       <table class="dtable">
-        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Sem</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Sem</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
         <tbody id="stu-tbody">
           {% for s in all_students_full %}
-          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_student_edit' s.pk %}'">
+          <tr style="cursor:pointer" onclick="navigateWithLoader('{% url 'admin_student_profile' s.pk %}')">
             <td style="font-weight:600;color:var(--teal)">{{ s.roll_number }}</td>
             <td>{{ s.user.get_full_name|default:s.user.username }}</td>
             <td>{{ s.department.code }}</td>
             <td style="text-align:center">{{ s.current_semester }}</td>
             <td>{% if s.status == 'ACTIVE' %}<span class="dbadge dbadge-active">Active</span>{% else %}<span class="dbadge dbadge-red">{{ s.status }}</span>{% endif %}</td>
             <td style="color:var(--muted);font-size:12px">{{ s.created_at|date:"d M Y" }}</td>
-            <td><a href="{% url 'admin_student_edit' s.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a></td>
+            <td>
+              <div style="display:flex;gap:6px;align-items:center">
+                <a href="{% url 'admin_student_edit' s.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()" title="Edit student"><i class="fas fa-pen"></i></a>
+                <button type="button" onclick="event.stopPropagation(); openStudentDeleteModal('{% url 'admin_student_delete' s.pk %}','{{ s.user.get_full_name|default:s.user.username|escapejs }}','{{ s.roll_number|escapejs }}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" title="Delete student">
+                    <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {% else %}<div class="empty"><i class="fas fa-user-graduate"></i>No students yet.</div>{% endif %}
+    {% else %}<div class="empty"><i class="fas fa-user-graduate"></i>{% if all_students_total %}No students match the selected filters.{% else %}No students yet.{% endif %}</div>{% endif %}
+  </div>
+
+  <div id="student-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.58);z-index:10020;align-items:center;justify-content:center;padding:20px">
+    <div style="width:min(520px,100%);background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.25);padding:24px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fas fa-triangle-exclamation" style="font-size:18px"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">Delete Student</div>
+          <p id="student-delete-summary" style="margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6"></p>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.7">
+        This will permanently remove the student, user role, fee records, auth user account, and linked student data.
+      </div>
+
+      <form id="student-delete-form" method="POST" style="margin-top:20px">
+        {% csrf_token %}
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+          <button type="button" onclick="closeStudentDeleteModal()" style="padding:10px 16px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;cursor:pointer">Cancel</button>
+          <button type="submit" style="padding:10px 16px;border-radius:10px;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer">
+            <i class="fas fa-trash" style="margin-right:6px"></i> Delete Student
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </section>
 
@@ -339,31 +415,42 @@
 <section data-dashboard-pane="faculty" class="dashboard-pane">
   <div class="d-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
-      <div class="d-card-title" style="margin:0"><i class="fas fa-chalkboard-teacher"></i> Faculty{% if all_faculty_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_faculty_total }})</span>{% endif %}</div>
+      <div class="d-card-title" style="margin:0"><i class="fas fa-chalkboard-teacher"></i> Faculty <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">({{ all_faculty_total }} total)</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Faculty</a>
         <a href="{% url 'admin_hod_add' %}" class="qa-btn qa-teal" style="font-size:12px;padding:7px 14px"><i class="fas fa-building-columns"></i> Add HOD</a>
       </div>
     </div>
     {% if all_faculty_full %}
-    <div style="margin-bottom:12px">
-      <input type="text" id="fac-search" placeholder="Search by name, dept or emp ID&hellip;" oninput="filterTable('fac-search','fac-tbody','fac-count')"
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <input type="text" id="fac-search" placeholder="Search by name, dept or emp ID&hellip;" oninput="filterTableAdvanced('fac-search','fac-tbody','fac-count','fac-dept-filter')"
         style="width:100%;max-width:320px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
         onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <select id="fac-dept-filter" onchange="filterTableAdvanced('fac-search','fac-tbody','fac-count','fac-dept-filter')" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer">
+        <option value="">All Departments</option>
+        {% for d in all_departments %}<option value="{{ d.code }}">{{ d.code }}</option>{% endfor %}
+      </select>
       <span id="fac-count" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
     </div>
     <div class="table-scroll" style="max-height:420px;overflow-y:auto">
       <table class="dtable">
-        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Name</th><th>Dept</th><th>Designation</th><th>Emp ID</th><th>Phone</th><th></th></tr></thead>
+        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Name</th><th>Dept</th><th>Designation</th><th>Emp ID</th><th>Phone</th><th>Actions</th></tr></thead>
         <tbody id="fac-tbody">
           {% for f in all_faculty_full %}
-          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_faculty_edit' f.pk %}'">
+          <tr style="cursor:pointer" data-dept="{{ f.department.code }}" onclick="navigateWithLoader('{% url 'admin_faculty_profile' f.pk %}')">
             <td style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</td>
             <td>{{ f.department.code }}</td>
             <td style="color:var(--muted)">{{ f.designation }}</td>
             <td style="color:var(--teal);font-weight:600">{{ f.employee_id }}</td>
             <td style="color:var(--muted)">{{ f.phone_number|default:"&mdash;" }}</td>
-            <td><a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a></td>
+            <td>
+              <div style="display:flex;gap:6px;align-items:center">
+                <a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
+                <button type="button" onclick="event.stopPropagation(); openFacultyDeleteModal('{% url 'admin_faculty_delete' f.pk %}','{{ f.user.get_full_name|default:f.user.username|escapejs }}','{{ f.employee_id|escapejs }}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" title="Delete faculty">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -374,16 +461,34 @@
   {% if all_hods_full %}
   <div class="d-card">
     <div class="d-card-title"><i class="fas fa-building-columns"></i> Heads of Department</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center">
+      <input type="text" id="hod-search" placeholder="Search HOD by name, department or emp ID&hellip;" oninput="filterTableAdvanced('hod-search','hod-tbody','hod-count','hod-dept-filter')"
+        style="width:100%;max-width:320px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <select id="hod-dept-filter" onchange="filterTableAdvanced('hod-search','hod-tbody','hod-count','hod-dept-filter')" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer">
+        <option value="">All Departments</option>
+        {% for d in all_departments %}<option value="{{ d.name }}">{{ d.name }}</option>{% endfor %}
+      </select>
+      <span id="hod-count" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+    </div>
     <div class="table-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Department</th><th>Emp ID</th><th>Qualification</th></tr></thead>
-        <tbody>
+        <thead><tr><th>Name</th><th>Department</th><th>Emp ID</th><th>Qualification</th><th>Actions</th></tr></thead>
+        <tbody id="hod-tbody">
           {% for h in all_hods_full %}
-          <tr style="cursor:pointer" onclick="window.location='{% url 'admin_hod_add' %}'">
+          <tr style="cursor:pointer" data-dept="{{ h.department.name }}" onclick="navigateWithLoader('{% url 'admin_hod_profile' h.pk %}')">
             <td style="font-weight:600;color:var(--deep)">{{ h.user.get_full_name|default:h.user.username }}</td>
             <td>{{ h.department.name }}</td>
             <td style="color:var(--teal);font-weight:600">{{ h.employee_id }}</td>
             <td style="color:var(--muted)">{{ h.qualification }}</td>
+            <td>
+              <div style="display:flex;gap:6px;align-items:center">
+                <a href="{% url 'admin_hod_edit' h.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px" onclick="event.stopPropagation()" title="Edit HOD"><i class="fas fa-pen"></i></a>
+                <button type="button" onclick="event.stopPropagation(); openHodDeleteModal('{% url 'admin_hod_delete' h.pk %}','{{ h.user.get_full_name|default:h.user.username|escapejs }}','{{ h.department.name|escapejs }}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" title="Delete HOD">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -391,6 +496,50 @@
     </div>
   </div>
   {% endif %}
+
+  <div id="faculty-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.58);z-index:10020;align-items:center;justify-content:center;padding:20px">
+    <div style="width:min(520px,100%);background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.25);padding:24px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-triangle-exclamation" style="font-size:18px"></i></div>
+        <div style="flex:1">
+          <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">Delete Faculty</div>
+          <p id="faculty-delete-summary" style="margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6"></p>
+        </div>
+      </div>
+      <div style="margin-top:18px;padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.7">
+        This will remove the faculty account and linked user access.
+      </div>
+      <form id="faculty-delete-form" method="POST" style="margin-top:20px">
+        {% csrf_token %}
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+          <button type="button" onclick="closeFacultyDeleteModal()" style="padding:10px 16px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;cursor:pointer">Cancel</button>
+          <button type="submit" style="padding:10px 16px;border-radius:10px;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer"><i class="fas fa-trash" style="margin-right:6px"></i> Delete Faculty</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="hod-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.58);z-index:10020;align-items:center;justify-content:center;padding:20px">
+    <div style="width:min(520px,100%);background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.25);padding:24px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-triangle-exclamation" style="font-size:18px"></i></div>
+        <div style="flex:1">
+          <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">Delete HOD</div>
+          <p id="hod-delete-summary" style="margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6"></p>
+        </div>
+      </div>
+      <div style="margin-top:18px;padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.7">
+        This will remove the HOD account and linked user access.
+      </div>
+      <form id="hod-delete-form" method="POST" style="margin-top:20px">
+        {% csrf_token %}
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+          <button type="button" onclick="closeHodDeleteModal()" style="padding:10px 16px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;cursor:pointer">Cancel</button>
+          <button type="submit" style="padding:10px 16px;border-radius:10px;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer"><i class="fas fa-trash" style="margin-right:6px"></i> Delete HOD</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </section>
 
 <!-- DEPARTMENTS -->
@@ -409,16 +558,23 @@
     </div>
     <div class="table-scroll">
       <table class="dtable">
-        <thead><tr><th>Name</th><th>Code</th><th>Students</th><th>Faculty</th><th>Subjects</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Code</th><th>Students</th><th>Faculty</th><th>Subjects</th><th>Actions</th></tr></thead>
         <tbody id="dept-tbody">
           {% for d in all_departments %}
-          <tr>
+          <tr data-dept-id="{{ d.pk }}" data-dept-name="{{ d.name|escape }}" data-students="{{ d.student_count }}" data-faculty="{{ d.faculty_count }}" data-subjects="{{ d.subject_count }}">
             <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
             <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ d.code }}</span></td>
             <td style="text-align:center">{{ d.student_count }}</td>
             <td style="text-align:center">{{ d.faculty_count }}</td>
             <td style="text-align:center">{{ d.subject_count }}</td>
-            <td><a href="{% url 'admin_department_edit' d.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px"><i class="fas fa-pen"></i></a></td>
+            <td>
+              <div style="display:flex;gap:6px;align-items:center">
+                <a href="{% url 'admin_department_edit' d.pk %}" class="btn-sm btn-sm-deep" style="padding:4px 9px;font-size:11px"><i class="fas fa-pen"></i></a>
+                <button type="button" onclick="openDepartmentDeleteModal('{{ d.pk }}','{{ d.name|escapejs }}','{{ d.student_count }}','{{ d.faculty_count }}','{{ d.subject_count }}','{% url 'admin_department_delete' d.pk %}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px" title="Delete department">
+                    <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -427,51 +583,43 @@
     {% else %}<div class="empty"><i class="fas fa-building"></i>No departments yet.</div>{% endif %}
   </div>
 
-  <div class="d-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
-      <div class="d-card-title" style="margin:0"><i class="fas fa-book"></i> Subjects{% if all_subjects_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_subjects_total }})</span>{% endif %}</div>
-      <a href="{% url 'admin_subject_add' %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Subject</a>
-    </div>
-    {% if all_subjects %}
-    <!-- Subject filters -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-      <input type="text" id="subj-search" placeholder="Search subjects&hellip;" oninput="filterSubjects()"
-        style="flex:1;min-width:180px;max-width:280px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
-        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
-      <select id="subj-dept-filter" onchange="filterSubjects()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
-        <option value="">All Departments</option>
-        {% for d in all_departments %}<option value="{{ d.code }}">{{ d.code }}</option>{% endfor %}
-      </select>
-      <select id="subj-sem-filter" onchange="filterSubjects()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
-        <option value="">All Semesters</option>
-        {% for i in "12345678" %}<option value="{{ i }}">Sem {{ i }}</option>{% endfor %}
-      </select>
-      <span id="subj-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
-      <button onclick="clearSubjFilters()" id="subj-clear" style="display:none;padding:6px 12px;border-radius:7px;background:var(--surface2);border:1.5px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer">Clear</button>
-    </div>
-    <div class="table-scroll" style="max-height:420px;overflow-y:auto">
-      <table class="dtable">
-        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1"><tr><th>Subject</th><th>Code</th><th>Dept</th><th>Semester</th><th>Hrs/Wk</th><th></th></tr></thead>
-        <tbody id="subj-tbody">
-          {% for s in all_subjects %}
-          <tr data-name="{{ s.name|lower }}" data-code="{{ s.code|lower }}" data-dept="{{ s.department.code }}" data-sem="{{ s.semester }}">
-            <td style="font-weight:600;color:var(--deep)">{{ s.name }}</td>
-            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ s.code }}</span></td>
-            <td>{{ s.department.code }}</td>
-            <td style="text-align:center">{{ s.semester }}</td>
-            <td style="text-align:center">{{ s.weekly_hours }}</td>
-            <td>
-              <form method="POST" action="{% url 'admin_subject_delete' s.pk %}" style="display:inline" onsubmit="return confirm('Delete subject?')">
-                {% csrf_token %}<button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
-              </form>
-            </td>
-          </tr>
+  <div id="dept-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.58);z-index:10020;align-items:center;justify-content:center;padding:20px">
+    <div style="width:min(560px,100%);background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.25);padding:24px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(239,68,68,.1);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fas fa-triangle-exclamation" style="font-size:18px"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">Delete Department</div>
+          <p id="dept-delete-summary" style="margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6"></p>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.7">
+        The selected department HOD will be converted into faculty. Active students, faculty, subjects, courses, and sections will be moved into the department you choose below.
+      </div>
+
+      <form id="dept-delete-form" method="POST" style="margin-top:18px">
+        {% csrf_token %}
+        <label for="dept-target-select" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">Move Records To</label>
+        <select id="dept-target-select" name="target_department" required style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Select target department</option>
+          {% for d in all_departments %}
+          <option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>
           {% endfor %}
-        </tbody>
-      </table>
-      <div id="subj-empty" style="display:none;text-align:center;padding:24px 0;color:var(--muted);font-size:13px"><i class="fas fa-search" style="display:block;font-size:22px;margin-bottom:8px;color:#d1d5db"></i>No subjects match your filters.</div>
+        </select>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+          The source department will be removed from active lists after the transfer.
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:22px">
+          <button type="button" onclick="closeDepartmentDeleteModal()" style="padding:10px 16px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;cursor:pointer">Cancel</button>
+          <button type="submit" style="padding:10px 16px;border-radius:10px;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer">
+            <i class="fas fa-trash" style="margin-right:6px"></i> Transfer And Delete
+          </button>
+        </div>
+      </form>
     </div>
-    {% else %}<div class="empty"><i class="fas fa-book"></i>No subjects yet.</div>{% endif %}
   </div>
 </section>
 
@@ -648,17 +796,62 @@
     <div class="d-card">
       <div class="d-card-title"><i class="fas fa-plus"></i> Quick Actions</div>
       <div class="qa-row">
-        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-plus"></i> Add Fee Record</a>
+        <a href="{% url 'admin_fee_add' %}" class="qa-btn qa-red"><i class="fas fa-plus"></i> Create Fee Records</a>
       </div>
     </div>
   </div>
   <div class="d-card">
-    <div class="d-card-title"><i class="fas fa-indian-rupee-sign"></i> All Fee Records{% if all_fees_total > 100 %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">(showing 100 of {{ all_fees_total }})</span>{% endif %}</div>
+    <div class="d-card-title"><i class="fas fa-indian-rupee-sign"></i> All Fee Records{% if fee_academic_year_filter or fee_dept_filter or fee_sem_filter or fee_status_filter %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">({{ all_fees_filtered_total }} filtered of {{ all_fees_total }})</span>{% else %} <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:8px">({{ all_fees_total }} total)</span>{% endif %}</div>
+    <div id="finance-loader" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.18);backdrop-filter:blur(2px);z-index:10030;align-items:center;justify-content:center;padding:20px">
+      <div style="min-width:220px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 26px;text-align:center">
+        <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:financeSpin .8s linear infinite"></div>
+        <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Records</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Applying fee filters...</div>
+      </div>
+    </div>
+    <style>
+      @keyframes financeSpin { to { transform: rotate(360deg); } }
+    </style>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center">
+      <form id="finance-filter-form" method="GET" action="{% url 'admin_dashboard' %}#finance" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1">
+        <select name="fee_year" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Academic Years</option>
+          {% for year in fee_year_options %}
+          <option value="{{ year }}" {% if fee_academic_year_filter == year %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+        <select name="fee_dept" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Departments</option>
+          {% for d in all_departments %}
+          <option value="{{ d.pk }}" {% if fee_dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>
+          {% endfor %}
+        </select>
+        <select name="fee_sem" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Semesters</option>
+          {% for i in "12345678" %}
+          <option value="{{ i }}" {% if fee_sem_filter == i %}selected{% endif %}>Sem {{ i }}</option>
+          {% endfor %}
+        </select>
+        <select name="fee_status" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;cursor:pointer" onchange="this.form.submit()" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+          <option value="">All Statuses</option>
+          <option value="PENDING" {% if fee_status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+          <option value="PARTIAL" {% if fee_status_filter == 'PARTIAL' %}selected{% endif %}>Partial</option>
+          <option value="PAID" {% if fee_status_filter == 'PAID' %}selected{% endif %}>Paid</option>
+        </select>
+        {% if fee_academic_year_filter or fee_dept_filter or fee_sem_filter or fee_status_filter %}
+        <a href="{% url 'admin_dashboard' %}#finance" style="padding:7px 12px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>
+        {% endif %}
+      </form>
+      <input type="text" id="fee-search" placeholder="Search by name or roll no&hellip;" oninput="filterTable('fee-search','fee-tbody','fee-count')"
+        style="flex:1;min-width:200px;max-width:300px;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''"/>
+      <span id="fee-count" style="font-size:12px;color:var(--muted)"></span>
+    </div>
     {% if all_fees %}
     <div class="table-scroll content-scroll">
       <table class="dtable">
         <thead><tr><th>Student</th><th>Dept</th><th>Semester</th><th>Academic Year</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
-        <tbody>
+        <tbody id="fee-tbody">
           {% for fee in all_fees %}
           <tr>
             <td><div style="font-weight:600;color:var(--deep)">{{ fee.student.user.get_full_name|default:fee.student.user.username }}</div><div style="font-size:11px;color:var(--muted)">{{ fee.student.roll_number }}</div></td>
@@ -675,7 +868,16 @@
         </tbody>
       </table>
     </div>
-    {% else %}<div class="empty"><i class="fas fa-receipt"></i>No fee records yet.</div>{% endif %}
+    {% else %}
+    <div class="empty">
+      <i class="fas fa-receipt"></i>
+      {% if fee_academic_year_filter or fee_dept_filter or fee_sem_filter or fee_status_filter %}
+      No fee records match the selected filters.
+      {% else %}
+      No fee records yet. Use Create Fee Records to generate them by year and department.
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 </section>
 
@@ -799,7 +1001,7 @@
   <a href="#overview"      data-section-target="overview"      data-mob-nav="overview"><i class="fas fa-home"></i>Home</a>
   <a href="#students"      data-section-target="students"      data-mob-nav="students"><i class="fas fa-user-graduate"></i>Students</a>
   <a href="#faculty"       data-section-target="faculty"       data-mob-nav="faculty"><i class="fas fa-chalkboard-teacher"></i>Faculty</a>
-  <a href="#departments"   data-section-target="departments"   data-mob-nav="departments"><i class="fas fa-book"></i>Academics</a>
+  <a href="#departments"   data-section-target="departments"   data-mob-nav="departments"><i class="fas fa-building"></i>Academics</a>
   <a href="#finance"       data-section-target="finance"       data-mob-nav="finance"><i class="fas fa-indian-rupee-sign"></i>Finance</a>
 </nav>
 {% endblock %}
@@ -819,35 +1021,91 @@ function filterTable(inputId, tbodyId, countId) {
   if (el) el.textContent = q ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
 }
 
-/* ---- Subject multi-filter (search + dept + semester) ---- */
-function filterSubjects() {
-  var q    = (document.getElementById('subj-search').value || '').toLowerCase();
-  var dept = document.getElementById('subj-dept-filter').value;
-  var sem  = document.getElementById('subj-sem-filter').value;
-  var rows = document.getElementById('subj-tbody').querySelectorAll('tr');
+function filterTableAdvanced(inputId, tbodyId, countId, selectId) {
+  var q = (document.getElementById(inputId).value || '').toLowerCase();
+  var select = document.getElementById(selectId);
+  var filterValue = select ? select.value : '';
+  var rows = document.getElementById(tbodyId).querySelectorAll('tr');
   var visible = 0;
   rows.forEach(function(r) {
-    var nameMatch = !q || r.dataset.name.includes(q) || r.dataset.code.includes(q);
-    var deptMatch = !dept || r.dataset.dept === dept;
-    var semMatch  = !sem  || r.dataset.sem  === sem;
-    var show = nameMatch && deptMatch && semMatch;
+    var textMatch = !q || r.textContent.toLowerCase().includes(q);
+    var deptMatch = !filterValue || (r.dataset.dept === filterValue);
+    var show = textMatch && deptMatch;
     r.style.display = show ? '' : 'none';
     if (show) visible++;
   });
-  var countEl = document.getElementById('subj-count');
-  var emptyEl = document.getElementById('subj-empty');
-  var clearBtn = document.getElementById('subj-clear');
-  if (countEl) countEl.textContent = (q || dept || sem) ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
-  if (emptyEl) emptyEl.style.display = visible === 0 ? 'block' : 'none';
-  if (clearBtn) clearBtn.style.display = (q || dept || sem) ? 'inline-block' : 'none';
+  var el = document.getElementById(countId);
+  if (el) el.textContent = (q || filterValue) ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
 }
 
-function clearSubjFilters() {
-  document.getElementById('subj-search').value = '';
-  document.getElementById('subj-dept-filter').value = '';
-  document.getElementById('subj-sem-filter').value = '';
-  filterSubjects();
+function openDepartmentDeleteModal(deptId, deptName, students, faculty, subjects, actionUrl) {
+  var modal = document.getElementById('dept-delete-modal');
+  var form = document.getElementById('dept-delete-form');
+  var summary = document.getElementById('dept-delete-summary');
+  var select = document.getElementById('dept-target-select');
+  if (!modal || !form || !summary || !select) return;
+  form.action = actionUrl;
+  summary.innerHTML = 'You are deleting <strong>' + deptName + '</strong>.' +
+    '<br>' + students + ' student(s), ' + faculty + ' faculty member(s), and ' + subjects + ' subject(s) will be moved.';
+  Array.prototype.forEach.call(select.options, function(option) {
+    option.disabled = option.value === deptId;
+    if (option.value === deptId) option.hidden = true;
+    else option.hidden = false;
+  });
+  select.value = '';
+  modal.style.display = 'flex';
 }
+
+function closeDepartmentDeleteModal() {
+  var modal = document.getElementById('dept-delete-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openStudentDeleteModal(actionUrl, studentName, rollNumber) {
+  var modal = document.getElementById('student-delete-modal');
+  var form = document.getElementById('student-delete-form');
+  var summary = document.getElementById('student-delete-summary');
+  if (!modal || !form || !summary) return;
+  form.action = actionUrl;
+  summary.innerHTML = 'You are deleting <strong>' + studentName + '</strong> (' + rollNumber + ').';
+  modal.style.display = 'flex';
+}
+
+function closeStudentDeleteModal() {
+  var modal = document.getElementById('student-delete-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openFacultyDeleteModal(actionUrl, facultyName, employeeId) {
+  var modal = document.getElementById('faculty-delete-modal');
+  var form = document.getElementById('faculty-delete-form');
+  var summary = document.getElementById('faculty-delete-summary');
+  if (!modal || !form || !summary) return;
+  form.action = actionUrl;
+  summary.innerHTML = 'You are deleting <strong>' + facultyName + '</strong> (' + employeeId + ').';
+  modal.style.display = 'flex';
+}
+
+function closeFacultyDeleteModal() {
+  var modal = document.getElementById('faculty-delete-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function openHodDeleteModal(actionUrl, hodName, departmentName) {
+  var modal = document.getElementById('hod-delete-modal');
+  var form = document.getElementById('hod-delete-form');
+  var summary = document.getElementById('hod-delete-summary');
+  if (!modal || !form || !summary) return;
+  form.action = actionUrl;
+  summary.innerHTML = 'You are deleting <strong>' + hodName + '</strong> from ' + departmentName + '.';
+  modal.style.display = 'flex';
+}
+
+function closeHodDeleteModal() {
+  var modal = document.getElementById('hod-delete-modal');
+  if (modal) modal.style.display = 'none';
+}
+
 function hexLuminance(hex){
   var h=hex.replace('#','');
   var r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255;
@@ -874,4 +1132,54 @@ function filterTickets(status) {
   var el = document.getElementById(map[status]);
   if(el) el.classList.add('hd-tab-active');
 }
+
+function showFinanceLoader() {
+  var loader = document.getElementById('finance-loader');
+  if (loader) loader.style.display = 'flex';
+}
+
+function showDashboardPageLoader() {
+  var loader = document.getElementById('dashboard-page-loader');
+  if (loader) loader.style.display = 'flex';
+}
+
+function showStudentLoader() {
+  var loader = document.getElementById('student-loader');
+  if (loader) loader.style.display = 'flex';
+}
+
+function navigateWithLoader(url) {
+  showDashboardPageLoader();
+  window.location = url;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('a[href]').forEach(function (link) {
+    link.addEventListener('click', function (event) {
+      if (event.defaultPrevented) return;
+      if (link.target && link.target !== '_self') return;
+      if (link.hasAttribute('download')) return;
+      var href = link.getAttribute('href') || '';
+      if (!href || href.charAt(0) === '#') return;
+      if (href.indexOf('javascript:') === 0) return;
+      showDashboardPageLoader();
+    });
+  });
+
+  var studentForm = document.getElementById('student-filter-form');
+  if (studentForm) {
+    studentForm.addEventListener('submit', showStudentLoader);
+    studentForm.querySelectorAll('select').forEach(function (field) {
+      field.addEventListener('change', showStudentLoader);
+    });
+  }
+
+  var financeForm = document.getElementById('finance-filter-form');
+  if (financeForm) {
+    financeForm.addEventListener('submit', showFinanceLoader);
+    financeForm.querySelectorAll('select').forEach(function (field) {
+      field.addEventListener('change', showFinanceLoader);
+    });
+  }
+});
 {% endblock %}

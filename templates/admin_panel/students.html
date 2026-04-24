@@ -6,7 +6,7 @@
 {% block page_sub %}All enrolled students across departments{% endblock %}
 {% block page_action %}
   <div style="display:flex;gap:10px;flex-wrap:wrap">
-    <a href="{% url 'admin_students_export_csv' %}?dept={{ dept_filter }}&sem={{ sem_filter }}" class="btn-add" style="background:var(--deep)"><i class="fas fa-file-csv"></i> Export CSV</a>
+    <a href="{% url 'admin_students_export_csv' %}?year={{ year_filter }}&dept={{ dept_filter }}&sem={{ sem_filter }}" class="btn-add" style="background:var(--deep)"><i class="fas fa-file-csv"></i> Export CSV</a>
     <a href="{% url 'admin_student_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Student</a>
   </div>
 {% endblock %}
@@ -14,6 +14,12 @@
 {% block content %}
 <div class="filter-bar">
   <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap">
+    <select name="year" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Years</option>
+      {% for year in year_options %}
+      <option value="{{ year }}" {% if year_filter == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
+      {% endfor %}
+    </select>
     <select name="dept" class="filter-select" onchange="this.form.submit()">
       <option value="">All Departments</option>
       {% for d in departments %}
@@ -26,7 +32,7 @@
       <option value="{{ i }}" {% if sem_filter == i %}selected{% endif %}>Sem {{ i }}</option>
       {% endfor %}
     </select>
-    {% if dept_filter or sem_filter %}
+    {% if year_filter or dept_filter or sem_filter %}
     <a href="{% url 'admin_students' %}" style="padding:8px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:13px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>
     {% endif %}
   </form>

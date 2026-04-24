@@ -1,7 +1,7 @@
 {% extends 'dashboards/base_dashboard.html' %}
-{% block title %}Payment Receipt - {{ payment.transaction_id }}{% endblock %}
+{% block title %}{{ receipt_title|default:"Payment Receipt" }} - {{ payment.transaction_id }}{% endblock %}
 {% block role_label %}Student{% endblock %}
-{% block page_title %}Payment Receipt{% endblock %}
+{% block page_title %}{{ receipt_title|default:"Payment Receipt" }}{% endblock %}
 {% block page_sub %}{{ payment.transaction_id }}{% endblock %}
 
 {% block extra_css %}
@@ -58,7 +58,7 @@
         </div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:1px;text-transform:uppercase">Fee Receipt</div>
+        <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:1px;text-transform:uppercase">{{ receipt_title|default:"Payment Receipt" }}</div>
         <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px">{{ payment.transaction_id }}</div>
         <div style="margin-top:8px;display:inline-block;background:{% if payment.status == 'SUCCESS' %}#22c55e{% elif payment.status == 'PENDING' %}#f59e0b{% else %}#ef4444{% endif %};color:#fff;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;letter-spacing:0.5px">
           {% if payment.status == 'SUCCESS' %}âœ“ PAID{% elif payment.status == 'PENDING' %}â³ PENDING{% else %}âœ— FAILED{% endif %}
@@ -171,6 +171,12 @@
               <td style="padding:5px 0;color:#64748b">Fee Type</td>
               <td style="padding:5px 0;font-weight:600;color:#1e293b">{{ payment.payment_type }}</td>
             </tr>
+            {% if payment_context %}
+            <tr>
+              <td style="padding:5px 0;color:#64748b">{{ payment_context.label }}</td>
+              <td style="padding:5px 0;font-weight:600;color:#1e293b">{{ payment_context.value }}</td>
+            </tr>
+            {% endif %}
             <tr>
               <td style="padding:5px 0;color:#64748b">Status</td>
               <td style="padding:5px 0;font-weight:700;color:{% if payment.status == 'SUCCESS' %}#16a34a{% elif payment.status == 'PENDING' %}#d97706{% else %}#dc2626{% endif %}">
@@ -212,6 +218,44 @@
           {% endwith %}
         </div>
       </div>
+
+      {% if payment.payment_type == 'SUPPLY_EXAM' and supply_subjects %}
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:700;color:{% if branding %}{{ branding.primary_color }}{% else %}#0d7377{% endif %};text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;border-bottom:2px solid {% if branding %}{{ branding.primary_color }}{% else %}#0d7377{% endif %};padding-bottom:6px">
+          Applied Supply Subjects
+        </div>
+        <div style="display:grid;gap:8px">
+          {% for subject in supply_subjects %}
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#1e293b">{{ subject.code }} - {{ subject.name }}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px">Semester {{ subject.semester }}</div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:{% if branding %}{{ branding.primary_color }}{% else %}#0d7377{% endif %};white-space:nowrap">Included</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if payment.payment_type == 'EXAM' and exam_subjects %}
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:700;color:{% if branding %}{{ branding.primary_color }}{% else %}#0d7377{% endif %};text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;border-bottom:2px solid {% if branding %}{{ branding.primary_color }}{% else %}#0d7377{% endif %};padding-bottom:6px">
+          Current Semester Exam Subjects
+        </div>
+        <div style="display:grid;gap:8px">
+          {% for subject in exam_subjects %}
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#1e293b">{{ subject.code }} - {{ subject.name }}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:2px">Semester {{ subject.semester }}</div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:{% if branding %}{{ branding.primary_color }}{% else %}#0d7377{% endif %};white-space:nowrap">Included</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
       <!-- College contact strip -->
       {% if college %}
