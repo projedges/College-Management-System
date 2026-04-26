@@ -1,14 +1,19 @@
 import csv
+import os
 from collections import defaultdict
 from datetime import datetime, timedelta, time as dt_time
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import DataError, IntegrityError, transaction
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
 from django.core.files.base import ContentFile
 from django.http import HttpResponse
+from django.db import connections
+from django.db.migrations.executor import MigrationExecutor
+from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -65,6 +70,151 @@ def _safe_float(val, default=0.0):
 
 def _digits_only(value):
     return ''.join(ch for ch in str(value or '') if ch.isdigit())
+
+
+def _safe_decimal(value, default=Decimal('0')):
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+
+
+def _valid_academic_year(value):
+    raw = (value or '').strip()
+    if not raw:
+        return True
+    if len(raw) != 7 or raw[4] != '-':
+        return False
+    start, end = raw[:4], raw[5:]
+    if not (start.isdigit() and end.isdigit()):
+        return False
+    return int(end) == (int(start) + 1) % 100
+
+
+def _paginate_queryset(request, queryset, per_page=25, page_param='page'):
+    paginator = Paginator(queryset, per_page)
+    page_obj = paginator.get_page(request.GET.get(page_param) or 1)
+    return page_obj
+
+
+def _validate_staff_admin_payload(request, departments, *, is_hod=False, existing_user=None, existing_staff=None):
+    errors = []
+    first_name = request.POST.get('first_name', '').strip()
+    last_name = request.POST.get('last_name', '').strip()
+    username = request.POST.get('username', '').strip()
+    email = request.POST.get('email', '').strip()
+    employee_id = request.POST.get('employee_id', '').strip()
+    dept_id = request.POST.get('department', '').strip()
+    phone = request.POST.get('phone_number', '').strip()
+    experience = _safe_int(request.POST.get('experience_years'))
+    joined_date_str = request.POST.get('joined_date', '').strip()
+
+    if not first_name:
+        errors.append('First name is required.')
+    if not last_name:
+        errors.append('Last name is required.')
+    if not username:
+        errors.append('Username is required.')
+    if not dept_id:
+        errors.append('Department is required.')
+    elif not departments.filter(pk=dept_id).exists():
+        errors.append('Select a valid department.')
+
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            errors.append('Enter a valid email address.')
+        else:
+            dup_users = User.objects.exclude(pk=getattr(existing_user, 'pk', None)).filter(email__iexact=email)
+            if dup_users.exists():
+                errors.append('Email already exists for another user.')
+    else:
+        errors.append('Email is required.')
+
+    dup_username = User.objects.exclude(pk=getattr(existing_user, 'pk', None)).filter(username=username)
+    if dup_username.exists():
+        errors.append('Username already taken.')
+
+    if employee_id:
+        model_cls = HOD if is_hod else Faculty
+        dup_emp = model_cls.objects.exclude(pk=getattr(existing_staff, 'pk', None)).filter(employee_id=employee_id)
+        if dup_emp.exists():
+            errors.append('Employee ID already exists.')
+    else:
+        errors.append('Employee ID is required.')
+
+    digits = _digits_only(phone)
+    if len(digits) != 10:
+        errors.append('Phone number must be exactly 10 digits.')
+
+    if experience < 0 or experience > 60:
+        errors.append('Experience years must be between 0 and 60.')
+
+    if joined_date_str:
+        try:
+            joined_date = datetime.fromisoformat(joined_date_str).date()
+            if joined_date > timezone.localdate():
+                errors.append('Joined date cannot be in the future.')
+        except (ValueError, TypeError):
+            errors.append('Enter a valid joined date.')
+
+    return errors
+
+
+def _validate_fee_payload(total_amount, paid_amount, semester, academic_year):
+    errors = []
+    if total_amount <= 0:
+        errors.append('Total fee must be greater than zero.')
+    if paid_amount < 0:
+        errors.append('Paid amount cannot be negative.')
+    if paid_amount > total_amount:
+        errors.append('Paid amount cannot exceed total amount.')
+    if semester is not None and not (1 <= semester <= 8):
+        errors.append('Semester must be between 1 and 8.')
+    if academic_year and not _valid_academic_year(academic_year):
+        errors.append('Academic year must be in the format YYYY-YY, for example 2026-27.')
+    return errors
+
+
+def _validate_exam_payload(name, semester, start_date_raw, end_date_raw, college=None, exam_pk=None):
+    errors = []
+    start_date = end_date = None
+    if not name:
+        errors.append('Exam name is required.')
+    if semester < 1 or semester > 8:
+        errors.append('Semester must be between 1 and 8.')
+    try:
+        start_date = datetime.fromisoformat(start_date_raw).date()
+        end_date = datetime.fromisoformat(end_date_raw).date()
+    except (ValueError, TypeError):
+        errors.append('Enter valid exam start and end dates.')
+    if start_date and end_date and end_date < start_date:
+        errors.append('End date cannot be earlier than start date.')
+    if college and name and start_date and end_date:
+        dup = Exam.objects.filter(
+            college=college,
+            name__iexact=name,
+            semester=semester,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if exam_pk:
+            dup = dup.exclude(pk=exam_pk)
+        if dup.exists():
+            errors.append('An exam with the same name, semester, and date range already exists.')
+    return errors, start_date, end_date
+
+
+def _enterprise_summary(total_count, page_obj):
+    return {
+        'total': total_count,
+        'page_size': page_obj.paginator.per_page,
+        'current_page': page_obj.number,
+        'total_pages': page_obj.paginator.num_pages,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+    }
 
 
 def _validate_student_admin_payload(request, student):
@@ -342,6 +492,15 @@ def _resolve_password(raw_password):
     if password:
         return password, False
     return _generate_temporary_password(), True
+
+
+ADMIN_DASHBOARD_STUDENT_LIMIT = 100
+ADMIN_DASHBOARD_FACULTY_LIMIT = 80
+ADMIN_DASHBOARD_FEE_LIMIT = 100
+ADMIN_DASHBOARD_ANNOUNCEMENT_LIMIT = 30
+ADMIN_DASHBOARD_INVITE_LIMIT = 30
+ADMIN_DASHBOARD_REQUEST_LIMIT = 50
+ADMIN_DASHBOARD_HELPDESK_LIMIT = 50
 
 
 # ── PDF BUILDER (reportlab) ───────────────────────────────────────────────────
@@ -867,17 +1026,41 @@ def _auto_generate_timetable(department, semester):
     if not subjects:
         return {'created': 0, 'skipped_subjects': [], 'no_availability': []}
 
-    assignments_qs = (
-        FacultySubject.objects
-        .filter(subject__in=subjects)
-        .select_related('faculty__user', 'subject')
-        .order_by('subject__name', 'faculty__user__first_name')
+    mapping_qs = (
+        SectionSubjectFacultyMap.objects
+        .filter(section__department=department, section__semester=semester, subject__in=subjects)
+        .select_related('section', 'subject', 'faculty__user', 'classroom')
+        .order_by('subject__name', 'section__label')
     )
-    subject_faculty_map = {}
-    for fa in assignments_qs:
-        subject_faculty_map.setdefault(fa.subject_id, []).append(fa.faculty)
+    rows_by_subject = defaultdict(list)
+    for mapping in mapping_qs:
+        rows_by_subject[mapping.subject_id].append({
+            'faculty': mapping.faculty,
+            'section': mapping.section.label,
+            'classroom': mapping.classroom,
+        })
 
-    if not subject_faculty_map:
+    if not rows_by_subject:
+        assignments_qs = (
+            FacultySubject.objects
+            .filter(subject__in=subjects)
+            .select_related('faculty__user', 'subject')
+            .order_by('subject__name', 'faculty__user__first_name')
+        )
+        fallback_counts = defaultdict(int)
+        fallback_totals = defaultdict(int)
+        for fa in assignments_qs:
+            fallback_totals[fa.subject_id] += 1
+        for fa in assignments_qs:
+            idx = fallback_counts[fa.subject_id]
+            fallback_counts[fa.subject_id] += 1
+            rows_by_subject[fa.subject_id].append({
+                'faculty': fa.faculty,
+                'section': chr(65 + idx) if fallback_totals[fa.subject_id] > 1 else '',
+                'classroom': None,
+            })
+
+    if not rows_by_subject:
         return {'created': 0, 'skipped_subjects': subjects, 'no_availability': []}
 
     # Separate lecture rooms and lab rooms for room-type matching (Fix 4)
@@ -889,7 +1072,7 @@ def _auto_generate_timetable(department, semester):
     lab_rooms = [r for r in all_classrooms if r.room_type == 'lab']
     lecture_rooms = [r for r in all_classrooms if r.room_type != 'lab'] or all_classrooms
 
-    all_faculty_ids = [f.id for flist in subject_faculty_map.values() for f in flist]
+    all_faculty_ids = list({row['faculty'].id for rows in rows_by_subject.values() for row in rows})
     avail_qs = FacultyAvailability.objects.filter(
         faculty_id__in=all_faculty_ids, is_available=True
     ).order_by('day_of_week', 'start_time')
@@ -955,11 +1138,10 @@ def _auto_generate_timetable(department, semester):
 
     created_count = 0
     skipped_subjects = []
-    section_labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
     for subj in subjects:
-        faculty_list_for_subj = subject_faculty_map.get(subj.id, [])
-        if not faculty_list_for_subj:
+        subject_rows = rows_by_subject.get(subj.id, [])
+        if not subject_rows:
             skipped_subjects.append(subj)  # Fix 6 — track skipped
             continue
 
@@ -972,12 +1154,16 @@ def _auto_generate_timetable(department, semester):
         preferred_lab_rooms = lab_rooms if (is_lab_subject and lab_rooms) else all_classrooms
         preferred_lecture_rooms = lecture_rooms
 
-        for sec_idx, faculty in enumerate(faculty_list_for_subj):
-            section = section_labels[sec_idx] if len(faculty_list_for_subj) > 1 else ''
+        for sec_idx, row in enumerate(subject_rows):
+            faculty = row['faculty']
+            section = row['section']
+            default_room = row['classroom']
             fac_avail = avail_map.get(faculty.id)
             lecture_candidates = fac_avail if fac_avail else LECTURE_GRID
             lectures_placed = 0
             room_idx = sec_idx
+            lecture_room_pool = ([default_room] + [r for r in preferred_lecture_rooms if r.id != default_room.id]) if default_room else preferred_lecture_rooms
+            lab_room_pool = ([default_room] + [r for r in preferred_lab_rooms if r.id != default_room.id]) if default_room else preferred_lab_rooms
 
             for day, start, end in lecture_candidates:
                 if lectures_placed >= L:
@@ -986,8 +1172,8 @@ def _auto_generate_timetable(department, semester):
                 if fkey in used_faculty:
                     continue
                 room = None
-                for ri in range(len(preferred_lecture_rooms)):
-                    candidate = preferred_lecture_rooms[(room_idx + ri) % len(preferred_lecture_rooms)]
+                for ri in range(len(lecture_room_pool)):
+                    candidate = lecture_room_pool[(room_idx + ri) % len(lecture_room_pool)]
                     if (candidate.id, day, start) not in used_rooms:
                         room = candidate
                         break
@@ -1009,8 +1195,8 @@ def _auto_generate_timetable(department, semester):
                     if fkey in used_faculty:
                         continue
                     room = None
-                    for ri in range(len(preferred_lecture_rooms)):
-                        candidate = preferred_lecture_rooms[(room_idx + ri) % len(preferred_lecture_rooms)]
+                    for ri in range(len(lecture_room_pool)):
+                        candidate = lecture_room_pool[(room_idx + ri) % len(lecture_room_pool)]
                         if (candidate.id, day, start) not in used_rooms:
                             room = candidate
                             break
@@ -1034,8 +1220,8 @@ def _auto_generate_timetable(department, semester):
                         continue
                     # Fix 4 — prefer lab rooms for practical slots
                     room = None
-                    for ri in range(len(preferred_lab_rooms)):
-                        candidate = preferred_lab_rooms[(room_idx + ri) % len(preferred_lab_rooms)]
+                    for ri in range(len(lab_room_pool)):
+                        candidate = lab_room_pool[(room_idx + ri) % len(lab_room_pool)]
                         if (candidate.id, _day, _s1) not in used_rooms and (candidate.id, _day, _s2) not in used_rooms:
                             room = candidate
                             break
@@ -2096,6 +2282,8 @@ def admin_dashboard(request):
         pending=Sum(F('total_amount') - F('paid_amount'))
     )
     total_pending = total_pending_agg['pending'] or 0
+    fee_paid_count    = fee_qs.filter(status="PAID").count()
+    fee_partial_count = fee_qs.filter(status="PARTIAL").count()
 
     student_year_filter = request.GET.get("year", "").strip()
     student_dept_filter = request.GET.get("dept", "").strip()
@@ -2112,6 +2300,8 @@ def admin_dashboard(request):
         student_qs.order_by("-admission_year").values_list("admission_year", flat=True).distinct()
     )
     filtered_students = student_filter_qs.order_by("department__code", "admission_year", "current_semester", "roll_number")
+    filtered_students_total = filtered_students.count()
+    filtered_students = filtered_students[:ADMIN_DASHBOARD_STUDENT_LIMIT]
 
     fee_academic_year_filter = request.GET.get("fee_year", "").strip()
     fee_dept_filter = request.GET.get("fee_dept", "").strip()
@@ -2132,6 +2322,14 @@ def admin_dashboard(request):
     filtered_fees = fee_filter_qs.annotate(
         balance=ExpressionWrapper(F('total_amount') - F('paid_amount'), output_field=FloatField())
     ).order_by('status', 'student__roll_number')
+    filtered_fees_total = filtered_fees.count()
+    filtered_fees = filtered_fees[:ADMIN_DASHBOARD_FEE_LIMIT]
+
+    faculty_preview = faculty_qs.select_related('user', 'department').order_by('department__name', 'user__first_name')[:ADMIN_DASHBOARD_FACULTY_LIMIT]
+    helpdesk_preview = helpdesk_qs[:ADMIN_DASHBOARD_HELPDESK_LIMIT]
+    announcement_preview = announcement_qs.order_by('-created_at')[:ADMIN_DASHBOARD_ANNOUNCEMENT_LIMIT]
+    invite_preview = invite_qs.order_by('-created_at')[:ADMIN_DASHBOARD_INVITE_LIMIT]
+    request_preview = request_qs.select_related('desired_department').order_by('-created_at')[:ADMIN_DASHBOARD_REQUEST_LIMIT]
 
     context = {
         "total_students": total_students, "total_faculty": total_faculty,
@@ -2151,7 +2349,7 @@ def admin_dashboard(request):
         "exams_without_schedule": _scope_exams(request).exclude(
             pk__in=ExamSchedule.objects.values_list('exam_id', flat=True)
         ).count(),
-        "all_helpdesk_tickets": helpdesk_qs,
+        "all_helpdesk_tickets": helpdesk_preview,
         "exams": _scope_exams(request).select_related('created_by').order_by('-start_date'),
         "all_departments": department_qs.annotate(
             student_count=Count('student', distinct=True),
@@ -2160,25 +2358,27 @@ def admin_dashboard(request):
         ).order_by('name'),
         "all_students_full": filtered_students,
         "all_students_total": student_qs.count(),
-        "all_students_filtered_total": filtered_students.count(),
+        "all_students_filtered_total": filtered_students_total,
         "student_year_filter": student_year_filter,
         "student_dept_filter": student_dept_filter,
         "student_sem_filter": student_sem_filter,
         "student_year_options": student_year_options,
-        "all_faculty_full": faculty_qs.select_related('user', 'department').order_by('department__name', 'user__first_name'),
+        "all_faculty_full": faculty_preview,
         "all_faculty_total": faculty_qs.count(),
         "all_hods_full": hod_qs.filter(is_active=True).select_related('user', 'department').order_by('department__name')[:50],
         "all_fees": filtered_fees,
         "all_fees_total": fee_qs.count(),
-        "all_fees_filtered_total": filtered_fees.count(),
+        "all_fees_filtered_total": filtered_fees_total,
+        "fee_paid_count": fee_paid_count,
+        "fee_partial_count": fee_partial_count,
         "fee_academic_year_filter": fee_academic_year_filter,
         "fee_dept_filter": fee_dept_filter,
         "fee_sem_filter": fee_sem_filter,
         "fee_status_filter": fee_status_filter,
         "fee_year_options": fee_year_options,
-        "all_announcements": announcement_qs.order_by('-created_at')[:50],
-        "all_invites": invite_qs.order_by('-created_at')[:50],
-        "all_requests": request_qs.select_related('desired_department').order_by('-created_at')[:50],
+        "all_announcements": announcement_preview,
+        "all_invites": invite_preview,
+        "all_requests": request_preview,
         "now": timezone.now(),
         "color_presets": [
             {"name": "Ocean",   "primary": "#0d7377", "accent": "#e6a817", "deep": "#071e26"},
@@ -4059,15 +4259,6 @@ def faculty_mark_attendance(request, subject_id):
         }
 
     if request.method == 'POST':
-        topic_covered = request.POST.get('topic_covered', '').strip()
-        if not topic_covered:
-            messages.error(request, 'Topic covered is required before saving attendance.')
-            return render(request, 'faculty/mark_attendance.html', {
-                'subject': subject, 'students': students, 'today': today,
-                'active_sub': active_sub, 'topic_suggestions': topic_suggestions,
-                'existing_session': existing_session, 'existing_att': existing_att,
-            })
-
         date_str = request.POST.get('date', str(today))
         try:
             session_date = datetime.fromisoformat(date_str).date()
@@ -4077,6 +4268,16 @@ def faculty_mark_attendance(request, subject_id):
         if session_date > today:
             messages.error(request, 'Cannot mark attendance for a future date.')
             return redirect('faculty_dashboard')
+
+        topic_covered = request.POST.get('topic_covered', '').strip()
+        if not topic_covered:
+            prior_session = AttendanceSession.objects.filter(subject=subject, date=session_date).first()
+            topic_covered = (
+                (prior_session.topic_covered if prior_session else '')
+                or (active_sub.topic_covered if active_sub else '')
+                or (topic_suggestions[0] if topic_suggestions else '')
+                or f'Attendance session for {subject.code}'
+            )
 
         # Always store topic on the session
         session, created = AttendanceSession.objects.update_or_create(
@@ -7368,7 +7569,23 @@ def _scope_registration_requests(request):
 def admin_departments(request):
     if not _admin_guard(request):
         return redirect('dashboard')
-    return redirect('/dashboard/admin/#departments')
+    college = _get_admin_college(request)
+    department_qs = _scope_departments(request).annotate(
+        student_count=Count('student', distinct=True),
+        faculty_count=Count('faculty', distinct=True),
+        subject_count=Count('subject', distinct=True),
+    ).order_by('name')
+    total_students = Student.objects.filter(department__in=department_qs).count()
+    total_faculty  = Faculty.objects.filter(department__in=department_qs).count()
+    total_subjects = Subject.objects.filter(department__in=department_qs).count()
+    return render(request, 'admin_panel/departments.html', {
+        'departments': department_qs,
+        'total_students': total_students,
+        'total_faculty': total_faculty,
+        'total_subjects': total_subjects,
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required
@@ -7512,7 +7729,7 @@ def admin_student_profile(request, pk):
         session__subject__in=subjects
     ).select_related('session__subject').order_by('-session__date')[:10]
 
-    return render(request, 'hod/student_profile.html', {
+    context = {
         'dept': dept,
         'college': college,
         'student': student,
@@ -7526,14 +7743,69 @@ def admin_student_profile(request, pk):
         'recent_absences': recent_absences,
         'branding': _get_college_branding(college),
         'profile_view_mode': 'admin',
-    })
+    }
+    
+    # If AJAX request, return just the profile content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'admin_panel/student_profile_modal.html', context)
+    
+    return render(request, 'hod/student_profile.html', context)
 
 
 @login_required
 def admin_students(request):
     if not _admin_guard(request):
         return redirect('dashboard')
-    return redirect('/dashboard/admin/#students')
+    year_filter = request.GET.get('year', '').strip()
+    dept_filter = request.GET.get('dept', '').strip()
+    sem_filter = request.GET.get('sem', '').strip()
+    search_query = request.GET.get('q', '').strip()
+
+    departments = _scope_departments(request).order_by('name')
+    students = Student.objects.select_related('user', 'department__college').filter(
+        department__in=departments,
+        is_deleted=False,
+    )
+    if year_filter:
+        students = students.filter(admission_year=year_filter)
+    if dept_filter:
+        students = students.filter(department_id=dept_filter)
+    if sem_filter:
+        students = students.filter(current_semester=sem_filter)
+    if search_query:
+        students = students.filter(
+            Q(roll_number__icontains=search_query)
+            | Q(user__first_name__icontains=search_query)
+            | Q(user__last_name__icontains=search_query)
+            | Q(user__username__icontains=search_query)
+            | Q(user__email__icontains=search_query)
+            | Q(department__name__icontains=search_query)
+            | Q(department__code__icontains=search_query)
+        )
+
+    students = students.order_by('department__code', 'current_semester', 'roll_number')
+    total_students = students.count()
+    page_obj = _paginate_queryset(request, students, per_page=30)
+    year_options = list(
+        Student.objects.filter(department__in=departments, is_deleted=False)
+        .order_by('-admission_year')
+        .values_list('admission_year', flat=True)
+        .distinct()
+    )
+
+    return render(request, 'admin_panel/students.html', {
+        'students': page_obj.object_list,
+        'students_page': page_obj,
+        'student_summary': _enterprise_summary(total_students, page_obj),
+        'departments': departments,
+        'year_options': year_options,
+        'year_filter': year_filter,
+        'dept_filter': dept_filter,
+        'sem_filter': sem_filter,
+        'search_query': search_query,
+        'college': _get_admin_college(request),
+        'branding': _get_college_branding(_get_admin_college(request)),
+    })
 
 
 @login_required
@@ -7598,22 +7870,54 @@ def admin_registration_requests(request):
         return redirect('dashboard')
     status_filter = request.GET.get('status', '').strip()
     dept_filter = request.GET.get('department', '').strip()
-    requests_list = _scope_registration_requests(request).select_related(
+    search_query = request.GET.get('q', '').strip()
+    college = _get_admin_college(request) or _default_college()
+
+    base_requests = _scope_registration_requests(request).select_related(
         'desired_department', 'college', 'reviewed_by'
     ).order_by('-created_at')
+    requests_list = base_requests
     if status_filter:
         requests_list = requests_list.filter(status=status_filter)
     if dept_filter:
         requests_list = requests_list.filter(desired_department_id=dept_filter)
+    if search_query:
+        requests_list = requests_list.filter(
+            Q(first_name__icontains=search_query)
+            | Q(last_name__icontains=search_query)
+            | Q(email__icontains=search_query)
+            | Q(phone_number__icontains=search_query)
+        )
+
+    invites = RegistrationInvite.objects.filter(college=college).select_related(
+        'department', 'created_by'
+    ).order_by('-created_at')
     departments = _scope_departments(request).order_by('name')
-    return render(request, 'admin_panel/registration_requests.html', {
-        'requests_list': requests_list,
+    now = timezone.now()
+    request_page = _paginate_queryset(request, requests_list, per_page=25, page_param='requests_page')
+    invite_page = _paginate_queryset(request, invites, per_page=20, page_param='invites_page')
+
+    return render(request, 'admin_panel/student_invites.html', {
+        'college': college,
+        'branding': _get_college_branding(college),
+        'departments': departments,
         'status_filter': status_filter,
         'dept_filter': dept_filter,
-        'departments': departments,
-        'college': _get_admin_college(request),
-        'branding': _get_college_branding(_get_admin_college(request)),
+        'search_query': search_query,
         'status_choices': RegistrationRequest.STATUS_CHOICES,
+        'invites': invite_page.object_list,
+        'invites_page': invite_page,
+        'requests_list': request_page.object_list,
+        'requests_page': request_page,
+        'active_invites_count': invites.filter(used_at__isnull=True).filter(Q(expires_at__isnull=True) | Q(expires_at__gte=now)).count(),
+        'used_invites_count': invites.filter(used_at__isnull=False).count(),
+        'expired_invites_count': invites.filter(used_at__isnull=True, expires_at__lt=now).count(),
+        'pending_request_count': base_requests.filter(status__in=['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_CORRECTION']).count(),
+        'approved_request_count': base_requests.filter(status='APPROVED').count(),
+        'converted_request_count': base_requests.filter(status='CONVERTED').count(),
+        'rejected_request_count': base_requests.filter(status='REJECTED').count(),
+        'initial_tab': request.GET.get('tab', 'requests') if request.GET.get('tab') in {'requests', 'invites'} else 'requests',
+        'now': now,
     })
 
 
@@ -7679,7 +7983,7 @@ def admin_registration_invites(request):
             messages.error(request, 'An active invite already exists for this email.')
         else:
             department = departments.filter(pk=department_id).first() if department_id else None
-            invite = RegistrationInvite.objects.create(
+            RegistrationInvite.objects.create(
                 college=college,
                 department=department,
                 invited_email=email,
@@ -7689,9 +7993,9 @@ def admin_registration_invites(request):
                 expires_at=timezone.now() + timedelta(days=7),
             )
             messages.success(request, 'Invite link created successfully.')
-        return redirect('/dashboard/admin/#requests')
+        return redirect(f"{reverse('admin_registration_requests')}?tab=invites")
 
-    return redirect('/dashboard/admin/#requests')
+    return redirect(f"{reverse('admin_registration_requests')}?tab=invites")
 
 
 @login_required
@@ -7809,6 +8113,8 @@ def admin_student_edit(request, pk):
     if request.method == 'POST':
         errors = _validate_student_admin_payload(request, student)
         if errors:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': False, 'error': errors[0]})
             for error in errors:
                 messages.error(request, error)
         else:
@@ -7898,6 +8204,10 @@ def admin_student_edit(request, pk):
                         emergency_contact.save()
 
                 UserRole.objects.filter(user=student.user).update(college=student.department.college)
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True})
+            
             messages.success(request, 'Student updated.')
             return redirect('/dashboard/admin/#students')
     return render(request, 'admin_panel/student_form.html', {
@@ -8159,7 +8469,63 @@ def admin_student_delete(request, pk):
 def admin_faculty_list(request):
     if not _admin_guard(request):
         return redirect('dashboard')
-    return redirect('/dashboard/admin/#faculty')
+    dept_filter = request.GET.get('dept', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    college = _get_admin_college(request)
+    departments = _scope_departments(request).order_by('name')
+    faculty = Faculty.objects.filter(
+        department__in=departments,
+        is_deleted=False,
+    ).select_related('user', 'department')
+    hods = HOD.objects.filter(
+        department__in=departments,
+        is_active=True,
+    ).select_related('user', 'department')
+
+    if dept_filter:
+        faculty = faculty.filter(department_id=dept_filter)
+        hods = hods.filter(department_id=dept_filter)
+    if search_query:
+        faculty = faculty.filter(
+            Q(user__first_name__icontains=search_query)
+            | Q(user__last_name__icontains=search_query)
+            | Q(user__email__icontains=search_query)
+            | Q(employee_id__icontains=search_query)
+            | Q(department__name__icontains=search_query)
+            | Q(department__code__icontains=search_query)
+            | Q(designation__icontains=search_query)
+        )
+        hods = hods.filter(
+            Q(user__first_name__icontains=search_query)
+            | Q(user__last_name__icontains=search_query)
+            | Q(user__email__icontains=search_query)
+            | Q(employee_id__icontains=search_query)
+            | Q(department__name__icontains=search_query)
+            | Q(department__code__icontains=search_query)
+            | Q(designation__icontains=search_query)
+        )
+
+    faculty = faculty.order_by('department__name', 'user__first_name', 'user__last_name')
+    hods = hods.order_by('department__name', 'user__first_name', 'user__last_name')
+    total_faculty = faculty.count()
+    total_hods = hods.count()
+    faculty_page = _paginate_queryset(request, faculty, per_page=25, page_param='faculty_page')
+    hod_page = _paginate_queryset(request, hods, per_page=15, page_param='hod_page')
+
+    return render(request, 'admin_panel/faculty.html', {
+        'college': college,
+        'branding': _get_college_branding(college),
+        'departments': departments,
+        'faculty': faculty_page.object_list,
+        'hods': hod_page.object_list,
+        'faculty_page': faculty_page,
+        'hod_page': hod_page,
+        'faculty_summary': _enterprise_summary(total_faculty, faculty_page),
+        'hod_summary': _enterprise_summary(total_hods, hod_page),
+        'dept_filter': dept_filter,
+        'search_query': search_query,
+    })
 
 
 @login_required
@@ -8180,24 +8546,30 @@ def admin_faculty_add(request):
         experience   = request.POST.get('experience_years', 0)
         phone        = request.POST.get('phone_number', '').strip()
 
-        if User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already taken.')
-        elif Faculty.objects.filter(employee_id=employee_id).exists():
-            messages.error(request, 'Employee ID already exists.')
+        errors = _validate_staff_admin_payload(request, departments, is_hod=False)
+        if errors:
+            for error in errors:
+                messages.error(request, error)
         else:
             department = get_object_or_404(departments, pk=dept_id)
-            if not employee_id:
-                employee_id = _generate_faculty_id(department)
             password_value, password_generated = _resolve_password(password)
             user = User.objects.create_user(
                 username=username, email=email, password=password_value,
                 first_name=first_name, last_name=last_name
             )
             UserRole.objects.create(user=user, role=3, college=department.college)
-            Faculty.objects.create(
+            faculty = Faculty.objects.create(
                 user=user, employee_id=employee_id, department=department,
                 designation=designation, qualification=qualification,
-                experience_years=_safe_int(experience), phone_number=phone
+                experience_years=_safe_int(experience), phone_number=_digits_only(phone)
+            )
+            _audit(
+                'USER_CREATED', request.user,
+                f'Faculty account created for {user.get_full_name() or user.username}',
+                faculty=faculty,
+                college=department.college,
+                new_value=f'employee_id={employee_id}, department={department.code}, designation={designation}',
+                request=request,
             )
             if password_generated:
                 messages.success(request, f'Faculty {first_name} {last_name} added. Temporary password: {password_value}')
@@ -8263,7 +8635,7 @@ def admin_faculty_profile(request, pk):
         'rejected': LeaveApplication.objects.filter(faculty=faculty, status='REJECTED').count(),
     }
 
-    return render(request, 'hod/faculty_profile.html', {
+    context = {
         'dept': dept,
         'college': dept.college,
         'faculty': faculty,
@@ -8277,7 +8649,13 @@ def admin_faculty_profile(request, pk):
         'leave_summary': leave_summary,
         'branding': _get_college_branding(dept.college),
         'profile_view_mode': 'admin',
-    })
+    }
+    
+    # If AJAX request, return just the profile content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'admin_panel/faculty_profile_modal.html', context)
+    
+    return render(request, 'hod/faculty_profile.html', context)
 
 
 @login_required
@@ -8287,19 +8665,39 @@ def admin_faculty_edit(request, pk):
     departments = _scope_departments(request).order_by('name')
     faculty = get_object_or_404(Faculty.objects.filter(department__in=departments), pk=pk)
     if request.method == 'POST':
-        faculty.user.first_name = request.POST.get('first_name', '').strip()
-        faculty.user.last_name  = request.POST.get('last_name', '').strip()
-        faculty.user.email      = request.POST.get('email', '').strip()
-        faculty.user.save()
-        faculty.department_id   = request.POST.get('department', faculty.department_id)
-        faculty.designation     = request.POST.get('designation', faculty.designation).strip()
-        faculty.qualification   = request.POST.get('qualification', faculty.qualification).strip()
-        faculty.experience_years= _safe_int(request.POST.get('experience_years', faculty.experience_years))
-        faculty.phone_number    = request.POST.get('phone_number', faculty.phone_number).strip()
-        faculty.save()
-        UserRole.objects.filter(user=faculty.user).update(college=faculty.department.college)
-        messages.success(request, 'Faculty updated.')
-        return redirect('/dashboard/admin/#faculty')
+        errors = _validate_staff_admin_payload(
+            request, departments, is_hod=False,
+            existing_user=faculty.user, existing_staff=faculty
+        )
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            old_snapshot = f"department={faculty.department.code}, designation={faculty.designation}, phone={faculty.phone_number}"
+            faculty.user.first_name = request.POST.get('first_name', '').strip()
+            faculty.user.last_name  = request.POST.get('last_name', '').strip()
+            faculty.user.email      = request.POST.get('email', '').strip()
+            faculty.user.username   = request.POST.get('username', faculty.user.username).strip() or faculty.user.username
+            faculty.user.save()
+            faculty.employee_id     = request.POST.get('employee_id', faculty.employee_id).strip()
+            faculty.department_id   = request.POST.get('department', faculty.department_id)
+            faculty.designation     = request.POST.get('designation', faculty.designation).strip()
+            faculty.qualification   = request.POST.get('qualification', faculty.qualification).strip()
+            faculty.experience_years= _safe_int(request.POST.get('experience_years', faculty.experience_years))
+            faculty.phone_number    = _digits_only(request.POST.get('phone_number', faculty.phone_number).strip())
+            faculty.save()
+            UserRole.objects.filter(user=faculty.user).update(college=faculty.department.college)
+            _audit(
+                'OTHER', request.user,
+                f'Faculty profile updated for {faculty.user.get_full_name() or faculty.user.username}',
+                faculty=faculty,
+                college=faculty.department.college,
+                old_value=old_snapshot,
+                new_value=f"department={faculty.department.code}, designation={faculty.designation}, phone={faculty.phone_number}",
+                request=request,
+            )
+            messages.success(request, 'Faculty updated.')
+            return redirect('/dashboard/admin/#faculty')
     return render(request, 'admin_panel/faculty_form.html', {
         'faculty': faculty, 'departments': departments, 'action': 'Edit'
     })
@@ -8311,6 +8709,14 @@ def admin_faculty_delete(request, pk):
         return redirect('dashboard')
     faculty = get_object_or_404(Faculty.objects.filter(department__in=_scope_departments(request)), pk=pk)
     if request.method == 'POST':
+        _audit(
+            'OTHER', request.user,
+            f'Faculty account deleted for {faculty.user.get_full_name() or faculty.user.username}',
+            faculty=faculty,
+            college=faculty.department.college,
+            old_value=f"employee_id={faculty.employee_id}, department={faculty.department.code}",
+            request=request,
+        )
         faculty.user.delete()
         messages.success(request, 'Faculty deleted.')
     return redirect('/dashboard/admin/#faculty')
@@ -8449,7 +8855,7 @@ def admin_hod_profile(request, pk):
         if ratings:
             feedback_avg = round(sum(ratings) / len(ratings), 1)
 
-    return render(request, 'admin_panel/hod_profile.html', {
+    context = {
         'hod': hod,
         'dept': dept,
         'college': dept.college,
@@ -8463,7 +8869,13 @@ def admin_hod_profile(request, pk):
         'feedback_avg': feedback_avg,
         'leave_summary': leave_summary,
         'branding': _get_college_branding(dept.college),
-    })
+    }
+    
+    # If AJAX request, return just the profile content
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'admin_panel/hod_profile_modal.html', context)
+    
+    return render(request, 'admin_panel/hod_profile.html', context)
 
 
 @login_required
@@ -8591,19 +9003,17 @@ def admin_hod_add(request):
         joined_date = None
         if joined_date_str:
             try:
-                from datetime import date as _d
                 joined_date = datetime.fromisoformat(joined_date_str).date()
             except (ValueError, TypeError):
-                pass
+                joined_date = None
 
-        if not dept_id:
-            messages.error(request, 'Select a department.')
-        elif User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already taken.')
-        elif employee_id and HOD.objects.filter(employee_id=employee_id).exists():
-            messages.error(request, 'Employee ID already exists.')
-        elif HOD.objects.filter(department_id=dept_id, is_active=True).exists():
-            messages.error(request, 'This department already has an active HOD.')
+        errors = _validate_staff_admin_payload(request, departments, is_hod=True)
+        if dept_id and HOD.objects.filter(department_id=dept_id, is_active=True).exists():
+            errors.append('This department already has an active HOD.')
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
         else:
             department = get_object_or_404(departments, pk=dept_id)
             password_value, password_generated = _resolve_password(password)
@@ -8615,7 +9025,7 @@ def admin_hod_add(request):
             hod = HOD.objects.create(
                 user=user, employee_id=employee_id, department=department,
                 qualification=qualification, experience_years=_safe_int(experience),
-                phone_number=phone, is_active=True,
+                phone_number=_digits_only(phone), is_active=True,
                 designation=designation, specialization=specialization,
                 joined_date=joined_date, can_take_classes=can_take_classes,
             )
@@ -8629,19 +9039,32 @@ def admin_hod_add(request):
                         'designation': designation,
                         'qualification': qualification,
                         'experience_years': _safe_int(experience),
-                        'phone_number': phone,
+                        'phone_number': _digits_only(phone),
                         'joined_date': joined_date,
                     }
                 )
                 # Give them faculty role too (role=3) — keep HOD role as primary
                 UserRole.objects.filter(user=user).update(role=2)  # HOD role stays
 
+            _audit(
+                'USER_CREATED',
+                request.user,
+                f'HOD created: {user.get_full_name() or user.username} ({department.code})',
+                college=department.college,
+                request=request,
+                new_value={
+                    'username': user.username,
+                    'employee_id': employee_id,
+                    'department': department.code,
+                    'can_take_classes': can_take_classes,
+                },
+            )
+
             if password_generated:
                 messages.success(request, f'HOD {first_name} {last_name} added. Temporary password: {password_value}')
             else:
                 messages.success(request, f'HOD {first_name} {last_name} added.')
             return redirect('/dashboard/admin/#faculty')
-    return render(request, 'admin_panel/hod_form.html', {'departments': departments})
     return render(request, 'admin_panel/hod_form.html', {'departments': departments})
 
 
@@ -8651,6 +9074,14 @@ def admin_hod_delete(request, pk):
         return redirect('dashboard')
     hod = get_object_or_404(HOD.objects.filter(department__in=_scope_departments(request)), pk=pk)
     if request.method == 'POST':
+        _audit(
+            'OTHER',
+            request.user,
+            f'HOD deleted: {hod.user.get_full_name() or hod.user.username} ({hod.department.code})',
+            college=hod.department.college,
+            request=request,
+            old_value={'employee_id': hod.employee_id, 'department': hod.department.code},
+        )
         hod.user.delete()
         messages.success(request, 'HOD deleted.')
     return redirect('/dashboard/admin/#faculty')
@@ -8890,21 +9321,33 @@ def admin_regulation_add(request):
     if not _admin_guard(request):
         return redirect('dashboard')
     college = _get_admin_college(request)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if request.method == 'POST':
         name  = request.POST.get('name', '').strip()
         code  = request.POST.get('code', '').strip().upper()
         desc  = request.POST.get('description', '').strip()
         year  = _safe_int(request.POST.get('effective_from_year'))
+        
         if not all([name, code, year]):
+            if is_ajax:
+                return JsonResponse({'ok': False, 'error': 'Name, code, and effective year are required.'})
             messages.error(request, 'Name, code, and effective year are required.')
         elif Regulation.objects.filter(college=college, code=code).exists():
+            if is_ajax:
+                return JsonResponse({'ok': False, 'error': f'Regulation code "{code}" already exists.'})
             messages.error(request, f'Regulation code "{code}" already exists.')
         else:
             Regulation.objects.create(college=college, name=name, code=code,
                                       description=desc, effective_from_year=year)
+            if is_ajax:
+                return JsonResponse({'ok': True})
             messages.success(request, f'Regulation "{name}" created.')
             return redirect('admin_regulations')
-    return render(request, 'admin_panel/regulation_form.html', {'college': college})
+    
+    if is_ajax:
+        return JsonResponse({'ok': False, 'error': 'Invalid request.'})
+    return redirect('admin_regulations')
 
 
 @login_required
@@ -8912,8 +9355,11 @@ def admin_regulation_delete(request, pk):
     if not _admin_guard(request):
         return redirect('dashboard')
     reg = get_object_or_404(Regulation, pk=pk, college=_get_admin_college(request))
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == 'POST':
         reg.delete()
+        if is_ajax:
+            return JsonResponse({'ok': True})
         messages.success(request, 'Regulation deleted.')
     return redirect('admin_regulations')
 
@@ -9004,10 +9450,14 @@ def admin_elective_pools(request):
         regulation__college=college
     ).select_related('regulation', 'department').prefetch_related('subjects').order_by('-created_at')
     feature_cfg, _ = CollegeFeatureConfig.objects.get_or_create(college=college)
+    regulations = Regulation.objects.filter(college=college, is_active=True)
+    departments = _scope_departments(request).order_by('name')
     return render(request, 'admin_panel/elective_pools.html', {
         'pools': pools, 'college': college,
         'feature_cfg': feature_cfg,
         'branding': _get_college_branding(college),
+        'regulations': regulations,
+        'departments': departments,
     })
 
 
@@ -9030,9 +9480,16 @@ def admin_elective_pool_add(request):
         regulation = get_object_or_404(Regulation, pk=reg_id, college=college)
         department = get_object_or_404(departments, pk=dept_id)
         if not slot:
-            messages.error(request, 'Slot name is required (e.g. PE-1).')
+            error_msg = 'Slot name is required (e.g. PE-1).'
         elif not subj_ids:
-            messages.error(request, 'Select at least one subject for this elective pool.')
+            error_msg = 'Select at least one subject for this elective pool.'
+        else:
+            error_msg = None
+        
+        if error_msg:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': False, 'error': error_msg})
+            messages.error(request, error_msg)
         else:
             from django.utils.dateparse import parse_datetime
             deadline = parse_datetime(deadline_str) if deadline_str else None
@@ -9042,6 +9499,8 @@ def admin_elective_pool_add(request):
                 deadline=deadline, created_by=request.user,
             )
             pool.subjects.set(Subject.objects.filter(pk__in=subj_ids))
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True})
             messages.success(request, f'Elective pool "{slot}" created.')
             return redirect('admin_elective_pools')
     return render(request, 'admin_panel/elective_pool_form.html', {
@@ -9146,6 +9605,25 @@ def admin_elective_pool_selections(request, pk):
     })
 
 
+# ── API: SUBJECTS BY DEPARTMENT ───────────────────────────────────────────────
+
+def api_subjects_by_department(request):
+    """API endpoint to get subjects for a given department."""
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    dept_id = request.GET.get('department')
+    if not dept_id:
+        return JsonResponse({'subjects': []})
+    
+    try:
+        dept = Department.objects.get(pk=dept_id)
+        subjects = Subject.objects.filter(department=dept).values('id', 'code', 'name').order_by('code')
+        return JsonResponse({'subjects': list(subjects)})
+    except Department.DoesNotExist:
+        return JsonResponse({'subjects': []})
+
+
 # ── STUDENT ELECTIVE SELECTION ────────────────────────────────────────────────
 
 @login_required
@@ -9240,22 +9718,7 @@ def admin_academic_planner(request):
     if request.method == 'POST' and department:
         action = request.POST.get('planner_action')
         if action == 'add_subject':
-            name = request.POST.get('name', '').strip()
-            code = request.POST.get('code', '').strip().upper()
-            if not name or not code:
-                messages.error(request, 'Subject name and code are required.')
-            else:
-                existing_subjects = Subject.objects.filter(
-                    department=department,
-                    semester=selected_semester,
-                )
-                if existing_subjects.filter(code=code).exists():
-                    messages.error(request, f'Subject code "{code}" already exists for {department.code} semester {selected_semester}.')
-                elif existing_subjects.filter(name__iexact=name).exists():
-                    messages.error(request, f'Subject "{name}" already exists for {department.code} semester {selected_semester}.')
-                else:
-                    Subject.objects.create(name=name, code=code, department=department, semester=selected_semester)
-                    messages.success(request, 'Subject added to the selected semester.')
+            messages.warning(request, 'Subjects are managed from the Subjects page. The semester planner only uses the approved catalog.')
         elif action == 'assign_faculty':
             subject_id = request.POST.get('subject_id')
             faculty_id = request.POST.get('faculty_id')
@@ -9278,7 +9741,8 @@ def admin_academic_planner(request):
             messages.success(request, 'Faculty assignment removed.')
         elif action == 'add_availability':
             faculty_id = request.POST.get('faculty_id')
-            faculty = Faculty.objects.filter(pk=faculty_id, department=department).first()
+            college = _get_admin_college(request)
+            faculty = Faculty.objects.filter(pk=faculty_id, department__college=college).first()
             day = request.POST.get('day_of_week')
             start = request.POST.get('start_time')
             end = request.POST.get('end_time')
@@ -9300,7 +9764,7 @@ def admin_academic_planner(request):
             if created_count:
                 messages.success(request, f'Timetable updated with {created_count} scheduled class slot(s).')
             else:
-                messages.warning(request, 'No timetable entries could be generated. Add subjects, assign faculty, and try again.')
+                messages.warning(request, 'No timetable entries could be generated. Confirm subjects, sections, faculty mappings, rooms, and try again.')
             # Fix 6 — warn about skipped subjects
             if skipped:
                 names = ', '.join(s.code for s in skipped)
@@ -9317,10 +9781,13 @@ def admin_academic_planner(request):
             scope = request.POST.get('break_scope', 'all')
             college = _get_admin_college(request)
             if day and start and end and college:
+                applies_to_all = scope == 'all'
                 _, created = TimetableBreak.objects.get_or_create(
                     college=college, day_of_week=day, start_time=start, end_time=end,
-                    applies_to_all=(scope == 'all'),
-                    defaults={'label': label},
+                    applies_to_all=applies_to_all,
+                    department=None if applies_to_all else department,
+                    applies_to='college' if applies_to_all else 'department',
+                    defaults={'label': label, 'break_type': 'regular'},
                 )
                 if created:
                     messages.success(request, f'Break "{label}" added for {day}.')
@@ -9349,7 +9816,7 @@ def admin_academic_planner(request):
                 messages.success(request, f'Room {room_number} added.')
             else:
                 messages.error(request, 'Room number is required.')
-        return redirect(f"{reverse('admin_academic_planner')}?dept={department.pk}&sem={selected_semester}")
+        return redirect(f"{reverse('admin_academic_planner')}?dept={department.pk}&sem={selected_semester}&step={request.POST.get('step', 1)}")
 
     college = _get_admin_college(request)
     faculty = Faculty.objects.filter(department__college=college).select_related('user', 'department').order_by('department__code', 'user__first_name') if department else Faculty.objects.none()
@@ -9357,8 +9824,19 @@ def admin_academic_planner(request):
     subject_assignments = FacultySubject.objects.filter(subject__in=subjects).select_related('subject', 'faculty__user').order_by('subject__name')
     availability = FacultyAvailability.objects.filter(faculty__in=faculty).select_related('faculty__user').order_by('faculty__user__first_name', 'day_of_week', 'start_time')
     timetable_entries = Timetable.objects.filter(subject__in=subjects).select_related('subject', 'faculty__user', 'classroom').order_by('day_of_week', 'start_time')
-    college_breaks = TimetableBreak.objects.filter(college=college).order_by('day_of_week', 'start_time') if college else TimetableBreak.objects.none()
+    college_breaks = TimetableBreak.objects.filter(
+        Q(applies_to_all=True) | Q(department=department),
+        college=college,
+    ).order_by('day_of_week', 'start_time') if college and department else TimetableBreak.objects.none()
     classrooms = Classroom.objects.filter(college=college).order_by('building', 'room_number') if college else Classroom.objects.none()
+    sections = Section.objects.filter(department=department, semester=selected_semester).order_by('label') if department else Section.objects.none()
+    section_mappings = SectionSubjectFacultyMap.objects.filter(
+        section__department=department,
+        section__semester=selected_semester,
+        subject__semester=selected_semester,
+    ).select_related('section', 'subject', 'faculty__user', 'faculty__department', 'classroom').order_by('section__label', 'subject__name') if department else SectionSubjectFacultyMap.objects.none()
+    mapped_subject_ids = section_mappings.values_list('subject_id', flat=True) if department else []
+    unmapped_subjects = subjects.exclude(id__in=mapped_subject_ids) if department else Subject.objects.none()
     section_strength_summary = []
     if department:
         section_counts = (
@@ -9374,6 +9852,7 @@ def admin_academic_planner(request):
         )
         section_strength_summary = list(section_counts)
     timetable_matrix = _build_weekly_timetable_matrix(timetable_entries, breaks=college_breaks)
+    regulations = Regulation.objects.filter(college=college).order_by('-effective_from_year', 'name') if college else Regulation.objects.none()
 
     return render(request, 'admin_panel/academic_planner.html', {
         'departments': departments,
@@ -9382,12 +9861,16 @@ def admin_academic_planner(request):
         'faculty': faculty,
         'subjects': subjects,
         'subject_assignments': subject_assignments,
+        'sections': sections,
+        'section_mappings': section_mappings,
+        'unmapped_subjects': unmapped_subjects,
         'availability': availability,
         'timetable_entries': timetable_entries,
         'timetable_matrix': timetable_matrix,
         'college_breaks': college_breaks,
         'classrooms': classrooms,
         'section_strength_summary': section_strength_summary,
+        'regulations': regulations,
         'branding': _get_college_branding(college),
     })
 
@@ -9573,15 +10056,15 @@ def admin_timetable_upload_csv(request):
     dept_id = request.POST.get('department')
     semester = _safe_int(request.POST.get('semester'), default=1)
     department = get_object_or_404(_scope_departments(request), pk=dept_id)
-    csv_file = request.FILES.get('timetable_csv')
+    csv_file = request.FILES.get('timetable_csv') or request.FILES.get('csv_file')
 
     if not csv_file:
         messages.error(request, 'No file uploaded.')
-        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}")
+        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}&step=4")
 
     if not csv_file.name.endswith('.csv'):
         messages.error(request, 'Only .csv files are accepted.')
-        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}")
+        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}&step=4")
 
     VALID_DAYS = {'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'}
 
@@ -9598,13 +10081,13 @@ def admin_timetable_upload_csv(request):
         decoded = csv_file.read().decode('utf-8-sig').splitlines()
     except UnicodeDecodeError:
         messages.error(request, 'File encoding error. Save the CSV as UTF-8 and try again.')
-        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}")
+        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}&step=4")
 
     reader = csv.DictReader(decoded)
     required_cols = {'day', 'start_time', 'end_time', 'subject_code', 'faculty_employee_id', 'room_number'}
     if not required_cols.issubset({c.strip().lower() for c in (reader.fieldnames or [])}):
         messages.error(request, f'CSV must have columns: {", ".join(sorted(required_cols))}')
-        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}")
+        return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}&step=4")
 
     for i, row in enumerate(reader, start=2):
         day          = (row.get('day') or '').strip().upper()
@@ -9682,7 +10165,7 @@ def admin_timetable_upload_csv(request):
     if error_lines:
         messages.warning(request, 'Issues: ' + ' | '.join(error_lines[:5]) + ('...' if len(error_lines) > 5 else ''))
 
-    return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}")
+    return redirect(f"{reverse('admin_academic_planner')}?dept={dept_id}&sem={semester}&step=4")
 
 
 @login_required
@@ -9769,20 +10252,57 @@ def admin_fee_add(request):
 
     if request.method == 'POST':
         academic_year = request.POST.get('academic_year', '').strip()
-        total_amount = float(request.POST.get('total_amount', 0) or 0)
+        total_amount = _safe_decimal(request.POST.get('total_amount', 0) or 0)
         component_amounts = {
-            key: float(request.POST.get(f'comp_{key}', 0) or 0)
+            key: _safe_decimal(request.POST.get(f'comp_{key}', 0) or 0)
             for key, _, _ in FEE_COMPONENTS
         }
+        component_total = sum(component_amounts.values(), Decimal('0'))
+        payload_errors = _validate_fee_payload(float(total_amount), 0.0, None, academic_year)
 
         if not selected_year or not selected_department:
             messages.error(request, 'Select admission year and department first.')
         elif not filtered_students:
             messages.error(request, 'No active students found for the selected year and department.')
-        elif total_amount <= 0:
-            messages.error(request, 'Enter at least one fee amount before creating records.')
+        elif payload_errors:
+            for error in payload_errors:
+                messages.error(request, error)
+        elif component_total > 0 and abs(component_total - total_amount) > Decimal('0.01'):
+            messages.error(request, 'Fee component total must match the total fee amount.')
         else:
             department = get_object_or_404(departments, pk=selected_department)
+            conflicting_fees = []
+            existing_fees = {
+                (fee.student_id, fee.semester): fee
+                for fee in Fee.objects.filter(
+                    student__in=filtered_students,
+                    semester__in=[student.current_semester or 1 for student in filtered_students],
+                )
+            }
+            for student in filtered_students:
+                semester = student.current_semester or 1
+                existing_fee = existing_fees.get((student.pk, semester))
+                if existing_fee and Decimal(str(existing_fee.paid_amount)) > total_amount:
+                    conflicting_fees.append(student.roll_number)
+
+            if conflicting_fees:
+                messages.error(
+                    request,
+                    'Cannot reduce total fee below already paid amount for: ' + ', '.join(conflicting_fees[:5]),
+                )
+                return render(request, 'admin_panel/fee_form.html', {
+                    'action': 'Add',
+                    'fee_components': FEE_COMPONENTS,
+                    'departments': departments,
+                    'year_options': year_options,
+                    'selected_year': selected_year,
+                    'selected_department': selected_department,
+                    'preview_students': preview_students,
+                    'preview_count': len(preview_students),
+                    'preview_academic_year': preview_academic_year,
+                    'breakdown_map': {},
+                })
+
             created_count = 0
             updated_count = 0
             semester_structures = {}
@@ -9796,19 +10316,19 @@ def admin_fee_add(request):
                             college=department.college,
                             department=department,
                             semester=semester,
-                            defaults={'total_fees': total_amount},
+                            defaults={'total_fees': float(total_amount)},
                         )
-                        structure.total_fees = total_amount
+                        structure.total_fees = float(total_amount)
                         structure.save(update_fields=['total_fees'])
                         semester_structures[semester] = structure
 
                         for key, _, _ in FEE_COMPONENTS:
                             amount = component_amounts[key]
-                            if amount > 0:
+                            if amount > Decimal('0'):
                                 FeeBreakdown.objects.update_or_create(
                                     structure=structure,
                                     category=key,
-                                    defaults={'amount': amount},
+                                    defaults={'amount': float(amount)},
                                 )
                             else:
                                 FeeBreakdown.objects.filter(structure=structure, category=key).delete()
@@ -9817,7 +10337,7 @@ def admin_fee_add(request):
                         student=student,
                         semester=semester,
                         defaults={
-                            'total_amount': total_amount,
+                            'total_amount': float(total_amount),
                             'paid_amount': 0.0,
                             'academic_year': academic_year or _student_academic_year(student, semester),
                         },
@@ -9825,11 +10345,26 @@ def admin_fee_add(request):
                     if created:
                         created_count += 1
                     else:
-                        fee.total_amount = total_amount
+                        fee.total_amount = float(total_amount)
                         fee.academic_year = academic_year or _student_academic_year(student, semester)
                         updated_count += 1
                     _sync_fee_status(fee)
                     fee.save()
+
+            _audit(
+                'OTHER',
+                request.user,
+                f'Bulk fee structure processed for {department.code} {selected_year}',
+                college=department.college,
+                request=request,
+                new_value={
+                    'students': len(filtered_students),
+                    'created': created_count,
+                    'updated': updated_count,
+                    'total_amount': float(total_amount),
+                    'academic_year': academic_year or preview_academic_year,
+                },
+            )
 
             messages.success(
                 request,
@@ -9878,27 +10413,75 @@ def admin_fee_edit(request, pk):
             breakdown_map[bd.category] = bd.amount
 
     if request.method == 'POST':
-        fee.total_amount  = float(request.POST.get('total_amount', fee.total_amount) or fee.total_amount)
-        fee.paid_amount   = float(request.POST.get('paid_amount', fee.paid_amount) or 0)
-        fee.semester      = _safe_int(request.POST.get('semester', '')) or None
-        fee.academic_year = request.POST.get('academic_year', fee.academic_year or '').strip()
-        _sync_fee_status(fee)
-        fee.save()
+        total_amount = _safe_decimal(request.POST.get('total_amount', fee.total_amount) or fee.total_amount)
+        paid_amount = _safe_decimal(request.POST.get('paid_amount', fee.paid_amount) or fee.paid_amount)
+        semester = _safe_int(request.POST.get('semester', '')) or fee.semester or fee.student.current_semester or None
+        academic_year = request.POST.get('academic_year', fee.academic_year or '').strip()
+        component_amounts = {
+            key: _safe_decimal(request.POST.get(f'comp_{key}', 0) or 0)
+            for key, _, _ in FEE_COMPONENTS
+        }
+        component_total = sum(component_amounts.values(), Decimal('0'))
+        payload_errors = _validate_fee_payload(float(total_amount), float(paid_amount), semester, academic_year)
 
-        # Update breakdown
-        if structure:
+        if component_total > 0 and abs(component_total - total_amount) > Decimal('0.01'):
+            payload_errors.append('Fee component total must match the total fee amount.')
+
+        if payload_errors:
+            for error in payload_errors:
+                messages.error(request, error)
+        else:
+            target_structure, _ = FeeStructure.objects.get_or_create(
+                college=fee.student.department.college,
+                department=fee.student.department,
+                semester=semester,
+                defaults={'total_fees': float(total_amount)},
+            )
+            old_snapshot = {
+                'total_amount': fee.total_amount,
+                'paid_amount': fee.paid_amount,
+                'semester': fee.semester,
+                'academic_year': fee.academic_year,
+            }
+            fee.total_amount = float(total_amount)
+            fee.paid_amount = float(paid_amount)
+            fee.semester = semester
+            fee.academic_year = academic_year
+            _sync_fee_status(fee)
+            fee.save()
+
             for key, label, _ in FEE_COMPONENTS:
-                amt = float(request.POST.get(f'comp_{key}', 0) or 0)
-                if amt > 0:
+                amt = component_amounts[key]
+                if amt > Decimal('0'):
                     FeeBreakdown.objects.update_or_create(
-                        structure=structure, category=key,
-                        defaults={'amount': amt}
+                        structure=target_structure, category=key,
+                        defaults={'amount': float(amt)}
                     )
                 else:
-                    FeeBreakdown.objects.filter(structure=structure, category=key).delete()
+                    FeeBreakdown.objects.filter(structure=target_structure, category=key).delete()
 
-        messages.success(request, 'Fee record updated.')
-        return redirect('/dashboard/admin/#finance')
+            target_structure.total_fees = float(total_amount)
+            target_structure.save(update_fields=['total_fees'])
+
+            _audit(
+                'OTHER',
+                request.user,
+                f'Fee updated for {fee.student.roll_number}',
+                student=fee.student,
+                college=fee.student.department.college,
+                request=request,
+                old_value=old_snapshot,
+                new_value={
+                    'total_amount': fee.total_amount,
+                    'paid_amount': fee.paid_amount,
+                    'semester': fee.semester,
+                    'academic_year': fee.academic_year,
+                    'status': fee.status,
+                },
+            )
+
+            messages.success(request, 'Fee record updated.')
+            return redirect('/dashboard/admin/#finance')
 
     # Build fee_components with current values
     fee_components_with_vals = [
@@ -10037,11 +10620,21 @@ def admin_exams(request):
     if not _admin_guard(request):
         return redirect('dashboard')
     college = _get_admin_college(request)
-    exams = _scope_exams(request).order_by('-start_date')
+    today = timezone.now().date()
+    exams_qs = _scope_exams(request).select_related('created_by').order_by('-start_date', '-id')
+    page_obj = _paginate_queryset(request, exams_qs, per_page=20)
+    departments = Department.objects.filter(college=college).order_by('name') if college else Department.objects.none()
     return render(request, 'admin_panel/exams.html', {
-        'exams': exams,
+        'exams': page_obj.object_list,
+        'exams_page': page_obj,
         'college': college,
         'branding': _get_college_branding(college),
+        'departments': departments,
+        'exam_summary': _enterprise_summary(exams_qs.count(), page_obj),
+        'upcoming_count': exams_qs.filter(start_date__gt=today).count(),
+        'ongoing_count': exams_qs.filter(start_date__lte=today, end_date__gte=today).count(),
+        'completed_count': exams_qs.filter(end_date__lt=today).count(),
+        'published_count': exams_qs.count(),
     })
 
 
@@ -10052,17 +10645,44 @@ def admin_exam_add(request):
     college = _get_admin_college(request)
     if request.method == 'POST':
         name       = request.POST.get('name', '').strip()
-        semester   = request.POST.get('semester')
+        semester_raw = request.POST.get('semester')
+        semester = _safe_int(semester_raw)
         start_date = request.POST.get('start_date')
-        end_date   = request.POST.get('end_date')
-        Exam.objects.create(
-            college=college or _get_user_college(request.user),
-            name=name, semester=_safe_int(semester),
-            start_date=start_date, end_date=end_date,
-            created_by=request.user
+        end_date = request.POST.get('end_date')
+        effective_college = college or _get_user_college(request.user)
+        errors, parsed_start_date, parsed_end_date = _validate_exam_payload(
+            name,
+            semester,
+            start_date,
+            end_date,
+            effective_college,
         )
-        messages.success(request, f'Exam "{name}" created.')
-        return redirect('/dashboard/admin/#exams')
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            exam = Exam.objects.create(
+                college=effective_college,
+                name=name,
+                semester=semester,
+                start_date=parsed_start_date,
+                end_date=parsed_end_date,
+                created_by=request.user,
+            )
+            _audit(
+                'OTHER',
+                request.user,
+                f'Exam created: {exam.name} (Sem {exam.semester})',
+                college=effective_college,
+                request=request,
+                new_value={
+                    'exam_id': exam.pk,
+                    'start_date': str(exam.start_date),
+                    'end_date': str(exam.end_date),
+                },
+            )
+            messages.success(request, f'Exam "{name}" created.')
+            return redirect('/dashboard/admin/#exams')
     return render(request, 'admin_panel/exam_form.html')
 
 
@@ -10072,6 +10692,17 @@ def admin_exam_delete(request, pk):
         return redirect('dashboard')
     exam = get_object_or_404(_scope_exams(request), pk=pk)
     if request.method == 'POST':
+        _audit(
+            'OTHER',
+            request.user,
+            f'Exam deleted: {exam.name} (Sem {exam.semester})',
+            college=exam.college,
+            request=request,
+            old_value={
+                'start_date': str(exam.start_date),
+                'end_date': str(exam.end_date),
+            },
+        )
         exam.delete()
         messages.success(request, 'Exam deleted.')
     return redirect('/dashboard/admin/#exams')
@@ -10238,7 +10869,44 @@ def admin_report_pdf(request, report_type):
 
     response = HttpResponse(payload, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    _audit(
+        'OTHER',
+        request.user,
+        f'Report exported: {report_type}',
+        college=college,
+        request=request,
+        new_value={'filename': filename, 'report_type': system_report_type},
+    )
     return response
+
+
+def system_health(request):
+    db_ok = True
+    db_error = ''
+    pending_migrations = None
+    try:
+        with connections['default'].cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        executor = MigrationExecutor(connections['default'])
+        pending_migrations = len(executor.migration_plan(executor.loader.graph.leaf_nodes()))
+    except Exception as exc:
+        db_ok = False
+        db_error = str(exc)
+
+    status_label = 'ok' if db_ok and not pending_migrations else 'degraded'
+    response_status = 200 if db_ok else 503
+    return JsonResponse({
+        'status': status_label,
+        'application': 'studentmanagementsystem',
+        'version': getattr(settings, 'APP_VERSION', 'dev'),
+        'timestamp': timezone.now().isoformat(),
+        'database': 'ok' if db_ok else 'error',
+        'database_error': db_error,
+        'pending_migrations': pending_migrations,
+        'debug': settings.DEBUG,
+        'environment': os.environ.get('DJANGO_ENV', 'development'),
+    }, status=response_status)
 
 
 def ParagraphStyle_colored(styles, color):
@@ -11405,7 +12073,7 @@ def admin_attendance_rule_add(request):
     if not _admin_guard(request):
         return redirect('dashboard')
     college = _get_admin_college(request)
-    departments = _scope_departments(request).order_by('name')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if request.method == 'POST':
         p = request.POST
@@ -11413,6 +12081,8 @@ def admin_attendance_rule_add(request):
         semester = _safe_int(p.get('semester')) if p.get('semester') else None
 
         if AttendanceRule.objects.filter(college=college, department_id=dept_id, semester=semester).exists():
+            if is_ajax:
+                return JsonResponse({'ok': False, 'error': 'A rule for this department/semester combination already exists.'})
             messages.error(request, 'A rule for this department/semester combination already exists.')
         else:
             AttendanceRule.objects.create(
@@ -11433,13 +12103,14 @@ def admin_attendance_rule_add(request):
                 critical_below_pct=float(p.get('critical_below_pct', 65) or 65),
                 created_by=request.user,
             )
+            if is_ajax:
+                return JsonResponse({'ok': True})
             messages.success(request, 'Attendance rule created.')
             return redirect('admin_attendance_rules')
 
-    return render(request, 'attendance/admin_rule_form.html', {
-        'departments': departments, 'college': college,
-        'branding': _get_college_branding(college),
-    })
+    if is_ajax:
+        return JsonResponse({'ok': False, 'error': 'Invalid request.'})
+    return redirect('admin_attendance_rules')
 
 
 @login_required
@@ -11448,7 +12119,7 @@ def admin_attendance_rule_edit(request, pk):
         return redirect('dashboard')
     college = _get_admin_college(request)
     rule = get_object_or_404(AttendanceRule, pk=pk, college=college)
-    departments = _scope_departments(request).order_by('name')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if request.method == 'POST':
         p = request.POST
@@ -11465,13 +12136,14 @@ def admin_attendance_rule_edit(request, pk):
         rule.alert_below_pct = float(p.get('alert_below_pct', 75) or 75)
         rule.critical_below_pct = float(p.get('critical_below_pct', 65) or 65)
         rule.save()
+        if is_ajax:
+            return JsonResponse({'ok': True})
         messages.success(request, 'Attendance rule updated.')
         return redirect('admin_attendance_rules')
 
-    return render(request, 'attendance/admin_rule_form.html', {
-        'rule': rule, 'departments': departments, 'college': college,
-        'branding': _get_college_branding(college),
-    })
+    if is_ajax:
+        return JsonResponse({'ok': False, 'error': 'Invalid request.'})
+    return redirect('admin_attendance_rules')
 
 
 @login_required
@@ -11479,8 +12151,11 @@ def admin_attendance_rule_delete(request, pk):
     if not _admin_guard(request):
         return redirect('dashboard')
     rule = get_object_or_404(AttendanceRule, pk=pk, college=_get_admin_college(request))
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == 'POST':
         rule.delete()
+        if is_ajax:
+            return JsonResponse({'ok': True})
         messages.success(request, 'Rule deleted.')
     return redirect('admin_attendance_rules')
 
@@ -13402,12 +14077,17 @@ def admin_leave_quotas(request):
         cfg.max_od_leaves      = _safe_int(request.POST.get('max_od_leaves'),      20)
         cfg.max_substitutions  = _safe_int(request.POST.get('max_substitutions'),  10)
         cfg.save(update_fields=['max_casual_leaves','max_medical_leaves','max_earned_leaves','max_od_leaves','max_substitutions'])
+        # store who last updated
+        request.session['leave_quota_updated_by'] = request.user.get_full_name() or request.user.username
         messages.success(request, 'Leave and substitution quotas updated.')
         return redirect('admin_leave_quotas')
+
+    last_updated_by = request.session.get('leave_quota_updated_by') or (request.user.get_full_name() or request.user.username)
 
     return render(request, 'admin_panel/leave_quotas.html', {
         'cfg': cfg, 'college': college,
         'branding': _get_college_branding(college),
+        'last_updated_by': last_updated_by,
         'leave_fields': [
             ('max_casual_leaves',  'Casual Leave (CL)',  cfg.max_casual_leaves),
             ('max_medical_leaves', 'Medical Leave (ML)', cfg.max_medical_leaves),

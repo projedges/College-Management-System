@@ -1,0 +1,206 @@
+<div data-profile-content>
+  <!-- View Mode -->
+  <div id="stu-view-mode">
+    <div class="stu-info-grid">
+      <div class="stu-info-item">
+        <div class="stu-info-label">Roll Number</div>
+        <div class="stu-info-val">{{ student.roll_number }}</div>
+      </div>
+      <div class="stu-info-item">
+        <div class="stu-info-label">Department</div>
+        <div class="stu-info-val">{{ student.department.code }}</div>
+      </div>
+      <div class="stu-info-item">
+        <div class="stu-info-label">Current Semester</div>
+        <div class="stu-info-val">{{ student.current_semester }}</div>
+      </div>
+      <div class="stu-info-item">
+        <div class="stu-info-label">Status</div>
+        <div class="stu-info-val">
+          {% if student.status == 'ACTIVE' %}<span style="color:#10b981">Active</span>
+          {% elif student.status == 'GRADUATED' %}<span style="color:#0d7377">Graduated</span>
+          {% else %}<span style="color:#dc2626">Dropped</span>{% endif %}
+        </div>
+      </div>
+      <div class="stu-info-item">
+        <div class="stu-info-label">Admission Year</div>
+        <div class="stu-info-val">{{ student.admission_year }}</div>
+      </div>
+      <div class="stu-info-item">
+        <div class="stu-info-label">Email</div>
+        <div class="stu-info-val" style="font-size:12px;word-break:break-all">{{ student.user.email }}</div>
+      </div>
+    </div>
+
+    {% if cgpa %}
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border);margin-bottom:16px">
+      <div class="stu-info-label">CGPA</div>
+      <div style="font-size:18px;font-weight:800;color:var(--teal);margin-top:4px">{{ cgpa }}</div>
+    </div>
+    {% endif %}
+
+    {% if overall_pct %}
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border);margin-bottom:16px">
+      <div class="stu-info-label">Overall Attendance</div>
+      <div style="font-size:18px;font-weight:800;color:{% if overall_pct >= 75 %}#10b981{% elif overall_pct >= 60 %}#f59e0b{% else %}#dc2626{% endif %};margin-top:4px">{{ overall_pct }}%</div>
+    </div>
+    {% endif %}
+
+    {% if fee %}
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border);margin-bottom:16px">
+      <div class="stu-info-label">Fee Status</div>
+      <div style="font-size:13px;color:var(--deep);margin-top:4px;font-weight:600">
+        {% if fee.status == 'PAID' %}<span style="color:#10b981">Paid</span>
+        {% elif fee.status == 'PARTIAL' %}<span style="color:#f59e0b">Partial</span>
+        {% else %}<span style="color:#dc2626">Pending</span>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if pending_assignments > 0 %}
+    <div style="background:#fef3c7;border-radius:10px;padding:12px;border:1.5px solid #fcd34d;margin-bottom:16px">
+      <div style="font-size:12px;color:#92400e;font-weight:600"><i class="fas fa-exclamation-triangle" style="margin-right:6px"></i> {{ pending_assignments }} pending assignment{{ pending_assignments|pluralize }}</div>
+    </div>
+    {% endif %}
+
+    {% if attendance_data %}
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Subject Attendance</div>
+      <div style="display:grid;gap:8px">
+        {% for att in attendance_data %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--surface2);border-radius:8px;border:1.5px solid var(--border)">
+          <div style="font-size:12px;color:var(--deep);font-weight:600">{{ att.subject.code }}</div>
+          <div style="font-size:12px;color:var(--muted)">{{ att.present }}/{{ att.total }}</div>
+          <div style="font-size:12px;font-weight:700;color:{% if att.pct >= 75 %}#10b981{% elif att.pct >= 60 %}#f59e0b{% else %}#dc2626{% endif %}">{{ att.pct|default:"—" }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Edit Mode -->
+  <div id="stu-edit-mode" style="display:none;max-height:calc(85vh - 140px);overflow-y:auto">
+    <form id="stu-edit-form">
+      {% csrf_token %}
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Personal Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">First Name *</label>
+          <input type="text" name="first_name" value="{{ student.user.first_name }}" class="stu-edit-input" required>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Last Name *</label>
+          <input type="text" name="last_name" value="{{ student.user.last_name }}" class="stu-edit-input" required>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Email *</label>
+        <input type="email" name="email" value="{{ student.user.email }}" class="stu-edit-input" required>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">Academic Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Current Semester *</label>
+          <select name="current_semester" class="stu-edit-input" required>
+            {% for i in "12345678" %}
+            <option value="{{ i }}" {% if student.current_semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Status</label>
+          <select name="status" class="stu-edit-input">
+            <option value="ACTIVE" {% if student.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+            <option value="DETAINED" {% if student.status == 'DETAINED' %}selected{% endif %}>Detained</option>
+            <option value="SUSPENDED" {% if student.status == 'SUSPENDED' %}selected{% endif %}>Suspended</option>
+            <option value="GRADUATED" {% if student.status == 'GRADUATED' %}selected{% endif %}>Graduated</option>
+            <option value="DROPPED" {% if student.status == 'DROPPED' %}selected{% endif %}>Dropped</option>
+            <option value="TRANSFERRED" {% if student.status == 'TRANSFERRED' %}selected{% endif %}>Transferred</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Admission Year *</label>
+          <input type="number" name="admission_year" value="{{ student.admission_year }}" class="stu-edit-input" min="2000" max="2100" required>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Admission Type</label>
+          <select name="admission_type" class="stu-edit-input">
+            <option value="regular" {% if student.admission_type == 'regular' %}selected{% endif %}>Regular</option>
+            <option value="lateral_entry" {% if student.admission_type == 'lateral_entry' %}selected{% endif %}>Lateral Entry</option>
+            <option value="transfer" {% if student.admission_type == 'transfer' %}selected{% endif %}>Transfer</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">Profile Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Date of Birth</label>
+          <input type="date" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d' }}" class="stu-edit-input">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Gender</label>
+          <select name="gender" class="stu-edit-input">
+            <option value="">Select Gender</option>
+            <option value="Male" {% if profile.gender == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if profile.gender == 'Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if profile.gender == 'Other' %}selected{% endif %}>Other</option>
+            <option value="Not Specified" {% if profile.gender == 'Not Specified' %}selected{% endif %}>Not Specified</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Phone Number</label>
+          <input type="tel" name="phone_number" value="{{ profile.phone_number }}" class="stu-edit-input">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Alternate Phone</label>
+          <input type="tel" name="alternate_phone" value="{{ profile.alternate_phone }}" class="stu-edit-input">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Blood Group</label>
+          <input type="text" name="blood_group" value="{{ profile.blood_group }}" class="stu-edit-input" placeholder="e.g. O+">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Aadhaar Number</label>
+          <input type="text" name="aadhaar_number" value="{{ profile.aadhaar_number }}" class="stu-edit-input">
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">Address</div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Street</label>
+        <input type="text" name="street" value="{{ address.street }}" class="stu-edit-input">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">City</label>
+          <input type="text" name="city" value="{{ address.city }}" class="stu-edit-input">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">State</label>
+          <input type="text" name="state" value="{{ address.state }}" class="stu-edit-input">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Pincode</label>
+          <input type="text" name="pincode" value="{{ address.pincode }}" class="stu-edit-input">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Country</label>
+          <input type="text" name="country" value="{{ address.country }}" class="stu-edit-input">
+        </div>
+      </div>
+
+      <div id="stu-edit-error" style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;color:#dc2626;font-size:12px;padding:10px;margin-bottom:12px;display:none"></div>
+    </form>
+  </div>
+</div>

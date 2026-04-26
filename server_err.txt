@@ -1,0 +1,71 @@
+Watching for file changes with StatReloader
+D:\MY Res\Incomplete projects\test_sms\students\views\_legacy.py changed, reloading.
+/2026 11:58:53] "GET /dashboard/admin/ HTTP/1.1" 200 364436
+[25/Apr/2026 11:58:56,255] - Broken pipe from ('127.0.0.1', 59359)
+[25/Apr/2026 11:58:56,395] - Broken pipe from ('127.0.0.1', 64336)
+[25/Apr/2026 11:58:56,595] - Broken pipe from ('127.0.0.1', 57136)
+[25/Apr/2026 11:58:56,751] - Broken pipe from ('127.0.0.1', 62064)
+[25/Apr/2026 11:58:56] "GET /dashboard/admin/ HTTP/1.1" 200 364436
+[25/Apr/2026 11:58:57] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 11:59:01] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 11:59:03] "GET /dashboard/admin/subjects/ HTTP/1.1" 200 246895
+[25/Apr/2026 11:59:04] "GET /dashboard/admin/student-invites/ HTTP/1.1" 302 0
+[25/Apr/2026 11:59:04] "GET /dashboard/admin/ HTTP/1.1" 200 364436
+[25/Apr/2026 11:59:58] "GET /dashboard/admin/ HTTP/1.1" 200 364436
+[25/Apr/2026 11:59:59] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:00:02] "GET /dashboard/admin/subjects/ HTTP/1.1" 200 246895
+[25/Apr/2026 12:00:04] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:00:05] "GET /dashboard/admin/ HTTP/1.1" 200 364436
+[25/Apr/2026 12:00:08] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:00:11] "GET /dashboard/admin/subjects/ HTTP/1.1" 200 246895
+[25/Apr/2026 12:00:13] "GET /dashboard/admin/student-invites/ HTTP/1.1" 302 0
+[25/Apr/2026 12:00:13] "GET /dashboard/admin/ HTTP/1.1" 200 364436
+[25/Apr/2026 12:04:50] "GET /dashboard/admin/ HTTP/1.1" 200 365848
+[25/Apr/2026 12:04:51] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:04:54] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:04:54] "GET /static/students/images/logo.png HTTP/1.1" 304 0
+[25/Apr/2026 12:04:56] "GET /dashboard/admin/subjects/ HTTP/1.1" 200 246895
+[25/Apr/2026 12:04:59] "GET /dashboard/admin/students/ HTTP/1.1" 302 0
+[25/Apr/2026 12:04:59] "GET /dashboard/admin/ HTTP/1.1" 200 365848
+[25/Apr/2026 12:05:01] "GET /dashboard/admin/ HTTP/1.1" 200 365848
+[25/Apr/2026 12:05:02] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:05:12] "GET /dashboard/admin/academic-planner/ HTTP/1.1" 200 70315
+[25/Apr/2026 12:05:14] "GET /dashboard/admin/academic-planner/?dept=50&sem=1&step=2 HTTP/1.1" 200 70315
+[25/Apr/2026 12:05:15] "GET /dashboard/admin/academic-planner/?dept=50&sem=1&step=3 HTTP/1.1" 200 70315
+[25/Apr/2026 12:07:45] "GET /dashboard/admin/academic-planner/?dept=50&sem=1&step=3 HTTP/1.1" 200 70315
+[25/Apr/2026 12:07:45] "GET /static/students/css/mobile_dashboard.css HTTP/1.1" 200 10963
+[25/Apr/2026 12:07:45] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:07:48] "GET /dashboard/admin/bulk-import/ HTTP/1.1" 200 45805
+[25/Apr/2026 12:09:31] "GET /dashboard/admin/faculty/ HTTP/1.1" 302 0
+[25/Apr/2026 12:09:32] "GET /dashboard/admin/ HTTP/1.1" 200 368006
+[25/Apr/2026 12:11:35] "GET /dashboard/admin/ HTTP/1.1" 200 369903
+[25/Apr/2026 12:11:36] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:16:32] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:16:33] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:16:53] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:16:54] "GET /dashboard/admin/subjects/ HTTP/1.1" 200 246895
+[25/Apr/2026 12:16:57] "GET /dashboard/admin/student-invites/ HTTP/1.1" 302 0
+[25/Apr/2026 12:16:57] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:17:43] "GET /dashboard/admin/academic-planner/ HTTP/1.1" 200 70315
+[25/Apr/2026 12:23:47] "GET /dashboard/admin/academic-planner/ HTTP/1.1" 200 70315
+[25/Apr/2026 12:23:47] "GET /static/students/css/mobile_dashboard.css HTTP/1.1" 200 10963
+[25/Apr/2026 12:23:47] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:23:50] "GET /dashboard/admin/faculty/ HTTP/1.1" 302 0
+[25/Apr/2026 12:23:50] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:32:41] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:32:43] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:32:48] "GET /dashboard/admin/subjects/ HTTP/1.1" 200 246895
+[25/Apr/2026 12:32:48] "GET /static/students/images/logo.png HTTP/1.1" 304 0
+[25/Apr/2026 12:32:50] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:33:12] "GET /dashboard/admin/faculty/ HTTP/1.1" 302 0
+[25/Apr/2026 12:33:12] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:33:17] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:33:20] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:33:23] "GET /dashboard/admin/departments/ HTTP/1.1" 200 48498
+[25/Apr/2026 12:33:24] "GET /dashboard/admin/students/ HTTP/1.1" 302 0
+[25/Apr/2026 12:33:25] "GET /dashboard/admin/ HTTP/1.1" 200 393580
+[25/Apr/2026 12:35:23] "GET /dashboard/admin/ HTTP/1.1" 200 415646
+[25/Apr/2026 12:35:24] "GET /static/students/images/favicon.png HTTP/1.1" 200 64523
+[25/Apr/2026 12:35:39] "GET /dashboard/admin/exams/add/ HTTP/1.1" 200 39578
+[25/Apr/2026 12:35:40] "GET /dashboard/admin/ HTTP/1.1" 200 415646
+D:\MY Res\Incomplete projects\test_sms\students\views\_legacy.py changed, reloading.

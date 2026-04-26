@@ -1,51 +1,129 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Faculty &mdash; Admin{% endblock %}
 {% block nav_faculty %}on{% endblock %}
-{% block breadcrumb %} / Faculty{% endblock %}
+{% block breadcrumb %} > Faculty{% endblock %}
 {% block page_title %}Faculty{% endblock %}
-{% block page_sub %}All faculty members across departments{% endblock %}
-{% block page_action %}
-  <a href="{% url 'admin_faculty_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Faculty</a>
+{% block page_sub %}Manage all faculty members and Heads of Department (HODs).{% endblock %}
+
+{% block extra_css %}
+<style>
+  .fac-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+  .fac-stat-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;box-shadow:var(--sh);transition:transform .2s,box-shadow .2s}
+  .fac-stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(7,30,38,.1)}
+  .fac-stat-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;flex-shrink:0}
+  .fac-stat-icon.teal{background:rgba(13,115,119,.08);color:var(--teal)}
+  .fac-stat-icon.blue{background:rgba(37,99,235,.08);color:#2563eb}
+  .fac-stat-icon.gold{background:rgba(230,168,23,.1);color:#d97706}
+  .fac-stat-icon.red{background:rgba(239,68,68,.08);color:#ef4444}
+  .fac-stat-val{font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep);line-height:1}
+  .fac-stat-lbl{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
+  .fac-action-bar{display:flex;gap:10px;margin-bottom:20px;justify-content:flex-end;flex-wrap:wrap}
+  .fac-btn-add{display:inline-flex;align-items:center;gap:6px;padding:11px 18px;border-radius:11px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:all .2s;box-shadow:var(--sh)}
+  .fac-btn-add:hover{background:var(--teal-dk);transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,115,119,.2)}
+  .fac-search-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+  .fac-search{flex:1;min-width:200px;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fff}
+  .fac-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .fac-filter-btn{padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--deep);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+  .fac-filter-btn:hover{border-color:var(--teal);color:var(--teal)}
+  .fac-table-wrap{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
+  .fac-table{width:100%;border-collapse:collapse;font-size:13px}
+  .fac-table th{background:var(--deep);color:#fff;padding:14px 16px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:11px}
+  .fac-table td{padding:14px 16px;border-bottom:1px solid #f3f4f6;color:var(--text)}
+  .fac-table tr:last-child td{border-bottom:none}
+  .fac-table tr:hover td{background:#f8fafc}
+  .fac-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;font-family:'Outfit',sans-serif}
+  .fac-badge{display:inline-block;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700}
+  .fac-badge-active{background:#d1fae5;color:#065f46}
+  .fac-actions{display:flex;gap:8px;align-items:center}
+  .fac-action-btn{width:32px;height:32px;border-radius:8px;border:none;background:rgba(13,115,119,.08);color:var(--teal);cursor:pointer;font-size:12px;transition:all .2s;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .fac-action-btn:hover{background:rgba(13,115,119,.15);transform:scale(1.05)}
+  .fac-action-btn.del{background:rgba(239,68,68,.08);color:#ef4444}
+  .fac-action-btn.del:hover{background:rgba(239,68,68,.15)}
+  .fac-empty{text-align:center;padding:48px 20px;color:var(--muted)}
+  .fac-empty i{font-size:36px;color:#d1d5db;margin-bottom:12px;display:block}
+  .fac-empty p{margin:0;font-size:14px}
+  .fac-hod-section{margin-top:32px}
+  .fac-hod-title{font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+  .fac-hod-title i{width:28px;height:28px;border-radius:9px;background:rgba(13,115,119,.09);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:13px}
+  @media(max-width:1024px){.fac-stat-grid{grid-template-columns:repeat(2,1fr)}.fac-search-bar{flex-direction:column}.fac-search{width:100%}}
+  @media(max-width:640px){.fac-stat-grid{grid-template-columns:1fr}.fac-table{font-size:12px}.fac-table th,.fac-table td{padding:11px 12px}.fac-action-bar{flex-direction:column}.fac-btn-add{width:100%;justify-content:center}.fac-actions{flex-direction:column;gap:4px}.fac-action-btn{width:100%;justify-content:center}}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="filter-bar">
-  <form method="GET" style="display:flex;gap:10px">
-    <select name="dept" class="filter-select" onchange="this.form.submit()">
+<!-- Stat cards -->
+<div class="fac-stat-grid">
+  <div class="fac-stat-card">
+    <div class="fac-stat-icon teal"><i class="fas fa-chalkboard-teacher"></i></div>
+    <div class="fac-stat-val">{% if faculty_summary %}{{ faculty_summary.total }}{% else %}{{ faculty|length }}{% endif %}</div>
+    <div class="fac-stat-lbl">Total Faculty</div>
+  </div>
+  <div class="fac-stat-card">
+    <div class="fac-stat-icon blue"><i class="fas fa-users"></i></div>
+    <div class="fac-stat-val">{% if faculty_summary %}{{ faculty_summary.total }}{% else %}{{ faculty|length }}{% endif %}</div>
+    <div class="fac-stat-lbl">Active Faculty</div>
+  </div>
+  <div class="fac-stat-card">
+    <div class="fac-stat-icon gold"><i class="fas fa-building-columns"></i></div>
+    <div class="fac-stat-val">{{ departments|length }}</div>
+    <div class="fac-stat-lbl">Departments</div>
+  </div>
+  <div class="fac-stat-card">
+    <div class="fac-stat-icon red"><i class="fas fa-user-tie"></i></div>
+    <div class="fac-stat-val">{% if hod_summary %}{{ hod_summary.total }}{% else %}{{ hods|length }}{% endif %}</div>
+    <div class="fac-stat-lbl">HODs</div>
+  </div>
+</div>
+
+<!-- Action bar -->
+<div class="fac-action-bar">
+  <a href="{% url 'admin_faculty_add' %}" class="fac-btn-add"><i class="fas fa-plus"></i> Add Faculty</a>
+</div>
+
+<!-- Search and filters -->
+<div class="fac-search-bar">
+  <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%">
+    <input type="text" name="search" placeholder="Search by name, department or emp ID..." class="fac-search" style="flex:1;min-width:200px" value="{{ search_query|default:'' }}"/>
+    <select name="dept" class="fac-filter-btn" onchange="this.form.submit()">
       <option value="">All Departments</option>
       {% for d in departments %}
       <option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.code }}</option>
       {% endfor %}
     </select>
-    {% if dept_filter %}<a href="{% url 'admin_faculty_list' %}" style="padding:8px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:13px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>{% endif %}
+    <button type="submit" class="fac-filter-btn"><i class="fas fa-search"></i> Search</button>
+    {% if dept_filter or search_query %}<a href="{% url 'admin_faculty_list' %}" class="fac-filter-btn" style="background:rgba(13,115,119,.08);color:var(--teal)">Clear</a>{% endif %}
   </form>
-  <span style="font-size:13px;color:var(--muted);margin-left:auto">{{ faculty|length }} member{{ faculty|length|pluralize }}</span>
 </div>
 
+<!-- Faculty table -->
 {% if faculty %}
-<div class="ap-card">
-  <table class="ap-table">
+<div class="fac-table-wrap">
+  <table class="fac-table">
     <thead>
-      <tr><th>Name</th><th>Emp ID</th><th>Department</th><th>Designation</th><th>Experience</th><th>Phone</th><th>Actions</th></tr>
+      <tr><th>Name</th><th>Department</th><th>Designation</th><th>Emp ID</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
     </thead>
     <tbody>
       {% for f in faculty %}
       <tr>
         <td>
-          <div style="font-weight:600;color:var(--deep)">{{ f.user.get_full_name|default:f.user.username }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ f.user.email }}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="fac-avatar">{{ f.user.first_name|first|upper }}{{ f.user.last_name|first|upper }}</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;color:var(--deep);font-size:13px">{{ f.user.get_full_name|default:f.user.username }}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ f.user.email }}</div>
+            </div>
+          </div>
         </td>
-        <td style="font-weight:600;color:var(--teal)">{{ f.employee_id }}</td>
-        <td>{{ f.department.code }}</td>
-        <td style="color:var(--muted)">{{ f.designation }}</td>
-        <td style="text-align:center">{{ f.experience_years }} yrs</td>
-        <td style="color:var(--muted)">{{ f.phone_number }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ f.department.code }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ f.designation }}</td>
+        <td style="font-weight:600;color:var(--teal);font-size:12px">{{ f.employee_id }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ f.phone_number }}</td>
+        <td><span class="fac-badge fac-badge-active">Active</span></td>
         <td>
-          <div style="display:flex;gap:6px">
-            <a href="{% url 'admin_faculty_edit' f.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
-            <button class="btn-del" onclick="confirmDelete('{% url 'admin_faculty_delete' f.pk %}','Delete faculty {{ f.user.get_full_name }}?')">
-              <i class="fas fa-trash"></i>
-            </button>
+          <div class="fac-actions">
+            <button type="button" class="fac-action-btn" onclick="openFacultyProfile({{ f.pk }}, '{{ f.user.get_full_name|default:f.user.username|escapejs }}', '{{ f.employee_id|escapejs }}')" title="View"><i class="fas fa-eye"></i></button>
+            <a href="{% url 'admin_faculty_edit' f.pk %}" class="fac-action-btn" title="Edit"><i class="fas fa-pen"></i></a>
+            <button class="fac-action-btn del" onclick="confirmDelete('{% url 'admin_faculty_delete' f.pk %}','Delete faculty {{ f.user.get_full_name }}?')" title="Delete"><i class="fas fa-trash"></i></button>
           </div>
         </td>
       </tr>
@@ -53,8 +131,196 @@
     </tbody>
   </table>
 </div>
-{% else %}
-<div class="empty-state"><i class="fas fa-chalkboard-teacher"></i><p>No faculty found. <a href="{% url 'admin_faculty_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
+{% if faculty_page and faculty_page.paginator.num_pages > 1 %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px">
+  <div style="font-size:13px;color:var(--muted)">
+    Faculty page {{ faculty_page.number }} of {{ faculty_page.paginator.num_pages }}.
+    Total records: {{ faculty_summary.total }}.
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    {% if faculty_page.has_previous %}
+    <a href="?faculty_page={{ faculty_page.previous_page_number }}{% if hod_page %}&hod_page={{ hod_page.number }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if dept_filter %}&dept={{ dept_filter|urlencode }}{% endif %}" class="fac-filter-btn">Previous</a>
+    {% endif %}
+    {% if faculty_page.has_next %}
+    <a href="?faculty_page={{ faculty_page.next_page_number }}{% if hod_page %}&hod_page={{ hod_page.number }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if dept_filter %}&dept={{ dept_filter|urlencode }}{% endif %}" class="fac-filter-btn">Next</a>
+    {% endif %}
+  </div>
+</div>
 {% endif %}
+{% else %}
+<div class="fac-table-wrap">
+  <div class="fac-empty"><i class="fas fa-chalkboard-teacher"></i><p>No faculty found. <a href="{% url 'admin_faculty_add' %}" style="color:var(--teal);font-weight:600">Add one</a>.</p></div>
+</div>
+{% endif %}
+
+<!-- Heads of Department section -->
+{% if hods %}
+<div class="fac-hod-section">
+  <div class="fac-hod-title"><i class="fas fa-crown"></i> Heads of Department</div>
+  <div class="fac-table-wrap">
+    <table class="fac-table">
+      <thead>
+        <tr><th>Name</th><th>Department</th><th>Designation</th><th>Emp ID</th><th>Phone</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for h in hods %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="fac-avatar">{{ h.user.first_name|first|upper }}{{ h.user.last_name|first|upper }}</div>
+              <div style="min-width:0">
+                <div style="font-weight:600;color:var(--deep);font-size:13px">{{ h.user.get_full_name|default:h.user.username }}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ h.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:12px;color:var(--muted)">{{ h.department.code }}</td>
+          <td style="font-size:12px;color:var(--muted)">{{ h.designation }}</td>
+          <td style="font-weight:600;color:var(--teal);font-size:12px">{{ h.employee_id }}</td>
+          <td style="font-size:12px;color:var(--muted)">{{ h.phone_number }}</td>
+          <td><span class="fac-badge fac-badge-active">Active</span></td>
+        <td>
+          <div class="fac-actions">
+            <button type="button" class="fac-action-btn" onclick="openHodProfile({{ h.pk }}, '{{ h.user.get_full_name|default:h.user.username|escapejs }}', '{{ h.employee_id|escapejs }}')" title="View"><i class="fas fa-eye"></i></button>
+            <a href="{% url 'admin_hod_edit' h.pk %}" class="fac-action-btn" title="Edit"><i class="fas fa-pen"></i></a>
+            <button class="fac-action-btn del" onclick="confirmDelete('{% url 'admin_hod_delete' h.pk %}','Delete HOD {{ h.user.get_full_name }}?')" title="Delete"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% if hod_page and hod_page.paginator.num_pages > 1 %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px">
+  <div style="font-size:13px;color:var(--muted)">
+    HOD page {{ hod_page.number }} of {{ hod_page.paginator.num_pages }}.
+    Total records: {{ hod_summary.total }}.
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    {% if hod_page.has_previous %}
+    <a href="?hod_page={{ hod_page.previous_page_number }}{% if faculty_page %}&faculty_page={{ faculty_page.number }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if dept_filter %}&dept={{ dept_filter|urlencode }}{% endif %}" class="fac-filter-btn">Previous</a>
+    {% endif %}
+    {% if hod_page.has_next %}
+    <a href="?hod_page={{ hod_page.next_page_number }}{% if faculty_page %}&faculty_page={{ faculty_page.number }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if dept_filter %}&dept={{ dept_filter|urlencode }}{% endif %}" class="fac-filter-btn">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
 {% include 'admin_panel/_confirm_modal.html' %}
+
+<style>
+  .fac-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999}
+  .fac-modal-overlay.open{display:flex}
+  .fac-modal{background:#fff;border-radius:14px;width:90%;max-width:550px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:facModalSlideIn .3s ease}
+  @keyframes facModalSlideIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+  .fac-modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1.5px solid var(--border);position:sticky;top:0;background:#fff}
+  .fac-modal-title{font-size:16px;font-weight:800;color:var(--deep);display:flex;align-items:center;gap:10px}
+  .fac-modal-close{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+  .fac-modal-close:hover{border-color:var(--red);color:var(--red)}
+  .fac-modal-body{padding:20px}
+  .fac-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .fac-info-item{background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border)}
+  .fac-info-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .fac-info-val{font-size:13px;color:var(--deep);font-weight:600}
+  .fac-modal-actions{display:flex;gap:10px;padding:20px;border-top:1.5px solid var(--border);background:var(--surface2)}
+  .fac-btn-edit{padding:9px 18px;border:none;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;flex:1}
+  .fac-btn-edit:hover{background:var(--teal-dk,#0a5c60)}
+  .fac-btn-close{padding:9px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;flex:1}
+  .fac-btn-close:hover{border-color:var(--deep);color:var(--deep)}
+  .fac-loading{text-align:center;padding:40px 20px;color:var(--muted)}
+  .fac-error{background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:14px;color:#dc2626;font-size:13px;margin-bottom:16px}
+</style>
+
+<div class="fac-modal-overlay" id="fac-modal-overlay">
+  <div class="fac-modal" id="fac-modal">
+    <div class="fac-modal-head">
+      <div class="fac-modal-title"><i class="fas fa-user-tie" style="color:var(--teal);font-size:18px"></i> <span id="fac-modal-name">Faculty Profile</span></div>
+      <button class="fac-modal-close" onclick="closeFacultyProfile()" type="button"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="fac-modal-body" id="fac-modal-body">
+      <div class="fac-loading"><i class="fas fa-spinner fa-spin"></i> Loading profile...</div>
+    </div>
+    <div class="fac-modal-actions">
+      <button type="button" class="fac-btn-edit" onclick="editFacultyFromModal()"><i class="fas fa-pen"></i> Edit</button>
+      <button type="button" class="fac-btn-close" onclick="closeFacultyProfile()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentFacultyId = null;
+var currentHodId = null;
+
+function openFacultyProfile(facultyId, name, empId){
+  currentFacultyId = facultyId;
+  document.getElementById('fac-modal-name').textContent = name + ' (' + empId + ')';
+  document.getElementById('fac-modal-overlay').classList.add('open');
+  
+  fetch('/dashboard/admin/faculty/' + facultyId + '/profile/', {
+    headers:{'X-Requested-With':'XMLHttpRequest'}
+  }).then(function(r){ return r.text(); }).then(function(html){
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    var profileContent = doc.querySelector('[data-profile-content]');
+    if(profileContent){
+      document.getElementById('fac-modal-body').innerHTML = profileContent.innerHTML;
+    } else {
+      document.getElementById('fac-modal-body').innerHTML = '<div class="fac-error"><i class="fas fa-exclamation-circle"></i> Error loading profile.</div>';
+    }
+  }).catch(function(){
+    document.getElementById('fac-modal-body').innerHTML = '<div class="fac-error"><i class="fas fa-exclamation-circle"></i> Error loading profile. Please try again.</div>';
+  });
+}
+
+function openHodProfile(hodId, name, empId){
+  currentHodId = hodId;
+  document.getElementById('fac-modal-name').textContent = name + ' (' + empId + ')';
+  document.getElementById('fac-modal-overlay').classList.add('open');
+  
+  fetch('/dashboard/admin/hods/' + hodId + '/profile/', {
+    headers:{'X-Requested-With':'XMLHttpRequest'}
+  }).then(function(r){ return r.text(); }).then(function(html){
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    var profileContent = doc.querySelector('[data-profile-content]');
+    if(profileContent){
+      document.getElementById('fac-modal-body').innerHTML = profileContent.innerHTML;
+    } else {
+      document.getElementById('fac-modal-body').innerHTML = '<div class="fac-error"><i class="fas fa-exclamation-circle"></i> Error loading profile.</div>';
+    }
+  }).catch(function(){
+    document.getElementById('fac-modal-body').innerHTML = '<div class="fac-error"><i class="fas fa-exclamation-circle"></i> Error loading profile. Please try again.</div>';
+  });
+}
+
+function closeFacultyProfile(){
+  document.getElementById('fac-modal-overlay').classList.remove('open');
+  currentFacultyId = null;
+  currentHodId = null;
+}
+
+function editFacultyFromModal(){
+  if(currentFacultyId){
+    window.location.href = '/dashboard/admin/faculty/' + currentFacultyId + '/edit/';
+  } else if(currentHodId){
+    window.location.href = '/dashboard/admin/hods/' + currentHodId + '/edit/';
+  }
+}
+
+document.getElementById('fac-modal-overlay').addEventListener('click', function(e){
+  if(e.target === this){
+    closeFacultyProfile();
+  }
+});
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && document.getElementById('fac-modal-overlay').classList.contains('open')){
+    closeFacultyProfile();
+  }
+});
+</script>
 {% endblock %}

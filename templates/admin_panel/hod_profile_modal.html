@@ -1,0 +1,78 @@
+<div data-profile-content>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+    <div class="fac-info-item">
+      <div class="fac-info-label">Employee ID</div>
+      <div class="fac-info-val">{{ hod.employee_id }}</div>
+    </div>
+    <div class="fac-info-item">
+      <div class="fac-info-label">Department</div>
+      <div class="fac-info-val">{{ hod.department.code }}</div>
+    </div>
+    <div class="fac-info-item">
+      <div class="fac-info-label">Designation</div>
+      <div class="fac-info-val">{{ hod.designation }}</div>
+    </div>
+    <div class="fac-info-item">
+      <div class="fac-info-label">Email</div>
+      <div class="fac-info-val" style="font-size:12px;word-break:break-all">{{ hod.user.email }}</div>
+    </div>
+    <div class="fac-info-item">
+      <div class="fac-info-label">Phone</div>
+      <div class="fac-info-val">{{ hod.phone_number }}</div>
+    </div>
+    <div class="fac-info-item">
+      <div class="fac-info-label">Qualification</div>
+      <div class="fac-info-val">{{ hod.qualification|default:"—" }}</div>
+    </div>
+  </div>
+
+  {% if feedback_avg %}
+  <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border);margin-bottom:16px">
+    <div class="fac-info-label">Feedback Rating</div>
+    <div style="font-size:18px;font-weight:800;color:var(--teal);margin-top:4px">{{ feedback_avg }}/5.0</div>
+  </div>
+  {% endif %}
+
+  {% if leave_summary %}
+  <div style="margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Leave Summary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="background:rgba(16,185,129,.08);border-radius:8px;padding:10px;border:1.5px solid rgba(16,185,129,.2)">
+        <div style="font-size:11px;color:var(--muted);font-weight:600">Approved</div>
+        <div style="font-size:16px;font-weight:800;color:#10b981;margin-top:2px">{{ leave_summary.approved }}</div>
+      </div>
+      <div style="background:rgba(245,158,11,.08);border-radius:8px;padding:10px;border:1.5px solid rgba(245,158,11,.2)">
+        <div style="font-size:11px;color:var(--muted);font-weight:600">Pending</div>
+        <div style="font-size:16px;font-weight:800;color:#f59e0b;margin-top:2px">{{ leave_summary.pending }}</div>
+      </div>
+      <div style="background:rgba(239,68,68,.08);border-radius:8px;padding:10px;border:1.5px solid rgba(239,68,68,.2)">
+        <div style="font-size:11px;color:var(--muted);font-weight:600">Rejected</div>
+        <div style="font-size:16px;font-weight:800;color:#dc2626;margin-top:2px">{{ leave_summary.rejected }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if assigned_subjects %}
+  <div style="margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Assigned Subjects</div>
+    <div style="display:grid;gap:8px;max-height:200px;overflow-y:auto">
+      {% for fs in assigned_subjects %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--surface2);border-radius:8px;border:1.5px solid var(--border)">
+        <div>
+          <div style="font-size:12px;color:var(--deep);font-weight:600">{{ fs.subject.code }}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">Sem {{ fs.subject.semester }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if sessions_total > 0 %}
+  <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border)">
+    <div class="fac-info-label">Attendance Sessions</div>
+    <div style="font-size:13px;color:var(--deep);margin-top:4px;font-weight:600">{{ sessions_this_month }} this month / {{ sessions_total }} total</div>
+  </div>
+  {% endif %}
+</div>

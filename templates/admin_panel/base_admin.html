@@ -31,64 +31,56 @@
         <img src="{{ college.logo.url }}" style="height:48px;width:auto;max-width:160px;object-fit:contain;flex-shrink:0"/>
       {% elif college %}
         <div style="width:42px;height:42px;border-radius:10px;background:var(--teal);display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:15px;font-weight:900;color:#fff;flex-shrink:0">{{ college.code|slice:":2"|upper }}</div>
-        <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;color:#fff;line-height:1.3;flex:1;min-width:0;word-break:break-word">{{ college.name|truncatechars:22 }}</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;color:#fff;line-height:1.3;flex:1;min-width:0;word-break:break-word">{{ college.name }}</div>
       {% else %}
         <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:900;color:#fff">Edu<span style="color:var(--teal)">Track</span></div>
       {% endif %}
       <button class="adm-close" id="adm-close" aria-label="Close"><i class="fas fa-times"></i></button>
     </div>
 
-    {% if college %}
-    <div style="padding:10px 16px 11px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)">
-      <div style="font-family:'Outfit',sans-serif;font-size:13px;font-weight:800;color:#fff;line-height:1.3">{{ college.name }}</div>
-      {% if branding and branding.tagline %}<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;font-style:italic">{{ branding.tagline }}</div>{% endif %}
-    </div>
-    {% endif %}
-
     <div style="padding:10px 10px;flex:1;overflow-y:auto">
       {% block extra_sidebar %}{% endblock %}
       {% block base_nav_links %}
       <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:10px 0 5px">Overview</div>
       <a href="{% url 'admin_dashboard' %}" class="sb-link {% block nav_dashboard %}{% endblock %}"><i class="fas fa-home"></i> Dashboard</a>
+      <a href="{% url 'admin_dashboard' %}#profile" class="sb-link {% block nav_profile %}{% endblock %}"><i class="fas fa-user-circle"></i> My Profile</a>
+      <a href="{% url 'admin_dashboard' %}#workflow" class="sb-link {% block nav_workflow %}{% endblock %}"><i class="fas fa-compass"></i> Start Here</a>
 
       <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Manage</div>
       <a href="{% url 'admin_departments' %}" class="sb-link {% block nav_dept %}{% endblock %}"><i class="fas fa-building"></i> Departments</a>
-      <a href="{% url 'admin_registration_invites' %}" class="sb-link {% block nav_invites %}{% endblock %}"><i class="fas fa-link"></i> Invite Links</a>
-      <a href="{% url 'admin_registration_requests' %}" class="sb-link {% block nav_requests %}{% endblock %}"><i class="fas fa-inbox"></i> Requests</a>
+      <a href="{% url 'admin_subjects' %}" class="sb-link {% block nav_subjects %}{% endblock %}"><i class="fas fa-book"></i> Subjects</a>
+      <a href="{% url 'admin_registration_requests' %}" class="sb-link {% block nav_invites %}{% endblock %} {% block nav_requests %}{% endblock %}"><i class="fas fa-link"></i> Invite &amp; Requests</a>
       <a href="{% url 'admin_students' %}" class="sb-link {% block nav_students %}{% endblock %}"><i class="fas fa-user-graduate"></i> Students</a>
       <a href="{% url 'admin_bulk_import' %}" class="sb-link {% block nav_import %}{% endblock %}"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
       <a href="{% url 'admin_faculty_list' %}" class="sb-link {% block nav_faculty %}{% endblock %}"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
-      <a href="{% url 'admin_hods' %}" class="sb-link {% block nav_hods %}{% endblock %}"><i class="fas fa-building-columns"></i> HODs</a>
-      <a href="{% url 'admin_subjects' %}" class="sb-link {% block nav_subjects %}{% endblock %}"><i class="fas fa-book"></i> Subjects</a>
       <a href="{% url 'admin_academic_planner' %}" class="sb-link {% block nav_planner %}{% endblock %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
       <a href="{% url 'admin_exams' %}" class="sb-link {% block nav_exams %}{% endblock %}"><i class="fas fa-file-pen"></i> Exams</a>
+
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Configuration</div>
+      <a href="{% url 'admin_college_settings' %}" class="sb-link {% block nav_settings %}{% endblock %}"><i class="fas fa-gear"></i> College Settings</a>
       <a href="{% url 'admin_attendance_rules' %}" class="sb-link {% block nav_att_rules %}{% endblock %}"><i class="fas fa-sliders"></i> Attendance Rules</a>
+      <a href="{% url 'admin_leave_quotas' %}" class="sb-link {% block nav_leave_quotas %}{% endblock %}"><i class="fas fa-calendar-minus"></i> Leave &amp; Substitution Quotas</a>
+      <a href="{% url 'admin_regulations' %}" class="sb-link {% block nav_regulations %}{% endblock %}"><i class="fas fa-scroll"></i> Regulations &amp; Curriculum</a>
+      <a href="{% url 'admin_sections' %}" class="sb-link {% block nav_sections %}{% endblock %}"><i class="fas fa-layer-group"></i> Sections</a>
+      <a href="{% url 'admin_ssf_map' %}" class="sb-link {% block nav_ssf %}{% endblock %}"><i class="fas fa-diagram-project"></i> Student-Faculty Mapping</a>
+      <a href="{% url 'admin_elective_pools' %}" class="sb-link {% block nav_electives %}{% endblock %}"><i class="fas fa-list-check"></i> Elective Pools</a>
 
       <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Finance & Comms</div>
       <a href="{% url 'admin_fees' %}" class="sb-link {% block nav_fees %}{% endblock %}"><i class="fas fa-indian-rupee-sign"></i> Fee Records</a>
       <a href="{% url 'admin_announcements' %}" class="sb-link {% block nav_ann %}{% endblock %}"><i class="fas fa-bell"></i> Announcements</a>
       <a href="{% url 'admin_helpdesk' %}" class="sb-link {% block nav_helpdesk %}{% endblock %}"><i class="fas fa-headset"></i> Help Desk</a>
 
-      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Results</div>
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Reports</div>
       <a href="{% url 'admin_semester_results' %}" class="sb-link {% block nav_semester_results %}{% endblock %}"><i class="fas fa-square-poll-horizontal"></i> Semester Results</a>
+      <a href="{% url 'admin_dashboard' %}#reports" class="sb-link {% block nav_reports %}{% endblock %}"><i class="fas fa-download"></i> Export Reports</a>
+
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:12px 0 6px">Platform</div>
+      <a href="{% url 'admin_contact_support' %}" class="sb-link {% block nav_support %}{% endblock %}"><i class="fas fa-headset"></i> Contact Platform Support</a>
       {% endblock %}{# base_nav_links #}
     </div>
 
     <div style="padding:14px;border-top:1px solid rgba(255,255,255,.08)">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
-        <div style="width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">
-          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
-        </div>
-        <div>
-          <div style="font-size:12px;font-weight:600;color:#fff">{{ request.user.get_full_name|default:request.user.username }}</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4)">{% block sidebar_role_label %}College Admin{% endblock %}</div>
-        </div>
-      </div>
-      <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;background:rgba(239,68,68,.12);color:#f87171;font-size:12px;font-weight:600;text-decoration:none"
-         onmouseover="this.style.background='rgba(239,68,68,.2)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">
-        <i class="fas fa-sign-out-alt"></i> Sign Out
-      </a>
-      <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.22);text-align:center;letter-spacing:.3px">Powered by <span style="color:rgba(255,255,255,.38);font-weight:600">ProEdge EduTrack</span></div>
+      <div style="margin-top:4px;font-size:10px;color:rgba(255,255,255,.22);text-align:center;letter-spacing:.3px">Powered by <span style="color:rgba(255,255,255,.38);font-weight:600">ProEdge EduTrack</span></div>
     </div>
   </aside>
 
@@ -113,6 +105,35 @@
           </div>
           {% endif %}
           {% block page_action %}{% endblock %}
+          <!-- Profile dropdown -->
+          <div class="topbar-profile-wrap" id="adm-topbar-profile-wrap">
+            <button class="topbar-profile-btn" id="adm-topbar-profile-btn" aria-label="Profile menu" aria-expanded="false">
+              <div class="topbar-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+              <div class="topbar-profile-info">
+                <span class="topbar-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                <span class="topbar-profile-role">{% block sidebar_role_label %}College Admin{% endblock %}</span>
+              </div>
+              <i class="fas fa-chevron-down topbar-profile-caret"></i>
+            </button>
+            <div class="topbar-profile-dropdown" id="adm-topbar-profile-dropdown">
+              <div class="tpd-header">
+                <div class="tpd-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+                <div>
+                  <div class="tpd-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                  <div class="tpd-role">{% block sidebar_role_label2 %}College Admin{% endblock %}</div>
+                  {% if college %}<div class="tpd-college">{{ college.name }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="tpd-divider"></div>
+              <a href="{% url 'admin_dashboard' %}#profile" class="tpd-item">
+                <i class="fas fa-user-circle"></i> My Profile
+              </a>
+              <div class="tpd-divider"></div>
+              <a href="{% url 'logout' %}" class="tpd-item tpd-logout">
+                <i class="fas fa-sign-out-alt"></i> Sign Out
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -141,6 +162,30 @@
   .adm-topbar-session-timer{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);padding:7px 14px;border-radius:99px;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);transition:all .3s;white-space:nowrap;flex-shrink:0}
   .adm-topbar-session-timer i{font-size:13px;color:var(--teal)}
   .adm-topbar-session-timer .timer-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
+  /* ---- Profile dropdown (same as base_dashboard) ---- */
+  .topbar-profile-wrap{position:relative}
+  .topbar-profile-btn{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;border-radius:99px;border:1.5px solid var(--border);background:#fff;cursor:pointer;box-shadow:var(--sh);transition:all .2s}
+  .topbar-profile-btn:hover{border-color:rgba(13,115,119,.3);box-shadow:0 4px 14px rgba(13,115,119,.1)}
+  .topbar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+  .topbar-profile-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+  .topbar-profile-name{font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+  .topbar-profile-role{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .topbar-profile-caret{font-size:10px;color:var(--muted);transition:transform .2s;margin-left:2px}
+  .topbar-profile-btn[aria-expanded="true"] .topbar-profile-caret{transform:rotate(180deg)}
+  .topbar-profile-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:220px;background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 12px 40px rgba(7,30,38,.14);z-index:500;overflow:hidden}
+  .topbar-profile-dropdown.open{display:block;animation:tpdIn .18s ease}
+  @keyframes tpdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .tpd-header{display:flex;align-items:center;gap:10px;padding:14px 16px}
+  .tpd-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+  .tpd-name{font-size:13px;font-weight:700;color:var(--deep)}
+  .tpd-role{font-size:11px;color:var(--teal);font-weight:600}
+  .tpd-college{font-size:10px;color:var(--muted);margin-top:1px}
+  .tpd-divider{height:1px;background:var(--border);margin:0}
+  .tpd-item{display:flex;align-items:center;gap:9px;padding:11px 16px;font-size:13px;font-weight:500;color:var(--deep);text-decoration:none;transition:background .15s}
+  .tpd-item:hover{background:#f8fafb}
+  .tpd-item i{width:16px;text-align:center;color:var(--teal)}
+  .tpd-logout{color:#ef4444}.tpd-logout i{color:#ef4444}.tpd-logout:hover{background:#fff5f5}
+  @media(max-width:860px){.topbar-profile-info,.topbar-profile-caret{display:none}.topbar-profile-btn{padding:4px}}
   .sb-link{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:8px;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;text-decoration:none;transition:all .2s;margin-bottom:2px}
   .sb-link:hover{background:rgba(255,255,255,.07);color:#fff}
   .sb-link.on,.sb-link.active{background:rgba(255,255,255,.15);color:#fff;border-left:3px solid var(--teal);padding-left:9px}
@@ -243,6 +288,36 @@
   .confirm-modal.show{display:flex}
   .confirm-box{background:#fff;border-radius:var(--r-lg);padding:28px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 
+  /* ---- Topbar profile dropdown (shared) ---- */
+  .topbar-profile-wrap{position:relative}
+  .topbar-profile-btn{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;border-radius:99px;border:1.5px solid var(--border);background:#fff;cursor:pointer;box-shadow:var(--sh);transition:all .2s}
+  .topbar-profile-btn:hover{border-color:rgba(13,115,119,.3);box-shadow:0 4px 14px rgba(13,115,119,.1)}
+  .topbar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+  .topbar-profile-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+  .topbar-profile-name{font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+  .topbar-profile-role{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .topbar-profile-caret{font-size:10px;color:var(--muted);transition:transform .2s;margin-left:2px}
+  .topbar-profile-btn[aria-expanded="true"] .topbar-profile-caret{transform:rotate(180deg)}
+  .topbar-profile-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:220px;background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 12px 40px rgba(7,30,38,.14);z-index:500;overflow:hidden}
+  .topbar-profile-dropdown.open{display:block;animation:tpdIn .18s ease}
+  @keyframes tpdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .tpd-header{display:flex;align-items:center;gap:10px;padding:14px 16px}
+  .tpd-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+  .tpd-name{font-size:13px;font-weight:700;color:var(--deep)}
+  .tpd-role{font-size:11px;color:var(--teal);font-weight:600}
+  .tpd-college{font-size:10px;color:var(--muted);margin-top:1px}
+  .tpd-divider{height:1px;background:var(--border);margin:0}
+  .tpd-item{display:flex;align-items:center;gap:9px;padding:11px 16px;font-size:13px;font-weight:500;color:var(--deep);text-decoration:none;transition:background .15s}
+  .tpd-item:hover{background:#f8fafb}
+  .tpd-item i{width:16px;text-align:center;color:var(--teal)}
+  .tpd-logout{color:#ef4444}
+  .tpd-logout i{color:#ef4444}
+  .tpd-logout:hover{background:#fff5f5}
+  @media(max-width:860px){
+    .topbar-profile-info,.topbar-profile-caret{display:none}
+    .topbar-profile-btn{padding:4px}
+  }
+
   @media(max-width:860px){
     .adm-mob-bar{display:flex}
     .adm-sidebar{position:fixed;top:0;left:0;height:100%;z-index:300;transform:translateX(-100%)}
@@ -323,5 +398,22 @@ function confirmDelete(url, msg) {
   modal.classList.add('show');
 }
 function closeConfirm(){ var m=document.getElementById('confirm-modal'); if(m) m.classList.remove('show'); }
+
+/* ---- Topbar profile dropdown ---- */
+(function(){
+  var btn = document.getElementById('adm-topbar-profile-btn');
+  var dd  = document.getElementById('adm-topbar-profile-dropdown');
+  if (!btn || !dd) return;
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = dd.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', function(){
+    dd.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+  });
+  dd.addEventListener('click', function(e){ e.stopPropagation(); });
+})();
 </script>
 {% endblock %}

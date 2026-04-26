@@ -1,109 +1,297 @@
 {% extends 'admin_panel/base_admin.html' %}
-{% block title %}Invite Links - Admin{% endblock %}
+{% block title %}Invite & Requests - Admin{% endblock %}
 {% block nav_invites %}on{% endblock %}
-{% block breadcrumb %} / Invite Links{% endblock %}
-{% block page_title %}Student Invite Links{% endblock %}
-{% block page_sub %}Share one-time onboarding links instead of giving public registration access{% endblock %}
+{% block nav_requests %}on{% endblock %}
+{% block breadcrumb %} > Invite & Requests{% endblock %}
+{% block page_title %}Invite & Requests{% endblock %}
+{% block page_sub %}Manage admissions invite links and review student onboarding requests{% endblock %}
+
+{% block page_action %}
+<a href="{% url 'admin_student_add' %}" class="btn-add"><i class="fas fa-user-plus"></i> Add Student Manually</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .ir-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .ir-tab{padding:10px 16px;border-radius:999px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+  .ir-tab.active{background:var(--teal);border-color:var(--teal);color:#fff}
+  .ir-pane{display:none}
+  .ir-pane.active{display:block}
+  .ir-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+  .ir-stat{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--sh)}
+  .ir-stat .n{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)}
+  .ir-stat .l{font-size:12px;color:var(--muted);margin-top:4px}
+  .ir-grid{display:grid;grid-template-columns:380px minmax(0,1fr);gap:18px}
+  .ir-form-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--sh);align-self:start}
+  .ir-form-card h3{font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep);margin-bottom:6px}
+  .ir-form-card p{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .ir-form-grid{display:grid;gap:12px}
+  .ir-form-grid label{display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+  .ir-form-grid input,.ir-form-grid select,.ir-filters input,.ir-filters select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;outline:none;background:#fff}
+  .ir-form-grid input:focus,.ir-form-grid select:focus,.ir-filters input:focus,.ir-filters select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.08)}
+  .ir-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .ir-filters > *{flex:1;min-width:180px}
+  .ir-table-wrap{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
+  .ir-table{width:100%;border-collapse:collapse;font-size:12px}
+  .ir-table th{background:var(--deep);color:#fff;padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .ir-table td{padding:12px 14px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+  .ir-table tr:last-child td{border-bottom:none}
+  .ir-table tr:hover td{background:#f8fafc}
+  .ir-badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:700}
+  .ir-badge-active{background:rgba(13,115,119,.1);color:var(--teal)}
+  .ir-badge-used{background:#d1fae5;color:#065f46}
+  .ir-badge-expired{background:#fee2e2;color:#991b1b}
+  .ir-badge-pending{background:#fef3c7;color:#92400e}
+  .ir-badge-approved{background:#dbeafe;color:#1d4ed8}
+  .ir-badge-converted{background:#d1fae5;color:#065f46}
+  .ir-badge-rejected{background:#fee2e2;color:#991b1b}
+  .ir-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .ir-link-box{display:block;margin-top:4px;font-size:11px;word-break:break-all;color:var(--teal)}
+  .ir-empty{text-align:center;padding:40px 18px;color:var(--muted)}
+  .ir-empty i{font-size:30px;display:block;margin-bottom:10px;color:#cbd5e1}
+  .ir-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;flex-wrap:wrap}
+  .ir-pagination .meta{font-size:12px;color:var(--muted)}
+  .ir-pagination .links{display:flex;gap:8px;align-items:center}
+  @media(max-width:1024px){.ir-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width:none;margin-bottom:22px">
-  <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px">Create Invite</div>
-  <form method="POST">
-    {% csrf_token %}
-    <div class="form-row">
-      <div class="form-group">
-        <label>Student Email <span>*</span></label>
-        <input type="email" name="invited_email" class="form-control" placeholder="student@example.com" required/>
-      </div>
-      <div class="form-group">
-        <label>Department</label>
-        <select name="department" class="form-control">
-          <option value="">Select Department</option>
-          {% for d in departments %}
-          <option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Admission Year</label>
-        <input type="number" name="admission_year" class="form-control" min="2000" max="2100" placeholder="2026"/>
-      </div>
-      <div class="form-group">
-        <label>Semester</label>
-        <select name="current_semester" class="form-control">
-          <option value="">Select Semester</option>
-          {% for i in "12345678" %}
-          <option value="{{ i }}">Semester {{ i }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-    <button type="submit" class="btn-submit"><i class="fas fa-link"></i> Create Invite Link</button>
-  </form>
+<div class="ir-tabs">
+  <button type="button" class="ir-tab {% if initial_tab == 'requests' %}active{% endif %}" data-tab="requests">Requests</button>
+  <button type="button" class="ir-tab {% if initial_tab == 'invites' %}active{% endif %}" data-tab="invites">Invites</button>
 </div>
 
-{% if created_link %}
-<div class="ap-card" style="margin-bottom:22px">
-  <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:10px"><i class="fas fa-link" style="color:var(--teal)"></i> Invite Link Ready</div>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <div id="invite-link-box" style="flex:1;background:var(--surface2);border:1px dashed var(--border);padding:12px 14px;border-radius:10px;font-size:13px;color:var(--text);word-break:break-all;min-width:0">{{ created_link }}</div>
-    <button onclick="copyInviteLink()" id="copy-btn" style="padding:10px 16px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0">
-      <i class="fas fa-copy"></i> Copy Link
-    </button>
+<section class="ir-pane {% if initial_tab == 'requests' %}active{% endif %}" data-pane="requests">
+  <div class="ir-stats">
+    <div class="ir-stat"><div class="n">{{ pending_request_count }}</div><div class="l">Pending Review</div></div>
+    <div class="ir-stat"><div class="n">{{ approved_request_count }}</div><div class="l">Approved</div></div>
+    <div class="ir-stat"><div class="n">{{ converted_request_count }}</div><div class="l">Converted</div></div>
+    <div class="ir-stat"><div class="n">{{ rejected_request_count }}</div><div class="l">Rejected</div></div>
   </div>
-  <div class="form-hint" style="margin-top:8px">One-time link for <strong>{{ created_invite.invited_email }}</strong>. Expires in 7 days.</div>
-</div>
-<script>
-function copyInviteLink() {
-  var text = document.getElementById('invite-link-box').textContent.trim();
-  var btn = document.getElementById('copy-btn');
-  navigator.clipboard.writeText(text).then(function() {
-    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    btn.style.background = 'var(--green)';
-    setTimeout(function(){ btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link'; btn.style.background = 'var(--teal)'; }, 2000);
-  }).catch(function() {
-    /* fallback for older browsers */
-    var ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    setTimeout(function(){ btn.innerHTML = '<i class="fas fa-copy"></i> Copy Link'; }, 2000);
-  });
-}
-</script>
-{% endif %}
 
-<div class="ap-card">
-  <div style="font-size:14px;font-weight:700;color:var(--deep);margin-bottom:14px">Invite History</div>
-  {% if invites %}
-  <table class="ap-table">
-    <thead>
-      <tr><th>Email</th><th>Department</th><th>Semester</th><th>Status</th><th>Created</th></tr>
-    </thead>
-    <tbody>
-      {% for invite in invites %}
-      <tr>
-        <td>{{ invite.invited_email }}</td>
-        <td>{% if invite.department %}{{ invite.department.code }}{% else %}-{% endif %}</td>
-        <td>{% if invite.current_semester %}{{ invite.current_semester }}{% else %}-{% endif %}</td>
-        <td>
-          {% if invite.used_at %}
-          <span class="ap-badge badge-active">Used</span>
-          {% else %}
-          <span class="ap-badge badge-graduated">Active</span>
-          {% endif %}
-        </td>
-        <td>{{ invite.created_at|date:"d M Y" }}</td>
-      </tr>
+  <form method="get" class="ir-filters">
+    <input type="hidden" name="tab" value="requests"/>
+    <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search by applicant, email, or phone"/>
+    <select name="department">
+      <option value="">All Departments</option>
+      {% for department in departments %}
+      <option value="{{ department.pk }}" {% if dept_filter == department.pk|stringformat:'s' %}selected{% endif %}>{{ department.name }} ({{ department.code }})</option>
       {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div class="empty-state"><i class="fas fa-link"></i><p>No invite links created yet.</p></div>
-  {% endif %}
-</div>
+    </select>
+    <select name="status">
+      <option value="">All Statuses</option>
+      {% for code, label in status_choices %}
+      <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-add" style="padding:10px 14px"><i class="fas fa-search"></i> Filter</button>
+    {% if search_query or dept_filter or status_filter %}
+    <a href="{% url 'admin_registration_requests' %}" class="btn-cancel" style="text-align:center">Clear</a>
+    {% endif %}
+  </form>
+
+  <div class="ir-table-wrap">
+    {% if requests_list %}
+    <div class="table-scroll">
+      <table class="ir-table">
+        <thead>
+          <tr><th>Applicant</th><th>Department</th><th>Academic</th><th>Status</th><th>Submitted</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for req in requests_list %}
+          <tr>
+            <td>
+              <div style="font-weight:700;color:var(--deep)">{{ req.first_name }} {{ req.last_name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ req.email }}</div>
+              {% if req.phone_number %}<div style="font-size:11px;color:var(--muted)">{{ req.phone_number }}</div>{% endif %}
+            </td>
+            <td>{% if req.desired_department %}{{ req.desired_department.name }} ({{ req.desired_department.code }}){% else %}&mdash;{% endif %}</td>
+            <td>
+              <div>Admission Year: {{ req.admission_year|default:"—" }}</div>
+              <div>Semester: {{ req.current_semester|default:"—" }}</div>
+            </td>
+            <td>
+              <span class="ir-badge
+                {% if req.status == 'APPROVED' %}ir-badge-approved
+                {% elif req.status == 'CONVERTED' %}ir-badge-converted
+                {% elif req.status == 'REJECTED' %}ir-badge-rejected
+                {% else %}ir-badge-pending{% endif %}">
+                {{ req.get_status_display }}
+              </span>
+              {% if req.review_notes %}<div style="font-size:11px;color:var(--muted);margin-top:6px">{{ req.review_notes|truncatechars:80 }}</div>{% endif %}
+            </td>
+            <td>{{ req.created_at|date:"d M Y, h:i A" }}</td>
+            <td>
+              <div class="ir-actions">
+                {% if req.status == 'APPROVED' %}
+                <a href="{% url 'admin_student_add' %}?request={{ req.pk }}" class="btn-edit"><i class="fas fa-user-check"></i> Convert</a>
+                {% endif %}
+                <form method="post" action="{% url 'admin_registration_request_update' req.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="UNDER_REVIEW"/>
+                  <input type="hidden" name="next" value="{% url 'admin_registration_requests' %}?tab=requests"/>
+                  <button type="submit" class="btn-edit">Under Review</button>
+                </form>
+                <form method="post" action="{% url 'admin_registration_request_update' req.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="APPROVED"/>
+                  <input type="hidden" name="next" value="{% url 'admin_registration_requests' %}?tab=requests"/>
+                  <button type="submit" class="btn-edit">Approve</button>
+                </form>
+                <form method="post" action="{% url 'admin_registration_request_update' req.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="REJECTED"/>
+                  <input type="hidden" name="next" value="{% url 'admin_registration_requests' %}?tab=requests"/>
+                  <button type="submit" class="btn-del">Reject</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if requests_page and requests_page.paginator.num_pages > 1 %}
+    <div class="ir-pagination" style="padding:12px 14px">
+      <div class="meta">Requests page {{ requests_page.number }} of {{ requests_page.paginator.num_pages }}. Total records: {{ requests_page.paginator.count }}.</div>
+      <div class="links">
+        {% if requests_page.has_previous %}
+        <a href="?tab=requests&requests_page={{ requests_page.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if dept_filter %}&department={{ dept_filter|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter|urlencode }}{% endif %}" class="btn-edit">Previous</a>
+        {% endif %}
+        {% if requests_page.has_next %}
+        <a href="?tab=requests&requests_page={{ requests_page.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if dept_filter %}&department={{ dept_filter|urlencode }}{% endif %}{% if status_filter %}&status={{ status_filter|urlencode }}{% endif %}" class="btn-edit">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="ir-empty"><i class="fas fa-inbox"></i>No registration requests match the current filters.</div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="ir-pane {% if initial_tab == 'invites' %}active{% endif %}" data-pane="invites">
+  <div class="ir-stats">
+    <div class="ir-stat"><div class="n">{{ active_invites_count }}</div><div class="l">Active Invites</div></div>
+    <div class="ir-stat"><div class="n">{{ used_invites_count }}</div><div class="l">Used</div></div>
+    <div class="ir-stat"><div class="n">{{ expired_invites_count }}</div><div class="l">Expired</div></div>
+    <div class="ir-stat"><div class="n">{% if invites_page %}{{ invites_page.paginator.count }}{% else %}{{ invites|length }}{% endif %}</div><div class="l">Total Recorded</div></div>
+  </div>
+
+  <div class="ir-grid">
+    <div class="ir-form-card">
+      <h3>Create Invite Link</h3>
+      <p>Send a direct admissions invite with preset department and semester details.</p>
+      <form method="post" action="{% url 'admin_registration_invites' %}">
+        {% csrf_token %}
+        <div class="ir-form-grid">
+          <div>
+            <label>Email Address</label>
+            <input type="email" name="invited_email" placeholder="student@example.com" required/>
+          </div>
+          <div>
+            <label>Department</label>
+            <select name="department">
+              <option value="">Any Department</option>
+              {% for d in departments %}
+              <option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Admission Year</label>
+            <input type="number" name="admission_year" min="2000" max="2100" placeholder="{{ now|date:'Y' }}"/>
+          </div>
+          <div>
+            <label>Current Semester</label>
+            <select name="current_semester">
+              <option value="">Not fixed</option>
+              {% for i in "12345678" %}
+              <option value="{{ i }}">Semester {{ i }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <button type="submit" class="btn-add"><i class="fas fa-link"></i> Create Invite</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="ir-table-wrap">
+      {% if invites %}
+      <div class="table-scroll">
+        <table class="ir-table">
+          <thead>
+            <tr><th>Email</th><th>Department</th><th>Academic</th><th>Status</th><th>Link</th></tr>
+          </thead>
+          <tbody>
+            {% for invite in invites %}
+            <tr>
+              <td>
+                <div style="font-weight:700;color:var(--deep)">{{ invite.invited_email }}</div>
+                <div style="font-size:11px;color:var(--muted)">Created {{ invite.created_at|date:"d M Y, h:i A" }}</div>
+              </td>
+              <td>{% if invite.department %}{{ invite.department.name }} ({{ invite.department.code }}){% else %}Any Department{% endif %}</td>
+              <td>
+                <div>Admission Year: {{ invite.admission_year|default:"—" }}</div>
+                <div>Semester: {{ invite.current_semester|default:"—" }}</div>
+              </td>
+              <td>
+                {% if invite.used_at %}
+                <span class="ir-badge ir-badge-used">Used</span>
+                <div style="font-size:11px;color:var(--muted);margin-top:6px">{{ invite.used_at|date:"d M Y, h:i A" }}</div>
+                {% elif invite.expires_at and invite.expires_at < now %}
+                <span class="ir-badge ir-badge-expired">Expired</span>
+                <div style="font-size:11px;color:var(--muted);margin-top:6px">Expired {{ invite.expires_at|date:"d M Y, h:i A" }}</div>
+                {% else %}
+                <span class="ir-badge ir-badge-active">Active</span>
+                <div style="font-size:11px;color:var(--muted);margin-top:6px">Expires {{ invite.expires_at|date:"d M Y, h:i A" }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <a class="ir-link-box" href="{% url 'register' %}?invite={{ invite.token }}">{{ request.scheme }}://{{ request.get_host }}{% url 'register' %}?invite={{ invite.token }}</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if invites_page and invites_page.paginator.num_pages > 1 %}
+      <div class="ir-pagination" style="padding:12px 14px">
+        <div class="meta">Invites page {{ invites_page.number }} of {{ invites_page.paginator.num_pages }}. Total records: {{ invites_page.paginator.count }}.</div>
+        <div class="links">
+          {% if invites_page.has_previous %}
+          <a href="?tab=invites&invites_page={{ invites_page.previous_page_number }}" class="btn-edit">Previous</a>
+          {% endif %}
+          {% if invites_page.has_next %}
+          <a href="?tab=invites&invites_page={{ invites_page.next_page_number }}" class="btn-edit">Next</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="ir-empty"><i class="fas fa-paper-plane"></i>No invite links have been created yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+(function(){
+  var tabs = document.querySelectorAll('.ir-tab');
+  var panes = document.querySelectorAll('.ir-pane');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var target = tab.getAttribute('data-tab');
+      tabs.forEach(function(btn){ btn.classList.toggle('active', btn === tab); });
+      panes.forEach(function(pane){ pane.classList.toggle('active', pane.getAttribute('data-pane') === target); });
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', target);
+      window.history.replaceState({}, '', url.toString());
+    });
+  });
+})();
 {% endblock %}

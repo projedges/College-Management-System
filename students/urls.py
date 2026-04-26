@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('ops/health/', views.system_health, name='system_health'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
@@ -94,6 +95,7 @@ urlpatterns = [
     path('dashboard/admin/electives/add/', views.admin_elective_pool_add, name='admin_elective_pool_add'),
     path('dashboard/admin/electives/<int:pk>/toggle/', views.admin_elective_pool_toggle, name='admin_elective_pool_toggle'),
     path('dashboard/admin/electives/<int:pk>/selections/', views.admin_elective_pool_selections, name='admin_elective_pool_selections'),
+    path('api/subjects/', views.api_subjects_by_department, name='api_subjects_by_department'),
     path('dashboard/admin/course-registration/toggle/', views.admin_course_registration_toggle, name='admin_course_registration_toggle'),
     path('dashboard/admin/leave-quotas/', views.admin_leave_quotas, name='admin_leave_quotas'),
     path('dashboard/admin/settings/', views.admin_college_settings, name='admin_college_settings'),

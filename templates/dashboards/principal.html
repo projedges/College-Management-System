@@ -117,11 +117,26 @@
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Professional Details</div>
     <div>
-      <div class="profile-row"><span class="profile-lbl">Email</span><span class="profile-val">{{ request.user.email|default:"Not set" }}</span></div>
-      <div class="profile-row"><span class="profile-lbl">Qualification</span><span class="profile-val">{{ principal.qualification }}</span></div>
-      <div class="profile-row"><span class="profile-lbl">Experience</span><span class="profile-val">{{ principal.experience_years }} years</span></div>
-      <div class="profile-row"><span class="profile-lbl">College</span><span class="profile-val">{{ college.name }}</span></div>
-      <div class="profile-row"><span class="profile-lbl">Username</span><span class="profile-val" style="color:var(--muted)">{{ request.user.username }}</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;min-width:100px">Email</div>
+        <div style="font-size:13px;color:var(--deep);font-weight:600">{{ request.user.email|default:"Not set" }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;min-width:100px">Qualification</div>
+        <div style="font-size:13px;color:var(--deep);font-weight:600">{{ principal.qualification }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;min-width:100px">Experience</div>
+        <div style="font-size:13px;color:var(--deep);font-weight:600">{{ principal.experience_years }} years</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;min-width:100px">College</div>
+        <div style="font-size:13px;color:var(--deep);font-weight:600">{{ college.name }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;min-width:100px">Username</div>
+        <div style="font-size:13px;color:var(--muted);font-weight:600">{{ request.user.username }}</div>
+      </div>
     </div>
   </div>
 </section>

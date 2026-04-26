@@ -1,6 +1,7 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Curriculum &mdash; {{ regulation.name }}{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'admin_regulations' %}">Regulations</a> / {{ regulation.code }} / Curriculum{% endblock %}
+{% block nav_regulations %}on{% endblock %}
+{% block breadcrumb %} > <a href="{% url 'admin_regulations' %}">Regulations</a> > {{ regulation.code }} > Curriculum{% endblock %}
 {% block page_title %}Curriculum &mdash; {{ regulation.name }}{% endblock %}
 {% block page_sub %}Map subjects to semesters for each department under this regulation.{% endblock %}
 {% block content %}
@@ -88,7 +89,7 @@
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Type</label>
         <select name="elective_type" class="form-control">
-          <option value="FIXED">Fixed / Compulsory</option>
+          <option value="FIXED">Fixed > Compulsory</option>
           <option value="PE">Program Elective (PE)</option>
           <option value="OE">Open Elective (OE)</option>
         </select>

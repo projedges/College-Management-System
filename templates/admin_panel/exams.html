@@ -1,40 +1,336 @@
 {% extends 'admin_panel/base_admin.html' %}
-{% block title %}Exams &mdash; Admin{% endblock %}
+{% block title %}Exams Management &mdash; Admin{% endblock %}
 {% block nav_exams %}on{% endblock %}
-{% block breadcrumb %} / Exams{% endblock %}
-{% block page_title %}Exams{% endblock %}
-{% block page_sub %}Create and manage exam schedules{% endblock %}
-{% block page_action %}
-  <a href="{% url 'admin_exam_add' %}" class="btn-add"><i class="fas fa-plus"></i> Create Exam</a>
+{% block breadcrumb %} > Exams{% endblock %}
+{% block page_title %}Exams Management{% endblock %}
+{% block page_sub %}Create, schedule and manage exams for all programs and semesters.{% endblock %}
+
+{% block extra_css %}
+<style>
+  .em-topbar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .em-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:all .2s}
+  .em-btn-primary{background:var(--teal);color:#fff}
+  .em-btn-primary:hover{background:var(--teal-dk)}
+  .em-btn-outline{background:#fff;color:var(--deep);border:1.5px solid var(--border)}
+  .em-btn-outline:hover{border-color:var(--teal);color:var(--teal)}
+  .em-stat-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px;margin-bottom:24px}
+  .em-stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
+  .em-stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .em-stat-val{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--deep);line-height:1}
+  .em-stat-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}
+  .em-stat-sub{font-size:10px;color:var(--muted);margin-top:2px}
+  .em-layout{display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start}
+  .em-main{}
+  .em-sidebar{}
+  .em-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px}
+  .em-tab{padding:10px 16px;font-size:13px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .em-tab:hover{color:var(--teal)}
+  .em-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+  .em-filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .em-select{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--deep);font-size:12px;font-weight:600;cursor:pointer;outline:none;transition:border-color .2s}
+  .em-select:focus{border-color:var(--teal)}
+  .em-table-wrap{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+  .em-table{width:100%;border-collapse:collapse;font-size:13px}
+  .em-table th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:#f8fafc;white-space:nowrap}
+  .em-table td{padding:12px 14px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+  .em-table tr:last-child td{border-bottom:none}
+  .em-table tr:hover td{background:#f8fafc}
+  .em-exam-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .em-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+  .em-badge-upcoming{background:#dbeafe;color:#1d4ed8}
+  .em-badge-ongoing{background:#fef3c7;color:#92400e}
+  .em-badge-completed{background:#d1fae5;color:#065f46}
+  .em-badge-cancelled{background:#fee2e2;color:#991b1b}
+  .em-badge-internal{background:rgba(13,115,119,.1);color:var(--teal)}
+  .em-badge-endsem{background:#dbeafe;color:#1d4ed8}
+  .em-badge-practical{background:#fef3c7;color:#92400e}
+  .em-badge-backlog{background:#fee2e2;color:#991b1b}
+  .em-badge-supplementary{background:rgba(139,92,246,.1);color:#7c3aed}
+  .em-action-btn{width:28px;height:28px;border-radius:7px;border:none;background:rgba(13,115,119,.08);color:var(--teal);cursor:pointer;font-size:11px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:all .2s}
+  .em-action-btn:hover{background:rgba(13,115,119,.15)}
+  .em-action-btn.del{background:rgba(239,68,68,.08);color:#ef4444}
+  .em-action-btn.del:hover{background:rgba(239,68,68,.15)}
+  .em-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);flex-wrap:wrap;gap:8px}
+  .em-empty{text-align:center;padding:48px 20px;color:var(--muted)}
+  .em-empty i{font-size:36px;color:#d1d5db;display:block;margin-bottom:12px}
+  .em-sidebar-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--sh);margin-bottom:16px}
+  .em-sidebar-title{font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;color:var(--deep);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .em-qa-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:all .2s}
+  .em-qa-item:last-child{border-bottom:none}
+  .em-qa-item:hover .em-qa-label{color:var(--teal)}
+  .em-qa-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .em-qa-label{font-size:13px;font-weight:600;color:var(--deep)}
+  .em-qa-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .em-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+  .em-cal-day{font-size:10px;font-weight:700;color:var(--muted);padding:4px 0}
+  .em-cal-cell{font-size:11px;padding:5px 2px;border-radius:6px;cursor:default;color:var(--text)}
+  .em-cal-cell.today{background:var(--teal);color:#fff;font-weight:700}
+  .em-cal-cell.has-exam{background:rgba(13,115,119,.1);color:var(--teal);font-weight:700}
+  .em-overview-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+  .em-overview-row:last-child{border-bottom:none}
+  .em-overview-row i{color:var(--teal);width:16px}
+  .em-pane{display:none}
+  .em-pane.active{display:block}
+  @media(max-width:1100px){.em-layout{grid-template-columns:1fr}.em-sidebar{display:none}}
+  @media(max-width:860px){.em-stat-grid{grid-template-columns:repeat(3,1fr)}.em-filter-bar{flex-direction:column}}
+  @media(max-width:480px){.em-stat-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
 {% endblock %}
 
 {% block content %}
-{% if exams %}
-<div class="ap-card">
-  <table class="ap-table">
-    <thead>
-      <tr><th>Exam Name</th><th>Semester</th><th>Start Date</th><th>End Date</th><th>Created By</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      {% for e in exams %}
-      <tr>
-        <td style="font-weight:600;color:var(--deep)">{{ e.name }}</td>
-        <td style="text-align:center">Sem {{ e.semester }}</td>
-        <td>{{ e.start_date|date:"d M Y" }}</td>
-        <td>{{ e.end_date|date:"d M Y" }}</td>
-        <td style="color:var(--muted)">{{ e.created_by.get_full_name|default:e.created_by.username }}</td>
-        <td>
-          <button class="btn-del" onclick="confirmDelete('{% url 'admin_exam_delete' e.pk %}','Delete exam {{ e.name }}?')">
-            <i class="fas fa-trash"></i> Delete
-          </button>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- Top action bar -->
+<div class="em-topbar">
+  <a href="#" class="em-btn em-btn-outline"><i class="fas fa-download"></i> Export</a>
+  <a href="{% url 'admin_exam_add' %}" class="em-btn em-btn-primary"><i class="fas fa-plus"></i> Create Exam</a>
 </div>
-{% else %}
-<div class="empty-state"><i class="fas fa-file-pen"></i><p>No exams created yet. <a href="{% url 'admin_exam_add' %}" style="color:var(--teal)">Create one</a>.</p></div>
-{% endif %}
+
+<!-- Stat cards -->
+<div class="em-stat-grid">
+  <div class="em-stat-card">
+    <div class="em-stat-icon" style="background:rgba(37,99,235,.08);color:#2563eb"><i class="fas fa-file-pen"></i></div>
+    <div><div class="em-stat-val">{{ exam_summary.total|default:published_count }}</div><div class="em-stat-lbl">Total Exams</div><div class="em-stat-sub">All programs</div></div>
+  </div>
+  <div class="em-stat-card">
+    <div class="em-stat-icon" style="background:rgba(34,197,94,.1);color:#16a34a"><i class="fas fa-calendar-check"></i></div>
+    <div><div class="em-stat-val">{{ upcoming_count }}</div><div class="em-stat-lbl">Scheduled</div><div class="em-stat-sub">Upcoming exams</div></div>
+  </div>
+  <div class="em-stat-card">
+    <div class="em-stat-icon" style="background:rgba(230,168,23,.1);color:#d97706"><i class="fas fa-circle-dot"></i></div>
+    <div><div class="em-stat-val">{{ ongoing_count }}</div><div class="em-stat-lbl">Ongoing</div><div class="em-stat-sub">In progress</div></div>
+  </div>
+  <div class="em-stat-card">
+    <div class="em-stat-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-circle-check"></i></div>
+    <div><div class="em-stat-val">{{ completed_count }}</div><div class="em-stat-lbl">Completed</div><div class="em-stat-sub">Finished exams</div></div>
+  </div>
+  <div class="em-stat-card">
+    <div class="em-stat-icon" style="background:rgba(239,68,68,.08);color:#ef4444"><i class="fas fa-book-open"></i></div>
+    <div><div class="em-stat-val">{{ exam_summary.total|default:published_count }}</div><div class="em-stat-lbl">Subjects Covered</div><div class="em-stat-sub">Across all exams</div></div>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div class="em-layout">
+  <div class="em-main">
+    <!-- Tabs -->
+    <div class="em-tabs">
+      <a class="em-tab active" onclick="switchEmTab('all', this)"><i class="fas fa-list"></i> All Exams</a>
+      <a class="em-tab" onclick="switchEmTab('upcoming', this)">Upcoming</a>
+      <a class="em-tab" onclick="switchEmTab('ongoing', this)">Ongoing</a>
+      <a class="em-tab" onclick="switchEmTab('completed', this)">Completed</a>
+      <a class="em-tab" onclick="switchEmTab('cancelled', this)">Cancelled</a>
+    </div>
+
+    <!-- Filters -->
+    <div class="em-filter-bar">
+      <select class="em-select" id="em-sem-filter" onchange="filterEmExams()">
+        <option value="">All Semesters</option>
+        {% for i in "12345678" %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
+      </select>
+      <button class="em-btn em-btn-outline" style="padding:8px 12px;font-size:12px"><i class="fas fa-sliders-h"></i> Filters</button>
+      <button class="em-btn em-btn-outline" style="padding:8px 12px;font-size:12px" onclick="document.getElementById('em-sem-filter').value='';filterEmExams()"><i class="fas fa-rotate"></i> Reset</button>
+    </div>
+
+    <!-- All Exams Pane -->
+    <div id="em-pane-all" class="em-pane active">
+      {% if exams %}
+      <div class="em-table-wrap">
+        <table class="em-table">
+          <thead>
+            <tr>
+              <th>Exam Name</th>
+              <th>Semester</th>
+              <th>Date Range</th>
+              <th>Created By</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="em-tbody">
+            {% for e in exams %}
+            <tr data-sem="{{ e.semester }}" data-status="{% now 'Y-m-d' as today %}{% if e.start_date|date:'Y-m-d' > today %}upcoming{% elif e.end_date|date:'Y-m-d' < today %}completed{% else %}ongoing{% endif %}">
+              <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div class="em-exam-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-file-pen"></i></div>
+                  <div>
+                    <div style="font-weight:600;color:var(--deep);font-size:13px">{{ e.name }}</div>
+                    <div style="font-size:11px;color:var(--muted)">Semester {{ e.semester }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--muted)">Sem {{ e.semester }}</td>
+              <td style="font-size:12px;color:var(--muted)">
+                <div style="display:flex;align-items:center;gap:5px"><i class="fas fa-calendar" style="color:var(--teal);font-size:10px"></i>{{ e.start_date|date:"d M" }} &ndash; {{ e.end_date|date:"d M Y" }}</div>
+              </td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.created_by.get_full_name|default:e.created_by.username }}</td>
+              <td>
+                {% now "Y-m-d" as today %}
+                {% if e.start_date|date:"Y-m-d" > today %}
+                  <span class="em-badge em-badge-upcoming">Upcoming</span>
+                {% elif e.end_date|date:"Y-m-d" < today %}
+                  <span class="em-badge em-badge-completed">Completed</span>
+                {% else %}
+                  <span class="em-badge em-badge-ongoing">Ongoing</span>
+                {% endif %}
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <a href="#" class="em-action-btn" title="View"><i class="fas fa-eye"></i></a>
+                  <a href="#" class="em-action-btn" title="Edit"><i class="fas fa-pen"></i></a>
+                  <button class="em-action-btn del" onclick="confirmDelete('{% url 'admin_exam_delete' e.pk %}','Delete {{ e.name|escapejs }}?')" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="em-footer">
+          <span id="em-count">Showing {{ exams|length }} exam{{ exams|length|pluralize }} on this page. Total records: {{ exam_summary.total|default:published_count }}</span>
+          {% if exams_page and exams_page.paginator.num_pages > 1 %}
+          <span style="display:flex;gap:8px;align-items:center">
+            {% if exams_page.has_previous %}
+            <a href="?page={{ exams_page.previous_page_number }}" class="em-btn em-btn-outline" style="padding:7px 12px;font-size:12px">Previous</a>
+            {% endif %}
+            {% if exams_page.has_next %}
+            <a href="?page={{ exams_page.next_page_number }}" class="em-btn em-btn-outline" style="padding:7px 12px;font-size:12px">Next</a>
+            {% endif %}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="em-table-wrap"><div class="em-empty"><i class="fas fa-file-pen"></i><p>No exams yet. <a href="{% url 'admin_exam_add' %}" style="color:var(--teal);font-weight:600">Create one</a>.</p></div></div>
+      {% endif %}
+    </div>
+
+    <!-- Upcoming Pane -->
+    <div id="em-pane-upcoming" class="em-pane">
+      <div class="em-table-wrap">
+        <table class="em-table">
+          <thead><tr><th>Exam Name</th><th>Semester</th><th>Date Range</th><th>Created By</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for e in exams %}{% now "Y-m-d" as today %}{% if e.start_date|date:"Y-m-d" > today %}
+            <tr>
+              <td><div style="font-weight:600;color:var(--deep)">{{ e.name }}</div><div style="font-size:11px;color:var(--muted)">Sem {{ e.semester }}</div></td>
+              <td style="font-size:12px;color:var(--muted)">Sem {{ e.semester }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.start_date|date:"d M" }} &ndash; {{ e.end_date|date:"d M Y" }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.created_by.get_full_name|default:e.created_by.username }}</td>
+              <td><span class="em-badge em-badge-upcoming">Upcoming</span></td>
+              <td><div style="display:flex;gap:6px"><a href="#" class="em-action-btn"><i class="fas fa-eye"></i></a><button class="em-action-btn del" onclick="confirmDelete('{% url 'admin_exam_delete' e.pk %}','Delete {{ e.name|escapejs }}?')"><i class="fas fa-trash"></i></button></div></td>
+            </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ongoing Pane -->
+    <div id="em-pane-ongoing" class="em-pane">
+      <div class="em-table-wrap">
+        <table class="em-table">
+          <thead><tr><th>Exam Name</th><th>Semester</th><th>Date Range</th><th>Created By</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for e in exams %}{% now "Y-m-d" as today %}{% if e.start_date|date:"Y-m-d" <= today and e.end_date|date:"Y-m-d" >= today %}
+            <tr>
+              <td><div style="font-weight:600;color:var(--deep)">{{ e.name }}</div><div style="font-size:11px;color:var(--muted)">Sem {{ e.semester }}</div></td>
+              <td style="font-size:12px;color:var(--muted)">Sem {{ e.semester }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.start_date|date:"d M" }} &ndash; {{ e.end_date|date:"d M Y" }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.created_by.get_full_name|default:e.created_by.username }}</td>
+              <td><span class="em-badge em-badge-ongoing">Ongoing</span></td>
+              <td><div style="display:flex;gap:6px"><a href="#" class="em-action-btn"><i class="fas fa-eye"></i></a><button class="em-action-btn del" onclick="confirmDelete('{% url 'admin_exam_delete' e.pk %}','Delete {{ e.name|escapejs }}?')"><i class="fas fa-trash"></i></button></div></td>
+            </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Completed Pane -->
+    <div id="em-pane-completed" class="em-pane">
+      <div class="em-table-wrap">
+        <table class="em-table">
+          <thead><tr><th>Exam Name</th><th>Semester</th><th>Date Range</th><th>Created By</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for e in exams %}{% now "Y-m-d" as today %}{% if e.end_date|date:"Y-m-d" < today %}
+            <tr>
+              <td><div style="font-weight:600;color:var(--deep)">{{ e.name }}</div><div style="font-size:11px;color:var(--muted)">Sem {{ e.semester }}</div></td>
+              <td style="font-size:12px;color:var(--muted)">Sem {{ e.semester }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.start_date|date:"d M" }} &ndash; {{ e.end_date|date:"d M Y" }}</td>
+              <td style="font-size:12px;color:var(--muted)">{{ e.created_by.get_full_name|default:e.created_by.username }}</td>
+              <td><span class="em-badge em-badge-completed">Completed</span></td>
+              <td><div style="display:flex;gap:6px"><a href="#" class="em-action-btn"><i class="fas fa-eye"></i></a><button class="em-action-btn del" onclick="confirmDelete('{% url 'admin_exam_delete' e.pk %}','Delete {{ e.name|escapejs }}?')"><i class="fas fa-trash"></i></button></div></td>
+            </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cancelled Pane -->
+    <div id="em-pane-cancelled" class="em-pane">
+      <div class="em-table-wrap"><div class="em-empty"><i class="fas fa-ban"></i><p>No cancelled exams.</p></div></div>
+    </div>
+  </div>
+
+  <!-- Right Sidebar -->
+  <div class="em-sidebar">
+    <!-- Quick Actions -->
+    <div class="em-sidebar-card">
+      <div class="em-sidebar-title"><i class="fas fa-bolt" style="color:var(--teal)"></i> Quick Actions</div>
+      <div class="em-qa-item" onclick="window.location='{% url 'admin_exam_add' %}'">
+        <div class="em-qa-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-plus"></i></div>
+        <div><div class="em-qa-label">Create New Exam</div><div class="em-qa-sub">Add a new exam</div></div>
+      </div>
+      <div class="em-qa-item">
+        <div class="em-qa-icon" style="background:rgba(37,99,235,.08);color:#2563eb"><i class="fas fa-calendar-days"></i></div>
+        <div><div class="em-qa-label">Generate Timetable</div><div class="em-qa-sub">Auto or manual scheduling</div></div>
+      </div>
+      <div class="em-qa-item">
+        <div class="em-qa-icon" style="background:rgba(230,168,23,.1);color:#d97706"><i class="fas fa-users"></i></div>
+        <div><div class="em-qa-label">Assign Invigilators</div><div class="em-qa-sub">Manage exam duty</div></div>
+      </div>
+      <div class="em-qa-item">
+        <div class="em-qa-icon" style="background:rgba(139,92,246,.1);color:#7c3aed"><i class="fas fa-upload"></i></div>
+        <div><div class="em-qa-label">Upload Question Paper</div><div class="em-qa-sub">Secure paper upload</div></div>
+      </div>
+      <div class="em-qa-item">
+        <div class="em-qa-icon" style="background:rgba(239,68,68,.08);color:#ef4444"><i class="fas fa-gear"></i></div>
+        <div><div class="em-qa-label">Exam Settings</div><div class="em-qa-sub">Configure exam rules</div></div>
+      </div>
+    </div>
+
+    <!-- Exam Overview -->
+    <div class="em-sidebar-card">
+      <div class="em-sidebar-title"><i class="fas fa-chart-bar" style="color:var(--teal)"></i> Exam Overview</div>
+      <div class="em-overview-row"><span><i class="fas fa-user-graduate"></i> Total Students</span><strong>{{ all_students_total|default:"—" }}</strong></div>
+      <div class="em-overview-row"><span><i class="fas fa-chalkboard-teacher"></i> Total Invigilators</span><strong>{{ all_faculty_total|default:"—" }}</strong></div>
+      <div class="em-overview-row"><span><i class="fas fa-door-open"></i> Total Rooms</span><strong>—</strong></div>
+      <div class="em-overview-row"><span><i class="fas fa-file-alt"></i> Question Papers</span><strong>{{ exam_summary.total|default:published_count }}</strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchEmTab(tab, el) {
+  document.querySelectorAll('.em-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.em-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('em-pane-' + tab).classList.add('active');
+  el.classList.add('active');
+}
+
+function filterEmExams() {
+  var sem = document.getElementById('em-sem-filter').value;
+  var rows = document.querySelectorAll('#em-tbody tr');
+  var visible = 0;
+  rows.forEach(function(row) {
+    var rowSem = row.getAttribute('data-sem') || '';
+    var show = !sem || rowSem === sem;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  var countEl = document.getElementById('em-count');
+  if (countEl) countEl.textContent = 'Showing ' + visible + ' exam' + (visible !== 1 ? 's' : '');
+}
+</script>
+
 {% include 'admin_panel/_confirm_modal.html' %}
 {% endblock %}

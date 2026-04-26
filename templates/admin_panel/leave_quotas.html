@@ -1,66 +1,208 @@
-{% extends 'dashboards/base_dashboard.html' %}
+{% extends 'admin_panel/base_admin_form.html' %}
 {% block title %}Leave & Substitution Quotas — EduTrack{% endblock %}
 {% block role_label %}Admin{% endblock %}
+{% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Leave & Substitution Quotas{% endblock %}
-{% block page_sub %}Set the maximum leave days and substitution limits for faculty{% endblock %}
+{% block page_sub %}Set the maximum leave days and substitution limits for faculty members.{% endblock %}
 
-{% block sidebar_links %}
-{% include 'admin_panel/_admin_sidebar.html' with active_section='faculty' %}
-{% endblock %}
+{% block sidebar_links %}{% include 'admin_panel/_admin_sidebar.html' with active_section='leave_quotas' %}{% endblock %}
 
-{% block content %}
-<div style="max-width:640px;margin:0 auto;padding:24px 16px">
+{% block form_content %}
+<style>
+  .lq-page-title{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;color:var(--deep);line-height:1.1;margin-bottom:4px}
+  .lq-page-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
 
-  {% if messages %}
-  {% for msg in messages %}
-  <div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534">
-    <i class="fas fa-check-circle"></i> {{ msg }}
+  /* Hero banner */
+  .lq-hero{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:22px 28px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;overflow:hidden;position:relative}
+  .lq-hero-text h3{font-size:15px;font-weight:700;color:var(--deep);margin:0 0 4px}
+  .lq-hero-text p{font-size:13px;color:var(--muted);margin:0}
+  .lq-hero-icon{width:44px;height:44px;border-radius:12px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;margin-right:14px}
+  .lq-hero-left{display:flex;align-items:center}
+  .lq-hero-art{font-size:64px;opacity:.18;position:absolute;right:24px;top:50%;transform:translateY(-50%);pointer-events:none;line-height:1}
+
+  /* Section headers */
+  .lq-section-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--teal);margin-bottom:14px}
+  .lq-section-head i{font-size:16px}
+
+  /* Leave cards grid */
+  .lq-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+  .lq-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;transition:border-color .15s}
+  .lq-card:hover{border-color:var(--teal)}
+  .lq-card-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .lq-card-icon.cl{background:#e0fdf4;color:#059669}
+  .lq-card-icon.ml{background:#ede9fe;color:#7c3aed}
+  .lq-card-icon.el{background:#fef9c3;color:#b45309}
+  .lq-card-icon.od{background:#dbeafe;color:#1d4ed8}
+  .lq-card-icon.sub{background:#fce7f3;color:#be185d}
+  .lq-card-label{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:2px}
+  .lq-card-val{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;color:var(--deep);line-height:1}
+  .lq-card-unit{font-size:11px;color:var(--muted);margin-top:2px}
+
+  /* Sub card (max substitutions — full width) */
+  .lq-sub-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:22px}
+
+  /* Substitution rules */
+  .lq-rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+  .lq-rule-card{background:#f8fafc;border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px}
+  .lq-rule-icon{width:34px;height:34px;border-radius:9px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px}
+  .lq-rule-title{font-size:13px;font-weight:700;color:var(--deep);margin-bottom:4px}
+  .lq-rule-body{font-size:12px;color:var(--muted);line-height:1.6}
+
+  /* Footer bar */
+  .lq-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:18px;border-top:1px solid var(--border)}
+  .lq-footer-meta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .lq-edit-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;background:var(--teal);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;transition:background .15s}
+  .lq-edit-btn:hover{background:var(--teal-dk,#0a5c60)}
+
+  /* Edit modal overlay */
+  .lq-modal-overlay{display:none;position:fixed;inset:0;background:rgba(7,30,38,.45);z-index:1000;align-items:center;justify-content:center}
+  .lq-modal-overlay.open{display:flex}
+  .lq-modal{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(7,30,38,.18);position:relative;max-height:90vh;overflow-y:auto}
+  .lq-modal-title{font-size:17px;font-weight:800;color:var(--deep);margin-bottom:4px}
+  .lq-modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+  .lq-modal-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .lq-modal-close:hover{border-color:var(--red);color:var(--red)}
+  .lq-field-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2,#f8fafc);border-radius:10px;gap:16px;margin-bottom:10px}
+  .lq-field-label{font-size:13px;font-weight:700;color:var(--deep)}
+  .lq-field-sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .lq-field-input{width:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:700;text-align:center;outline:none;font-family:'Outfit',sans-serif}
+  .lq-field-input:focus{border-color:var(--teal)}
+  .lq-modal-actions{display:flex;gap:10px;margin-top:20px}
+  .lq-save-btn{flex:1;padding:11px;border:none;border-radius:9px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+  .lq-save-btn:hover{background:var(--teal-dk,#0a5c60)}
+  .lq-cancel-btn{padding:11px 20px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+  .lq-cancel-btn:hover{border-color:var(--deep);color:var(--deep)}
+
+  @media(max-width:860px){.lq-cards{grid-template-columns:1fr 1fr}.lq-rules-grid{grid-template-columns:1fr}}
+  @media(max-width:520px){.lq-cards{grid-template-columns:1fr}}
+</style>
+
+{% if messages %}
+{% for msg in messages %}
+<div style="padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:600;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534">
+  <i class="fas fa-check-circle"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+{# Hero banner #}
+<div class="lq-hero">
+  <div class="lq-hero-left">
+    <div class="lq-hero-icon"><i class="fas fa-calendar-check"></i></div>
+    <div class="lq-hero-text">
+      <h3>Define faculty leave entitlements and substitution limits</h3>
+      <p>These settings apply across the institute and can be updated at any time.</p>
+    </div>
+  </div>
+  <div class="lq-hero-art">📅</div>
+</div>
+
+{# Leave Limits section #}
+<div class="lq-section-head">
+  <i class="fas fa-calendar-minus"></i>
+  Leave Limits (Per Year)
+</div>
+
+<div class="lq-cards">
+  {% for field_name, label, val in leave_fields %}
+  <div class="lq-card">
+    <div class="lq-card-icon {% if forloop.counter == 1 %}cl{% elif forloop.counter == 2 %}ml{% elif forloop.counter == 3 %}el{% else %}od{% endif %}">
+      {% if forloop.counter == 1 %}<i class="fas fa-umbrella-beach"></i>
+      {% elif forloop.counter == 2 %}<i class="fas fa-briefcase-medical"></i>
+      {% elif forloop.counter == 3 %}<i class="fas fa-suitcase-rolling"></i>
+      {% else %}<i class="fas fa-user-tie"></i>{% endif %}
+    </div>
+    <div>
+      <div class="lq-card-label">{{ label }}</div>
+      <div class="lq-card-val">{{ val }}</div>
+      <div class="lq-card-unit">days > year</div>
+    </div>
   </div>
   {% endfor %}
-  {% endif %}
+</div>
 
-  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
-    <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:4px"><i class="fas fa-calendar-minus" style="color:var(--teal)"></i> Leave Quotas</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Maximum leave days per faculty member per academic year.</div>
-
-    <form method="POST">
-      {% csrf_token %}
-      <div style="display:grid;gap:14px;margin-bottom:24px">
-        {% for field_name, label, val in leave_fields %}
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:10px;gap:16px">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ label }}</div>
-            <div style="font-size:11px;color:var(--muted)">days per year</div>
-          </div>
-          <input type="number" name="{{ field_name }}" value="{{ val }}" min="0" max="365"
-                 style="width:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;text-align:center;outline:none">
-        </div>
-        {% endfor %}
-      </div>
-
-      <div style="font-size:16px;font-weight:800;color:var(--deep);margin-bottom:4px"><i class="fas fa-people-arrows" style="color:var(--teal)"></i> Substitution Quota</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Maximum substitution requests per faculty per semester.</div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:10px;gap:16px;margin-bottom:24px">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">Max Substitutions</div>
-          <div style="font-size:11px;color:var(--muted)">per faculty per semester</div>
-        </div>
-        <input type="number" name="max_substitutions" value="{{ cfg.max_substitutions }}" min="0" max="100"
-               style="width:80px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;text-align:center;outline:none">
-      </div>
-
-      <button type="submit" style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;cursor:pointer">
-        <i class="fas fa-save"></i> Save Quotas
-      </button>
-    </form>
-  </div>
-
-  <div style="margin-top:14px;background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.15);border-radius:10px;padding:14px;font-size:12px;color:var(--muted);line-height:1.7">
-    <strong style="color:var(--teal)">How it works:</strong>
-    Faculty see their remaining leave balance on the Leave &amp; Requests section of their dashboard.
-    When a faculty member applies for leave, the system checks against these limits.
-    Substitution quota resets each semester.
+<div class="lq-sub-card">
+  <div class="lq-card-icon sub"><i class="fas fa-people-arrows"></i></div>
+  <div>
+    <div class="lq-card-label">Max Substitutions</div>
+    <div class="lq-card-val">{{ cfg.max_substitutions }}</div>
+    <div class="lq-card-unit">per semester</div>
   </div>
 </div>
+
+{# Substitution Rules section #}
+<div class="lq-section-head">
+  <i class="fas fa-shield-halved"></i>
+  Substitution Rules
+</div>
+
+<div class="lq-rules-grid">
+  <div class="lq-rule-card">
+    <div class="lq-rule-icon"><i class="fas fa-circle-info"></i></div>
+    <div>
+      <div class="lq-rule-title">What are substitutions?</div>
+      <div class="lq-rule-body">Substitutions allow faculty to be covered by another faculty member during approved leaves or on-duty assignments.</div>
+    </div>
+  </div>
+  <div class="lq-rule-card">
+    <div class="lq-rule-icon"><i class="fas fa-people-group"></i></div>
+    <div>
+      <div class="lq-rule-title">How it works</div>
+      <div class="lq-rule-body">Each faculty member is allowed a maximum of {{ cfg.max_substitutions }} substitutions per semester. Exceeding this limit requires admin approval.</div>
+    </div>
+  </div>
+</div>
+
+{# Footer #}
+<div class="lq-footer">
+  <div class="lq-footer-meta">
+    <i class="fas fa-clock"></i>
+    Last updated by {{ last_updated_by|default:"Admin" }}
+    &nbsp;&middot;&nbsp;
+    {{ cfg.updated_at|date:"d M Y" }}
+    &nbsp;&middot;&nbsp;
+    {{ cfg.updated_at|date:"h:i A" }}
+  </div>
+  <button type="button" class="lq-edit-btn" onclick="openLQModal()">
+    <i class="fas fa-pen"></i> Edit Quotas
+  </button>
+</div>
+
+{# Edit Modal #}
+<div class="lq-modal-overlay" id="lq-modal-overlay">
+  <div class="lq-modal">
+    <button class="lq-modal-close" onclick="closeLQModal()" type="button"><i class="fas fa-times"></i></button>
+    <div class="lq-modal-title">Edit Leave &amp; Substitution Quotas</div>
+    <div class="lq-modal-sub">Update the maximum leave days and substitution limits for faculty.</div>
+    <form method="POST">
+      {% csrf_token %}
+      {% for field_name, label, val in leave_fields %}
+      <div class="lq-field-row">
+        <div>
+          <div class="lq-field-label">{{ label }}</div>
+          <div class="lq-field-sub">days per year</div>
+        </div>
+        <input type="number" name="{{ field_name }}" value="{{ val }}" min="0" max="365" class="lq-field-input">
+      </div>
+      {% endfor %}
+      <div class="lq-field-row">
+        <div>
+          <div class="lq-field-label">Max Substitutions</div>
+          <div class="lq-field-sub">per faculty per semester</div>
+        </div>
+        <input type="number" name="max_substitutions" value="{{ cfg.max_substitutions }}" min="0" max="100" class="lq-field-input">
+      </div>
+      <div class="lq-modal-actions">
+        <button type="submit" class="lq-save-btn"><i class="fas fa-save"></i> Save Quotas</button>
+        <button type="button" class="lq-cancel-btn" onclick="closeLQModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openLQModal(){ document.getElementById('lq-modal-overlay').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeLQModal(){ document.getElementById('lq-modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
+document.getElementById('lq-modal-overlay').addEventListener('click', function(e){ if(e.target===this) closeLQModal(); });
+</script>
 {% endblock %}

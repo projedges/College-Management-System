@@ -1,12 +1,113 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Elective Pools & Course Registration{% endblock %}
-{% block breadcrumb %} / Course Registration{% endblock %}
+{% block nav_electives %}on{% endblock %}
+{% block breadcrumb %} > Course Registration{% endblock %}
 {% block page_title %}Course Registration{% endblock %}
 {% block page_sub %}Manage elective pools and control the student course registration window.{% endblock %}
 {% block page_action %}
-  <a href="{% url 'admin_elective_pool_add' %}" class="btn-add"><i class="fas fa-plus"></i> Create Elective Pool</a>
+  <button type="button" class="btn-add" onclick="poolOpenAdd()"><i class="fas fa-plus"></i> Create Elective Pool</button>
 {% endblock %}
 {% block content %}
+
+<style>
+  .pool-panel{display:none;background:#fff;border:1.5px solid var(--teal);border-radius:14px;padding:24px;margin-bottom:20px;animation:poolSlideIn .2s ease}
+  .pool-panel.open{display:block}
+  @keyframes poolSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .pool-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .pool-panel-title{font-size:15px;font-weight:800;color:var(--deep);display:flex;align-items:center;gap:8px}
+  .pool-panel-title i{color:var(--teal)}
+  .pool-close{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s}
+  .pool-close:hover{border-color:var(--red);color:var(--red)}
+  .pool-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+  .pool-group{margin-bottom:12px}
+  .pool-group label{display:block;font-size:12px;font-weight:600;color:var(--deep);margin-bottom:5px}
+  .pool-group .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  .pool-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box}
+  .pool-input:focus{border-color:var(--teal)}
+  .pool-actions{display:flex;gap:10px;margin-top:18px}
+  .pool-btn-save{padding:9px 22px;border:none;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+  .pool-btn-save:hover{background:var(--teal-dk,#0a5c60)}
+  .pool-btn-cancel{padding:9px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+  .pool-btn-cancel:hover{border-color:var(--deep);color:var(--deep)}
+  .pool-error{padding:9px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;margin-bottom:12px;display:none}
+  .pool-error.show{display:block}
+</style>
+
+{# ── Inline Add Panel ── #}
+<div class="pool-panel" id="pool-panel">
+  <div class="pool-panel-head">
+    <div class="pool-panel-title"><i class="fas fa-list-check"></i> Create Elective Pool</div>
+    <button class="pool-close" onclick="poolClose()" type="button"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="pool-error" id="pool-error"></div>
+  <form id="pool-form">
+    {% csrf_token %}
+    <div class="pool-row">
+      <div class="pool-group">
+        <label>Regulation *</label>
+        <select name="regulation" class="pool-input" required>
+          <option value="">Select regulation...</option>
+          {% for r in regulations %}<option value="{{ r.pk }}">{{ r.code }} — {{ r.name }}</option>{% endfor %}
+        </select>
+        <div class="hint">Which regulation scheme?</div>
+      </div>
+      <div class="pool-group">
+        <label>Department *</label>
+        <select name="department" class="pool-input" required>
+          <option value="">Select department...</option>
+          {% for d in departments %}<option value="{{ d.pk }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}
+        </select>
+        <div class="hint">Which department?</div>
+      </div>
+    </div>
+    <div class="pool-row">
+      <div class="pool-group">
+        <label>Semester *</label>
+        <select name="semester" class="pool-input" required>
+          {% for i in "12345678" %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
+        </select>
+        <div class="hint">Which semester?</div>
+      </div>
+      <div class="pool-group">
+        <label>Slot Name *</label>
+        <input type="text" name="slot_name" class="pool-input" placeholder="e.g. PE-1, Open Elective" required>
+        <div class="hint">e.g. PE-1, OE-Advanced</div>
+      </div>
+    </div>
+    <div class="pool-row">
+      <div class="pool-group">
+        <label>Elective Type</label>
+        <select name="elective_type" class="pool-input">
+          <option value="PE">Program Elective (PE)</option>
+          <option value="OE">Open Elective (OE)</option>
+        </select>
+        <div class="hint">PE or OE?</div>
+      </div>
+      <div class="pool-group">
+        <label>Quota per Subject</label>
+        <input type="number" name="quota_per_subject" class="pool-input" value="60" min="1">
+        <div class="hint">Max students per subject</div>
+      </div>
+    </div>
+    <div class="pool-group">
+      <label>Selection Deadline</label>
+      <input type="datetime-local" name="deadline" class="pool-input">
+      <div class="hint">Leave blank for no deadline</div>
+    </div>
+    <div class="pool-group">
+      <label>Subjects in Pool *</label>
+      <select name="subjects" class="pool-input" multiple style="height:100px" required>
+        <option disabled>Select department first...</option>
+      </select>
+      <div class="hint">Hold Ctrl/Cmd to select multiple. Students choose one.</div>
+    </div>
+
+    <div class="pool-actions">
+      <button type="submit" class="pool-btn-save" id="pool-submit-btn">Create Pool</button>
+      <button type="button" class="pool-btn-cancel" onclick="poolClose()">Cancel</button>
+    </div>
+  </form>
+</div>
 
 <!-- Course Registration Window Control -->
 <div class="ap-card" style="margin-bottom:20px;border:2px solid {% if feature_cfg.course_registration_open %}#10b981{% else %}var(--border){% endif %}">
@@ -63,7 +164,7 @@
 <div class="ap-card">
   <table class="ap-table">
     <thead>
-      <tr><th>Dept / Sem</th><th>Slot</th><th>Regulation</th><th>Subjects</th><th>Quota</th><th>Deadline</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>Dept > Sem</th><th>Slot</th><th>Regulation</th><th>Subjects</th><th>Quota</th><th>Deadline</th><th>Status</th><th>Actions</th></tr>
     </thead>
     <tbody>
       {% for pool in pools %}
@@ -104,6 +205,80 @@
   </table>
 </div>
 {% else %}
-<div class="empty-state"><i class="fas fa-layer-group"></i><p>No elective pools yet. <a href="{% url 'admin_elective_pool_add' %}" style="color:var(--teal)">Create one</a>.</p></div>
+<div class="empty-state"><i class="fas fa-layer-group"></i><p>No elective pools yet. <button type="button" onclick="poolOpenAdd()" style="background:none;border:none;color:var(--teal);cursor:pointer;font-size:inherit;padding:0">Create one</button>.</p></div>
 {% endif %}
+
+<script>
+(function(){
+  var panel = document.getElementById('pool-panel');
+  var form  = document.getElementById('pool-form');
+  var errBox = document.getElementById('pool-error');
+  var submitBtn = document.getElementById('pool-submit-btn');
+  var deptSelect = form.querySelector('[name=department]');
+  var subjSelect = form.querySelector('[name=subjects]');
+
+  function getCsrf(){
+    return form.querySelector('[name=csrfmiddlewaretoken]').value;
+  }
+
+  window.poolOpenAdd = function(){
+    submitBtn.textContent = 'Create Pool';
+    form.reset();
+    errBox.classList.remove('show');
+    panel.classList.add('open');
+    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+
+  window.poolClose = function(){
+    panel.classList.remove('open');
+  };
+
+  // Load subjects when department changes
+  deptSelect.addEventListener('change', function(){
+    var deptId = this.value;
+    subjSelect.innerHTML = '<option disabled>Loading...</option>';
+    if(!deptId){
+      subjSelect.innerHTML = '<option disabled>Select department first...</option>';
+      return;
+    }
+    fetch('/api/subjects/?department=' + deptId, {
+      headers:{'X-Requested-With':'XMLHttpRequest'}
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if(data.subjects && data.subjects.length){
+        subjSelect.innerHTML = '';
+        data.subjects.forEach(function(s){
+          var opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.code + ' — ' + s.name;
+          subjSelect.appendChild(opt);
+        });
+      } else {
+        subjSelect.innerHTML = '<option disabled>No subjects found</option>';
+      }
+    }).catch(function(){
+      subjSelect.innerHTML = '<option disabled>Error loading subjects</option>';
+    });
+  });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    errBox.classList.remove('show');
+
+    var fd = new FormData(form);
+    fetch('/dashboard/admin/electives/add/', {
+      method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:fd
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if(data.ok){
+        window.location.reload();
+      } else {
+        errBox.textContent = data.error || 'Something went wrong.';
+        errBox.classList.add('show');
+      }
+    }).catch(function(){
+      errBox.textContent = 'Network error. Please try again.';
+      errBox.classList.add('show');
+    });
+  });
+})();
+</script>
 {% endblock %}

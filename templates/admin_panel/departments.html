@@ -1,43 +1,132 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Departments &mdash; Admin{% endblock %}
 {% block nav_dept %}on{% endblock %}
-{% block breadcrumb %} / Departments{% endblock %}
+{% block breadcrumb %} &rsaquo; Departments{% endblock %}
 {% block page_title %}Departments{% endblock %}
-{% block page_sub %}Manage all departments in the college{% endblock %}
+{% block page_sub %}Manage and organize all departments in your college.{% endblock %}
 {% block page_action %}
   <a href="{% url 'admin_department_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Department</a>
 {% endblock %}
 
 {% block content %}
+
+<!-- Stat cards -->
+<div class="stat-row" style="margin-bottom:22px">
+  <div class="stat-mini">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-building"></i></div>
+      <div><div class="n">{{ departments|length }}</div><div class="l">Total Departments</div></div>
+    </div>
+  </div>
+  <div class="stat-mini">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-user-graduate"></i></div>
+      <div><div class="n">{{ total_students|default:"0" }}</div><div class="l">Total Students</div></div>
+    </div>
+  </div>
+  <div class="stat-mini">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(230,168,23,.1);color:#b88510;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div><div class="n">{{ total_faculty|default:"0" }}</div><div class="l">Total Faculty</div></div>
+    </div>
+  </div>
+  <div class="stat-mini">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,.08);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-book"></i></div>
+      <div><div class="n">{{ total_subjects|default:"0" }}</div><div class="l">Total Subjects</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Search bar -->
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1.5px solid var(--border);border-radius:10px;background:#fff;flex:1;max-width:360px">
+    <i class="fas fa-search" style="color:var(--muted);font-size:13px;flex-shrink:0"></i>
+    <input type="text" id="dept-search" placeholder="Search departments..." style="border:none;outline:none;font-size:13px;width:100%;background:transparent;color:var(--deep)" oninput="filterDepts()">
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-size:13px;color:var(--muted)">
+    <i class="fas fa-filter" style="font-size:12px"></i> Filter
+  </div>
+</div>
+
 {% if departments %}
-<div class="ap-card">
+<div class="ap-card" style="padding:0;overflow:hidden">
   <table class="ap-table">
     <thead>
-      <tr><th>Name</th><th>Code</th><th>Est. Year</th><th>Students</th><th>Faculty</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      {% for d in departments %}
       <tr>
-        <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
-        <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal)">{{ d.code }}</span></td>
-        <td style="color:var(--muted)">{{ d.established_year|default:"&mdash;" }}</td>
-        <td style="text-align:center;font-weight:600">{{ d.student_count }}</td>
-        <td style="text-align:center;font-weight:600">{{ d.faculty_count }}</td>
+        <th style="padding-left:20px">Department Name <i class="fas fa-sort" style="font-size:10px;opacity:.4"></i></th>
+        <th>Code <i class="fas fa-sort" style="font-size:10px;opacity:.4"></i></th>
+        <th>Students <i class="fas fa-sort" style="font-size:10px;opacity:.4"></i></th>
+        <th>Faculty <i class="fas fa-sort" style="font-size:10px;opacity:.4"></i></th>
+        <th>Subjects <i class="fas fa-sort" style="font-size:10px;opacity:.4"></i></th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="dept-tbody">
+      {% for d in departments %}
+      <tr class="dept-row">
+        <td style="padding-left:20px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-building"></i></div>
+            <div>
+              <div style="font-weight:700;color:var(--deep)">{{ d.name }}</div>
+              {% if d.established_year %}<div style="font-size:11px;color:var(--muted)">Est. {{ d.established_year }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal);padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700">{{ d.code }}</span></td>
         <td>
-          <div style="display:flex;gap:6px">
-            <a href="{% url 'admin_department_edit' d.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
-            <button class="btn-del" onclick="confirmDelete('{% url 'admin_department_delete' d.pk %}','Delete department &quot;{{ d.name }}&quot;?')">
-              <i class="fas fa-trash"></i> Delete
-            </button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;color:var(--deep)">{{ d.student_count }}</span>
+            <i class="fas fa-user-graduate" style="font-size:11px;color:var(--muted)"></i>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;color:var(--deep)">{{ d.faculty_count }}</span>
+            <i class="fas fa-chalkboard-teacher" style="font-size:11px;color:var(--muted)"></i>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;color:var(--deep)">{{ d.subject_count|default:"0" }}</span>
+            <i class="fas fa-book" style="font-size:11px;color:var(--muted)"></i>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex;gap:6px;align-items:center">
+            <a href="{% url 'admin_department_edit' d.pk %}" class="btn-edit" style="padding:5px 10px"><i class="fas fa-pencil"></i></a>
+            <button class="btn-del" style="padding:5px 10px" onclick="confirmDelete('{% url 'admin_department_delete' d.pk %}','Delete department &quot;{{ d.name }}&quot;?')"><i class="fas fa-trash"></i></button>
           </div>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  <div style="padding:12px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span>Showing <span id="dept-visible">{{ departments|length }}</span> of {{ departments|length }} departments</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <select style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;outline:none;background:#fff">
+        <option>10 per page</option><option>25 per page</option><option>50 per page</option>
+      </select>
+      <button style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;color:var(--muted)"><i class="fas fa-chevron-left"></i></button>
+      <span style="width:28px;height:28px;border-radius:7px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">1</span>
+      <button style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;color:var(--muted)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+  </div>
 </div>
 {% else %}
 <div class="empty-state"><i class="fas fa-building"></i><p>No departments yet. <a href="{% url 'admin_department_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
 {% endif %}
+
+<script>
+function filterDepts(){
+  var q = document.getElementById('dept-search').value.toLowerCase();
+  var rows = document.querySelectorAll('.dept-row');
+  var v = 0;
+  rows.forEach(function(r){ var s = !q || r.textContent.toLowerCase().includes(q); r.style.display = s ? '' : 'none'; if(s) v++; });
+  var el = document.getElementById('dept-visible'); if(el) el.textContent = v;
+}
+</script>
 {% include 'admin_panel/_confirm_modal.html' %}
 {% endblock %}

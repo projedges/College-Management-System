@@ -1,8 +1,11 @@
 import os
+import tempfile
 from datetime import time
+from io import StringIO
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -12,6 +15,7 @@ from .models import (
     Attendance,
     AttendanceSession,
     Address,
+    AuditLog,
     College,
     Classroom,
     EmergencyContact,
@@ -33,6 +37,7 @@ from .models import (
     Subject,
     Timetable,
     SupplyExamRegistration,
+    SystemReport,
     UserRole,
 )
 
@@ -342,6 +347,153 @@ class AdminViewsRegressionTests(TestCase):
         self.assertEqual(response.context["student_year_filter"], "2024")
         self.assertEqual(response.context["student_dept_filter"], str(self.cse.pk))
         self.assertEqual(response.context["student_sem_filter"], "3")
+
+    def test_admin_dashboard_limits_student_preview_to_100_records(self):
+        for index in range(105):
+            user = User.objects.create_user(
+                username=f"dashstu{index}",
+                password="pass12345",
+                first_name=f"Student{index}",
+            )
+            Student.objects.create(
+                user=user,
+                roll_number=f"2024-ALPHA-CSE-{index:03d}",
+                department=self.cse,
+                admission_year=2024,
+                current_semester=1,
+            )
+
+        response = self.client.get(reverse("admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["all_students_total"], 105)
+        self.assertEqual(response.context["all_students_filtered_total"], 105)
+        self.assertEqual(len(response.context["all_students_full"]), 100)
+
+    def test_admin_students_page_renders_real_filtered_listing(self):
+        target_user = User.objects.create_user(
+            username="students-page-target",
+            password="pass12345",
+            first_name="Target",
+            last_name="Student",
+            email="target@student.edu",
+        )
+        Student.objects.create(
+            user=target_user,
+            roll_number="2024-ALPHA-CSE-501",
+            department=self.cse,
+            admission_year=2024,
+            current_semester=5,
+        )
+        other_user = User.objects.create_user(
+            username="students-page-other",
+            password="pass12345",
+            first_name="Other",
+        )
+        Student.objects.create(
+            user=other_user,
+            roll_number="2023-ALPHA-ECE-101",
+            department=self.ece,
+            admission_year=2023,
+            current_semester=1,
+        )
+
+        response = self.client.get(
+            reverse("admin_students"),
+            {"year": "2024", "dept": str(self.cse.pk), "sem": "5", "q": "target"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_panel/students.html")
+        students = list(response.context["students"])
+        self.assertEqual(len(students), 1)
+        self.assertEqual(students[0].roll_number, "2024-ALPHA-CSE-501")
+
+    def test_admin_registration_requests_page_uses_unified_onboarding_template(self):
+        request_record = RegistrationRequest.objects.create(
+            college=self.college,
+            desired_department=self.cse,
+            first_name="Priya",
+            last_name="Applicant",
+            email="priya@applicant.edu",
+            phone_number="9876543210",
+            admission_year=2024,
+            current_semester=1,
+            status="SUBMITTED",
+        )
+        invite = RegistrationInvite.objects.create(
+            college=self.college,
+            department=self.cse,
+            invited_email="invitee@example.com",
+            created_by=self.admin_user,
+        )
+
+        response = self.client.get(reverse("admin_registration_requests"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_panel/student_invites.html")
+        self.assertContains(response, request_record.email)
+        self.assertContains(response, invite.invited_email)
+
+    def test_admin_registration_invites_post_redirects_to_unified_page(self):
+        response = self.client.post(
+            reverse("admin_registration_invites"),
+            {
+                "invited_email": "newinvite@example.com",
+                "department": str(self.cse.pk),
+                "admission_year": "2024",
+                "current_semester": "1",
+            },
+            follow=False,
+        )
+
+        self.assertRedirects(response, f"{reverse('admin_registration_requests')}?tab=invites")
+        invite = RegistrationInvite.objects.get(invited_email="newinvite@example.com")
+        self.assertEqual(invite.department, self.cse)
+
+    def test_admin_faculty_page_renders_filtered_faculty_and_hods(self):
+        faculty_user = User.objects.create_user(
+            username="faculty-page",
+            password="pass12345",
+            first_name="Meena",
+            last_name="Faculty",
+            email="meena@college.edu",
+        )
+        Faculty.objects.create(
+            user=faculty_user,
+            employee_id="FAC-777",
+            department=self.cse,
+            designation="Assistant Professor",
+            qualification="M.Tech",
+            experience_years=4,
+            phone_number="9999999999",
+        )
+        hod_user = User.objects.create_user(
+            username="hod-page",
+            password="pass12345",
+            first_name="Ravi",
+            last_name="Hod",
+            email="ravi@college.edu",
+        )
+        HOD.objects.create(
+            user=hod_user,
+            employee_id="HOD-777",
+            department=self.cse,
+            qualification="PhD",
+            experience_years=10,
+            phone_number="8888888888",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("admin_faculty_list"), {"dept": str(self.cse.pk), "search": "Meena"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_panel/faculty.html")
+        faculty = list(response.context["faculty"])
+        hods = list(response.context["hods"])
+        self.assertEqual(len(faculty), 1)
+        self.assertEqual(faculty[0].employee_id, "FAC-777")
+        self.assertEqual(len(hods), 0)
 
     def test_admin_students_export_csv_respects_year_filter(self):
         export_user = User.objects.create_user(username="csv2024", password="pass12345", first_name="Csv")
@@ -823,6 +975,96 @@ class AdminViewsRegressionTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(User.objects.filter(username="new-import").exists())
+
+    def test_admin_fee_edit_rejects_paid_amount_greater_than_total(self):
+        student_user = User.objects.create_user(username="fee-student", password="pass12345")
+        student = Student.objects.create(
+            user=student_user,
+            roll_number="2024-ALPHA-CSE-060",
+            department=self.cse,
+            admission_year=2024,
+            current_semester=3,
+        )
+        fee = Fee.objects.create(
+            student=student,
+            semester=3,
+            total_amount=40000,
+            paid_amount=5000,
+            academic_year="2024-25",
+            status="PARTIAL",
+        )
+
+        response = self.client.post(
+            reverse("admin_fee_edit", args=[fee.pk]),
+            {
+                "total_amount": "30000",
+                "paid_amount": "35000",
+                "semester": "3",
+                "academic_year": "2024-25",
+                "comp_TUITION": "30000",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        fee.refresh_from_db()
+        self.assertEqual(fee.total_amount, 40000)
+        self.assertEqual(fee.paid_amount, 5000)
+        self.assertContains(response, "Paid amount cannot exceed total amount.")
+
+    def test_admin_exam_add_rejects_invalid_date_range(self):
+        response = self.client.post(
+            reverse("admin_exam_add"),
+            {
+                "name": "Mid Semester Test",
+                "semester": "4",
+                "start_date": "2026-05-20",
+                "end_date": "2026-05-10",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Exam.objects.filter(name="Mid Semester Test", semester=4).exists())
+        self.assertContains(response, "End date cannot be earlier than start date.")
+
+    def test_admin_exam_delete_and_report_export_create_audit_trail(self):
+        exam = Exam.objects.create(
+            college=self.college,
+            name="Semester End Exam",
+            semester=6,
+            start_date="2026-05-01",
+            end_date="2026-05-10",
+            created_by=self.admin_user,
+        )
+
+        delete_response = self.client.post(reverse("admin_exam_delete", args=[exam.pk]), follow=False)
+        report_response = self.client.get(reverse("admin_report_pdf", args=["attendance"]))
+
+        self.assertEqual(delete_response.status_code, 302)
+        self.assertEqual(report_response.status_code, 200)
+        self.assertTrue(AuditLog.objects.filter(description__icontains="Exam deleted").exists())
+        self.assertTrue(AuditLog.objects.filter(description__icontains="Report exported: attendance").exists())
+        self.assertTrue(SystemReport.objects.filter(report_type="ATTENDANCE", generated_by=self.admin_user).exists())
+
+    def test_system_health_endpoint_reports_database_state(self):
+        response = self.client.get(reverse("system_health"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn(payload["status"], {"ok", "degraded"})
+        self.assertEqual(payload["database"], "ok")
+        self.assertIn("pending_migrations", payload)
+
+    def test_backup_db_command_writes_data_and_migration_snapshot(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = StringIO()
+            call_command("backup_db", "--output-dir", temp_dir, stdout=output)
+            created_files = os.listdir(temp_dir)
+
+        self.assertTrue(any(name.startswith("studentms-backup-") and name.endswith(".json") for name in created_files))
+        self.assertTrue(any(name.startswith("studentms-migrations-") and name.endswith(".txt") for name in created_files))
+        self.assertIn("Data backup written to", output.getvalue())
 
 
 class LoginAndPaymentSafetyTests(TestCase):

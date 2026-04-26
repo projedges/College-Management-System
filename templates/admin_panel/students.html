@@ -1,7 +1,7 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Students &mdash; Admin{% endblock %}
 {% block nav_students %}on{% endblock %}
-{% block breadcrumb %} / Students{% endblock %}
+{% block breadcrumb %} > Students{% endblock %}
 {% block page_title %}Students{% endblock %}
 {% block page_sub %}All enrolled students across departments{% endblock %}
 {% block page_action %}
@@ -14,6 +14,7 @@
 {% block content %}
 <div class="filter-bar">
   <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap">
+    <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search by roll number, student, email, or department" class="filter-select" style="min-width:260px"/>
     <select name="year" class="filter-select" onchange="this.form.submit()">
       <option value="">All Years</option>
       {% for year in year_options %}
@@ -32,11 +33,15 @@
       <option value="{{ i }}" {% if sem_filter == i %}selected{% endif %}>Sem {{ i }}</option>
       {% endfor %}
     </select>
-    {% if year_filter or dept_filter or sem_filter %}
+    <button type="submit" class="btn-add" style="padding:8px 14px"><i class="fas fa-search"></i> Search</button>
+    {% if year_filter or dept_filter or sem_filter or search_query %}
     <a href="{% url 'admin_students' %}" style="padding:8px 14px;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:13px;text-decoration:none;border:1.5px solid var(--border)">Clear</a>
     {% endif %}
   </form>
-  <span style="font-size:13px;color:var(--muted);margin-left:auto">{{ students|length }} student{{ students|length|pluralize }}</span>
+  <span style="font-size:13px;color:var(--muted);margin-left:auto">
+    {% if student_summary %}{{ student_summary.total }}{% else %}{{ students|length }}{% endif %}
+    student{% if student_summary %}{{ student_summary.total|pluralize }}{% else %}{{ students|length|pluralize }}{% endif %}
+  </span>
 </div>
 
 {% if students %}
@@ -63,6 +68,7 @@
         </td>
         <td>
           <div style="display:flex;gap:6px">
+            <button type="button" class="btn-edit" onclick="openStudentProfile({{ s.pk }}, '{{ s.user.get_full_name|default:s.user.username|escapejs }}', '{{ s.roll_number|escapejs }}')"><i class="fas fa-eye"></i> View</button>
             <a href="{% url 'admin_student_edit' s.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
             <button class="btn-del" onclick="confirmDelete('{% url 'admin_student_delete' s.pk %}','Delete student {{ s.roll_number }}? This cannot be undone.')">
               <i class="fas fa-trash"></i>
@@ -74,8 +80,192 @@
     </tbody>
   </table>
 </div>
+{% if students_page and students_page.paginator.num_pages > 1 %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px">
+  <div style="font-size:13px;color:var(--muted)">
+    Showing page {{ students_page.number }} of {{ students_page.paginator.num_pages }}.
+    Total records: {{ student_summary.total }}.
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    {% if students_page.has_previous %}
+    <a href="?page={{ students_page.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if year_filter %}&year={{ year_filter|urlencode }}{% endif %}{% if dept_filter %}&dept={{ dept_filter|urlencode }}{% endif %}{% if sem_filter %}&sem={{ sem_filter|urlencode }}{% endif %}" class="btn-edit">Previous</a>
+    {% endif %}
+    {% if students_page.has_next %}
+    <a href="?page={{ students_page.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if year_filter %}&year={{ year_filter|urlencode }}{% endif %}{% if dept_filter %}&dept={{ dept_filter|urlencode }}{% endif %}{% if sem_filter %}&sem={{ sem_filter|urlencode }}{% endif %}" class="btn-edit">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 {% else %}
 <div class="empty-state"><i class="fas fa-user-graduate"></i><p>No students found. <a href="{% url 'admin_student_add' %}" style="color:var(--teal)">Add one</a>.</p></div>
 {% endif %}
 {% include 'admin_panel/_confirm_modal.html' %}
+
+<style>
+  .stu-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999}
+  .stu-modal-overlay.open{display:flex}
+  .stu-modal{background:#fff;border-radius:14px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:stuModalSlideIn .3s ease}
+  @keyframes stuModalSlideIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+  .stu-modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1.5px solid var(--border);position:sticky;top:0;background:#fff}
+  .stu-modal-title{font-size:16px;font-weight:800;color:var(--deep);display:flex;align-items:center;gap:10px}
+  .stu-modal-close{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+  .stu-modal-close:hover{border-color:var(--red);color:var(--red)}
+  .stu-modal-body{padding:20px}
+  .stu-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .stu-info-item{background:var(--surface2);border-radius:10px;padding:12px;border:1.5px solid var(--border)}
+  .stu-info-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .stu-info-val{font-size:13px;color:var(--deep);font-weight:600}
+  .stu-edit-input{width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box}
+  .stu-edit-input:focus{border-color:var(--teal)}
+  .stu-modal-actions{display:flex;gap:10px;padding:20px;border-top:1.5px solid var(--border);background:var(--surface2)}
+  .stu-btn-edit{padding:9px 18px;border:none;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;flex:1}
+  .stu-btn-edit:hover{background:var(--teal-dk,#0a5c60)}
+  .stu-btn-save{padding:9px 18px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;flex:1}
+  .stu-btn-save:hover{background:#059669}
+  .stu-btn-cancel{padding:9px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;flex:1}
+  .stu-btn-cancel:hover{border-color:var(--deep);color:var(--deep)}
+  .stu-btn-close{padding:9px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;flex:1}
+  .stu-btn-close:hover{border-color:var(--deep);color:var(--deep)}
+  .stu-loading{text-align:center;padding:40px 20px;color:var(--muted)}
+  .stu-error{background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:14px;color:#dc2626;font-size:13px;margin-bottom:16px}
+</style>
+
+<div class="stu-modal-overlay" id="stu-modal-overlay">
+  <div class="stu-modal" id="stu-modal">
+    <div class="stu-modal-head">
+      <div class="stu-modal-title"><i class="fas fa-user-circle" style="color:var(--teal);font-size:18px"></i> <span id="stu-modal-name">Student Profile</span></div>
+      <button class="stu-modal-close" onclick="closeStudentProfile()" type="button"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="stu-modal-body" id="stu-modal-body">
+      <div class="stu-loading"><i class="fas fa-spinner fa-spin"></i> Loading profile...</div>
+    </div>
+    <div class="stu-modal-actions">
+      <button type="button" class="stu-btn-edit" id="stu-btn-edit-modal" onclick="toggleStudentEditMode()"><i class="fas fa-pen"></i> Edit</button>
+      <button type="button" class="stu-btn-save" id="stu-btn-save-modal" onclick="saveStudentChanges()" style="display:none"><i class="fas fa-check"></i> Save</button>
+      <button type="button" class="stu-btn-cancel" id="stu-btn-cancel-modal" onclick="toggleStudentEditMode()" style="display:none">Cancel</button>
+      <button type="button" class="stu-btn-close" onclick="closeStudentProfile()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentStudentId = null;
+
+function openStudentProfile(studentId, name, rollNo){
+  currentStudentId = studentId;
+  document.getElementById('stu-modal-name').textContent = name + ' (' + rollNo + ')';
+  document.getElementById('stu-modal-overlay').classList.add('open');
+  
+  // Fetch student profile data
+  fetch('/dashboard/admin/students/' + studentId + '/profile/', {
+    headers:{'X-Requested-With':'XMLHttpRequest'}
+  }).then(function(r){ return r.text(); }).then(function(html){
+    // Extract profile data from the response
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    var profileContent = doc.querySelector('[data-profile-content]');
+    if(profileContent){
+      document.getElementById('stu-modal-body').innerHTML = profileContent.innerHTML;
+      // Reset to view mode
+      document.getElementById('stu-view-mode').style.display = 'block';
+      document.getElementById('stu-edit-mode').style.display = 'none';
+      document.getElementById('stu-btn-edit-modal').style.display = 'block';
+      document.getElementById('stu-btn-save-modal').style.display = 'none';
+      document.getElementById('stu-btn-cancel-modal').style.display = 'none';
+    } else {
+      loadStudentBasicInfo(studentId);
+    }
+  }).catch(function(err){
+    document.getElementById('stu-modal-body').innerHTML = '<div class="stu-error"><i class="fas fa-exclamation-circle"></i> Error loading profile. Please try again.</div>';
+  });
+}
+
+function loadStudentBasicInfo(studentId){
+  // Fallback to load basic info via API
+  fetch('/api/v1/me/', {
+    headers:{'Authorization':'Bearer ' + localStorage.getItem('token')}
+  }).then(function(r){ return r.json(); }).then(function(data){
+    // Build basic profile view
+    var html = '<div class="stu-info-grid">';
+    html += '<div class="stu-info-item"><div class="stu-info-label">Roll Number</div><div class="stu-info-val">' + (data.roll_number || 'N/A') + '</div></div>';
+    html += '<div class="stu-info-item"><div class="stu-info-label">Department</div><div class="stu-info-val">' + (data.department || 'N/A') + '</div></div>';
+    html += '<div class="stu-info-item"><div class="stu-info-label">Semester</div><div class="stu-info-val">' + (data.semester || 'N/A') + '</div></div>';
+    html += '<div class="stu-info-item"><div class="stu-info-label">Status</div><div class="stu-info-val">' + (data.status || 'N/A') + '</div></div>';
+    html += '</div>';
+    document.getElementById('stu-modal-body').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('stu-modal-body').innerHTML = '<div class="stu-error"><i class="fas fa-exclamation-circle"></i> Unable to load profile data.</div>';
+  });
+}
+
+function toggleStudentEditMode(){
+  var viewMode = document.getElementById('stu-view-mode');
+  var editMode = document.getElementById('stu-edit-mode');
+  var editBtn = document.getElementById('stu-btn-edit-modal');
+  var saveBtn = document.getElementById('stu-btn-save-modal');
+  var cancelBtn = document.getElementById('stu-btn-cancel-modal');
+  
+  if(editMode.style.display === 'none'){
+    // Switch to edit mode
+    viewMode.style.display = 'none';
+    editMode.style.display = 'block';
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'block';
+    cancelBtn.style.display = 'block';
+  } else {
+    // Switch back to view mode
+    viewMode.style.display = 'block';
+    editMode.style.display = 'none';
+    editBtn.style.display = 'block';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  }
+}
+
+function saveStudentChanges(){
+  if(!currentStudentId) return;
+  
+  var form = document.getElementById('stu-edit-form');
+  var errorBox = document.getElementById('stu-edit-error');
+  errorBox.style.display = 'none';
+  
+  var fd = new FormData(form);
+  
+  fetch('/dashboard/admin/students/' + currentStudentId + '/edit/', {
+    method:'POST',
+    headers:{'X-Requested-With':'XMLHttpRequest'},
+    body:fd
+  }).then(function(r){ return r.json(); }).then(function(data){
+    if(data.ok){
+      // Reload profile to show updated data
+      openStudentProfile(currentStudentId, document.getElementById('stu-modal-name').textContent.split('(')[0].trim(), document.getElementById('stu-modal-name').textContent.match(/\(([^)]+)\)/)[1]);
+    } else {
+      errorBox.textContent = data.error || 'Error saving changes.';
+      errorBox.style.display = 'block';
+    }
+  }).catch(function(){
+    errorBox.textContent = 'Network error. Please try again.';
+    errorBox.style.display = 'block';
+  });
+}
+
+function closeStudentProfile(){
+  document.getElementById('stu-modal-overlay').classList.remove('open');
+  currentStudentId = null;
+}
+
+// Close modal on overlay click
+document.getElementById('stu-modal-overlay').addEventListener('click', function(e){
+  if(e.target === this){
+    closeStudentProfile();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && document.getElementById('stu-modal-overlay').classList.contains('open')){
+    closeStudentProfile();
+  }
+});
+</script>
 {% endblock %}

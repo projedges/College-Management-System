@@ -1,6 +1,6 @@
 {% extends 'exam/base_exam.html' %}
 {% block title %}Add Evaluation Scheme{% endblock %}
-{% block breadcrumb %} / <a href="{% url 'exam_scheme_list' %}" style="color:#7c3aed;text-decoration:none">Schemes</a> / Add{% endblock %}
+{% block breadcrumb %} > <a href="{% url 'exam_scheme_list' %}" style="color:#7c3aed;text-decoration:none">Schemes</a> > Add{% endblock %}
 {% block page_title %}Add Evaluation Scheme{% endblock %}
 {% block page_sub %}Define how CIE and SEE combine into a final result for a department{% endblock %}
 {% block content %}
@@ -42,11 +42,11 @@
     </div>
     <div class="form-group" style="max-width:300px"><label>Minimum SEE Marks to Pass</label><input type="number" name="see_passing_min" class="form-control" value="35" min="0" step="0.5"></div>
 
-    <div style="font-size:12px;font-weight:700;color:#b88510;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(230,168,23,.2)"><i class="fas fa-flask"></i> Practical / Lab (optional)</div>
+    <div style="font-size:12px;font-weight:700;color:#b88510;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(230,168,23,.2)"><i class="fas fa-flask"></i> Practical > Lab (optional)</div>
     <div class="form-group">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" name="has_practical" id="has_practical" onchange="document.getElementById('practical_fields').style.display=this.checked?'grid':'none'" style="width:16px;height:16px">
-        This scheme includes a practical / lab component
+        This scheme includes a practical > lab component
       </label>
     </div>
     <div id="practical_fields" style="display:none;grid-template-columns:1fr 1fr;gap:16px">

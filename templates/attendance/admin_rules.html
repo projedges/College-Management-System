@@ -1,58 +1,204 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Attendance Rules{% endblock %}
-{% block nav_exams %}on{% endblock %}
-{% block breadcrumb %} / Attendance Rules{% endblock %}
+{% block nav_att_rules %}on{% endblock %}
+{% block breadcrumb %} > Attendance Rules{% endblock %}
 {% block page_title %}Attendance Eligibility Rules{% endblock %}
 {% block page_sub %}Configure minimum attendance thresholds, grace periods, and exemption policies per department{% endblock %}
-{% block page_action %}<a href="{% url 'admin_attendance_rule_add' %}" class="btn-add"><i class="fas fa-plus"></i> Add Rule</a>{% endblock %}
-{% block content %}
+{% block page_action %}
+  <button type="button" class="btn-add" onclick="arOpenAdd()"><i class="fas fa-plus"></i> Add Rule</button>
+{% endblock %}
 
+{% block content %}
+<style>
+  /* ── Inline form panel ── */
+  .ar-panel{display:none;background:#fff;border:1.5px solid var(--teal);border-radius:14px;padding:24px;margin-bottom:20px;animation:arSlideIn .2s ease}
+  .ar-panel.open{display:block}
+  @keyframes arSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .ar-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .ar-panel-title{font-size:15px;font-weight:800;color:var(--deep);display:flex;align-items:center;gap:8px}
+  .ar-panel-title i{color:var(--teal)}
+  .ar-close{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s}
+  .ar-close:hover{border-color:var(--red);color:var(--red)}
+  .ar-section-label{font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 10px;padding-bottom:5px;border-bottom:1px solid rgba(13,115,119,.15)}
+  .ar-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ar-group{margin-bottom:12px}
+  .ar-group label{display:block;font-size:12px;font-weight:600;color:var(--deep);margin-bottom:5px}
+  .ar-group .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  .ar-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box}
+  .ar-input:focus{border-color:var(--teal)}
+  .ar-check-row{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px}
+  .ar-check{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
+  .ar-check input{width:15px;height:15px;accent-color:var(--teal)}
+  .ar-actions{display:flex;gap:10px;margin-top:18px}
+  .ar-btn-save{padding:9px 22px;border:none;border-radius:8px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+  .ar-btn-save:hover{background:var(--teal-dk,#0a5c60)}
+  .ar-btn-cancel{padding:9px 18px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+  .ar-btn-cancel:hover{border-color:var(--deep);color:var(--deep)}
+  .ar-error{padding:9px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;margin-bottom:12px;display:none}
+  .ar-error.show{display:block}
+
+  /* ── Rule cards ── */
+  .ar-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color .15s}
+  .ar-card:hover{border-color:rgba(13,115,119,.3)}
+  .ar-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .ar-card-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)}
+  .ar-card-sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .ar-card-btns{display:flex;gap:8px;flex-shrink:0}
+  .ar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .ar-chip{background:var(--surface2,#f8fafc);border-radius:8px;padding:10px 12px}
+  .ar-chip-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+  .ar-chip-val{font-size:13px;color:var(--deep)}
+  .ar-chip-val strong{color:var(--deep)}
+
+  @media(max-width:640px){.ar-row{grid-template-columns:1fr}}
+</style>
+
+{# ── Inline Add/Edit Panel ── #}
+<div class="ar-panel" id="ar-panel">
+  <div class="ar-panel-head">
+    <div class="ar-panel-title"><i class="fas fa-sliders"></i> <span id="ar-panel-title-text">Add Attendance Rule</span></div>
+    <button class="ar-close" onclick="arClose()" type="button"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="ar-error" id="ar-error"></div>
+  <form id="ar-form">
+    {% csrf_token %}
+    <input type="hidden" id="ar-edit-pk" value="">
+    <div class="ar-row">
+      <div class="ar-group">
+        <label>Department</label>
+        <select name="department" class="ar-input" id="ar-dept">
+          <option value="">All Departments (college-wide default)</option>
+          {% for d in departments %}<option value="{{ d.pk }}">{{ d.code }} — {{ d.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="ar-group">
+        <label>Semester</label>
+        <select name="semester" class="ar-input" id="ar-sem">
+          <option value="">All Semesters</option>
+          {% for i in "12345678" %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="ar-section-label">Eligibility Thresholds</div>
+    <div class="ar-row">
+      <div class="ar-group">
+        <label>Minimum Overall Attendance %</label>
+        <input type="number" name="min_overall_pct" class="ar-input" value="75" min="0" max="100" step="0.5">
+      </div>
+      <div class="ar-group">
+        <label>Minimum Per-Subject Attendance %</label>
+        <input type="number" name="min_subject_pct" class="ar-input" value="75" min="0" max="100" step="0.5">
+      </div>
+    </div>
+    <div class="ar-row">
+      <div class="ar-group">
+        <label>Grace > Condonation %</label>
+        <input type="number" name="grace_pct" class="ar-input" value="0" min="0" max="20" step="0.5">
+        <div class="hint">e.g. 5% grace on 75% = effective 70%</div>
+      </div>
+      <div class="ar-group">
+        <label>Min Sessions Before Check Applies</label>
+        <input type="number" name="min_sessions_for_check" class="ar-input" value="5" min="0">
+        <div class="hint">Subjects with fewer sessions are skipped</div>
+      </div>
+    </div>
+    <div class="ar-group">
+      <label class="ar-check"><input type="checkbox" name="require_both" checked> Both overall AND per-subject thresholds must be met (recommended)</label>
+    </div>
+
+    <div class="ar-section-label">Alert Thresholds (Notifications Only)</div>
+    <div class="ar-row">
+      <div class="ar-group">
+        <label>Warning Alert Below %</label>
+        <input type="number" name="alert_below_pct" class="ar-input" value="75" min="0" max="100" step="0.5">
+      </div>
+      <div class="ar-group">
+        <label>Critical Alert Below %</label>
+        <input type="number" name="critical_below_pct" class="ar-input" value="65" min="0" max="100" step="0.5">
+      </div>
+    </div>
+
+    <div class="ar-section-label">Exemption Policy</div>
+    <div class="ar-check-row">
+      <label class="ar-check"><input type="checkbox" name="allow_medical_exemption" checked> Allow Medical Exemptions</label>
+      <label class="ar-check"><input type="checkbox" name="allow_sports_exemption" checked> Allow Sports > Cultural</label>
+      <label class="ar-check"><input type="checkbox" name="allow_od_exemption" checked> Allow On-Duty</label>
+    </div>
+    <div class="ar-group" style="max-width:260px">
+      <label>Max Exemption Days per Semester</label>
+      <input type="number" name="max_exemption_days" class="ar-input" value="15" min="0">
+    </div>
+
+    <div class="ar-actions">
+      <button type="submit" class="ar-btn-save" id="ar-submit-btn">Create Rule</button>
+      <button type="button" class="ar-btn-cancel" onclick="arClose()">Cancel</button>
+    </div>
+  </form>
+</div>
+
+{# ── Hint box ── #}
 <div class="hint-box" style="margin-bottom:20px">
   <strong>Rule precedence:</strong> Department + Semester specific &gt; Department only &gt; College-wide default. If no rule is configured, the system uses 75% as the default threshold.
 </div>
 
+{# ── Rules list ── #}
+<div id="ar-rules-list">
 {% if rules %}
 {% for rule in rules %}
-<div class="ap-card" style="margin-bottom:16px">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+<div class="ar-card" id="ar-card-{{ rule.pk }}">
+  <div class="ar-card-head">
     <div>
-      <div style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)">
+      <div class="ar-card-title">
         {{ rule.department.name|default:"All Departments" }}
         {% if rule.semester %} &middot; Semester {{ rule.semester }}{% else %} &middot; All Semesters{% endif %}
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">
+      <div class="ar-card-sub">
         Effective thresholds: Overall {{ rule.effective_min_overall }}% &middot; Per-subject {{ rule.effective_min_subject }}%
         {% if rule.grace_pct > 0 %}<span style="color:var(--teal);margin-left:6px">(+{{ rule.grace_pct }}% grace applied)</span>{% endif %}
       </div>
     </div>
-    <div style="display:flex;gap:8px">
-      <a href="{% url 'admin_attendance_rule_edit' rule.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
-      <form method="POST" action="{% url 'admin_attendance_rule_delete' rule.pk %}" style="display:inline" onsubmit="return confirm('Delete this rule?')">
-        {% csrf_token %}<button type="submit" class="btn-del"><i class="fas fa-trash"></i></button>
-      </form>
+    <div class="ar-card-btns">
+      <button type="button" class="btn-edit"
+        onclick="arOpenEdit({{ rule.pk }}, this)"
+        data-min-overall="{{ rule.min_overall_pct }}"
+        data-min-subject="{{ rule.min_subject_pct }}"
+        data-require-both="{{ rule.require_both|yesno:'true,false' }}"
+        data-grace="{{ rule.grace_pct }}"
+        data-min-sessions="{{ rule.min_sessions_for_check }}"
+        data-alert="{{ rule.alert_below_pct }}"
+        data-critical="{{ rule.critical_below_pct }}"
+        data-medical="{{ rule.allow_medical_exemption|yesno:'true,false' }}"
+        data-sports="{{ rule.allow_sports_exemption|yesno:'true,false' }}"
+        data-od="{{ rule.allow_od_exemption|yesno:'true,false' }}"
+        data-max-exempt="{{ rule.max_exemption_days }}"
+        data-dept="{{ rule.department_id|default:'' }}"
+        data-sem="{{ rule.semester|default:'' }}"
+      ><i class="fas fa-pen"></i> Edit</button>
+      <button type="button" class="btn-del" onclick="arDelete({{ rule.pk }}, this)" title="Delete"><i class="fas fa-trash"></i></button>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-    <div style="background:var(--surface2);border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Thresholds</div>
-      <div style="font-size:13px;color:var(--deep)">Overall: <strong>{{ rule.min_overall_pct }}%</strong></div>
-      <div style="font-size:13px;color:var(--deep)">Per-subject: <strong>{{ rule.min_subject_pct }}%</strong></div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px">{% if rule.require_both %}Both must be met{% else %}Either condition sufficient{% endif %}</div>
+  <div class="ar-grid">
+    <div class="ar-chip">
+      <div class="ar-chip-label">Thresholds</div>
+      <div class="ar-chip-val">Overall: <strong>{{ rule.min_overall_pct }}%</strong></div>
+      <div class="ar-chip-val">Per-subject: <strong>{{ rule.min_subject_pct }}%</strong></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">{% if rule.require_both %}Both must be met{% else %}Either condition sufficient{% endif %}</div>
     </div>
-    <div style="background:var(--surface2);border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Grace & Sessions</div>
-      <div style="font-size:13px;color:var(--deep)">Grace: <strong>{{ rule.grace_pct }}%</strong></div>
-      <div style="font-size:13px;color:var(--deep)">Min sessions: <strong>{{ rule.min_sessions_for_check }}</strong></div>
+    <div class="ar-chip">
+      <div class="ar-chip-label">Grace &amp; Sessions</div>
+      <div class="ar-chip-val">Grace: <strong>{{ rule.grace_pct }}%</strong></div>
+      <div class="ar-chip-val">Min sessions: <strong>{{ rule.min_sessions_for_check }}</strong></div>
     </div>
-    <div style="background:var(--surface2);border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Exemptions Allowed</div>
+    <div class="ar-chip">
+      <div class="ar-chip-label">Exemptions Allowed</div>
       {% if rule.allow_medical_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> Medical</div>{% endif %}
-      {% if rule.allow_sports_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> Sports / Cultural</div>{% endif %}
+      {% if rule.allow_sports_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> Sports > Cultural</div>{% endif %}
       {% if rule.allow_od_exemption %}<div style="font-size:12px;color:var(--teal)"><i class="fas fa-check"></i> On Duty</div>{% endif %}
-      <div style="font-size:12px;color:var(--muted);margin-top:4px">Max {{ rule.max_exemption_days }} days/sem</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">Max {{ rule.max_exemption_days }} days/sem</div>
     </div>
-    <div style="background:var(--surface2);border-radius:8px;padding:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Alert Thresholds</div>
+    <div class="ar-chip">
+      <div class="ar-chip-label">Alert Thresholds</div>
       <div style="font-size:13px;color:var(--gold)">Warning: &lt; {{ rule.alert_below_pct }}%</div>
       <div style="font-size:13px;color:var(--red)">Critical: &lt; {{ rule.critical_below_pct }}%</div>
     </div>
@@ -60,6 +206,124 @@
 </div>
 {% endfor %}
 {% else %}
-<div class="empty-state"><i class="fas fa-sliders"></i><p>No rules configured. The system uses 75% as the default. <a href="{% url 'admin_attendance_rule_add' %}" style="color:var(--teal)">Add a rule</a>.</p></div>
+<div class="empty-state" id="ar-empty"><i class="fas fa-sliders"></i><p>No rules configured. The system uses 75% as the default. <button type="button" onclick="arOpenAdd()" style="background:none;border:none;color:var(--teal);cursor:pointer;font-size:inherit;padding:0">Add a rule</button>.</p></div>
 {% endif %}
+</div>
+
+<script>
+(function(){
+  var panel = document.getElementById('ar-panel');
+  var form  = document.getElementById('ar-form');
+  var editPk = document.getElementById('ar-edit-pk');
+  var errBox = document.getElementById('ar-error');
+  var submitBtn = document.getElementById('ar-submit-btn');
+  var titleText = document.getElementById('ar-panel-title-text');
+
+  function getCsrf(){
+    return form.querySelector('[name=csrfmiddlewaretoken]').value;
+  }
+
+  window.arOpenAdd = function(){
+    editPk.value = '';
+    titleText.textContent = 'Add Attendance Rule';
+    submitBtn.textContent = 'Create Rule';
+    form.reset();
+    form.querySelector('[name=require_both]').checked = true;
+    form.querySelector('[name=allow_medical_exemption]').checked = true;
+    form.querySelector('[name=allow_sports_exemption]').checked = true;
+    form.querySelector('[name=allow_od_exemption]').checked = true;
+    errBox.classList.remove('show');
+    panel.classList.add('open');
+    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+
+  window.arOpenEdit = function(pk, btn){
+    var d = btn.dataset;
+    editPk.value = pk;
+    titleText.textContent = 'Edit Attendance Rule';
+    submitBtn.textContent = 'Update Rule';
+    errBox.classList.remove('show');
+
+    // populate fields
+    form.querySelector('[name=department]').value = d.dept || '';
+    form.querySelector('[name=semester]').value   = d.sem  || '';
+    form.querySelector('[name=min_overall_pct]').value       = d.minOverall;
+    form.querySelector('[name=min_subject_pct]').value       = d.minSubject;
+    form.querySelector('[name=grace_pct]').value             = d.grace;
+    form.querySelector('[name=min_sessions_for_check]').value= d.minSessions;
+    form.querySelector('[name=alert_below_pct]').value       = d.alert;
+    form.querySelector('[name=critical_below_pct]').value    = d.critical;
+    form.querySelector('[name=max_exemption_days]').value    = d.maxExempt;
+    form.querySelector('[name=require_both]').checked            = d.requireBoth === 'true';
+    form.querySelector('[name=allow_medical_exemption]').checked = d.medical === 'true';
+    form.querySelector('[name=allow_sports_exemption]').checked  = d.sports  === 'true';
+    form.querySelector('[name=allow_od_exemption]').checked      = d.od      === 'true';
+
+    // disable dept/sem selects in edit mode (can't change scope)
+    form.querySelector('[name=department]').disabled = true;
+    form.querySelector('[name=semester]').disabled   = true;
+
+    panel.classList.add('open');
+    panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+
+  window.arClose = function(){
+    panel.classList.remove('open');
+    form.querySelector('[name=department]').disabled = false;
+    form.querySelector('[name=semester]').disabled   = false;
+  };
+
+  window.arDelete = function(pk, btn){
+    if(!confirm('Delete this attendance rule?')) return;
+    var fd = new FormData();
+    fd.append('csrfmiddlewaretoken', getCsrf());
+    fetch('/dashboard/admin/attendance/rules/' + pk + '/delete/', {
+      method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:fd
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if(data.ok){
+        var card = document.getElementById('ar-card-' + pk);
+        if(card) card.remove();
+        // show empty state if no cards left
+        if(!document.querySelector('.ar-card')){
+          var list = document.getElementById('ar-rules-list');
+          list.innerHTML = '<div class="empty-state" id="ar-empty"><i class="fas fa-sliders"></i><p>No rules configured. The system uses 75% as the default. <button type="button" onclick="arOpenAdd()" style="background:none;border:none;color:var(--teal);cursor:pointer;font-size:inherit;padding:0">Add a rule</button>.</p></div>';
+        }
+      }
+    });
+  };
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    errBox.classList.remove('show');
+    var pk = editPk.value;
+    var url = pk
+      ? '/dashboard/admin/attendance/rules/' + pk + '/edit/'
+      : '/dashboard/admin/attendance/rules/add/';
+
+    // re-enable disabled fields so they get serialised
+    var deptSel = form.querySelector('[name=department]');
+    var semSel  = form.querySelector('[name=semester]');
+    deptSel.disabled = false;
+    semSel.disabled  = false;
+
+    var fd = new FormData(form);
+    fetch(url, {
+      method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:fd
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if(data.ok){
+        // reload the page to reflect new/updated rule
+        window.location.reload();
+      } else {
+        errBox.textContent = data.error || 'Something went wrong.';
+        errBox.classList.add('show');
+        // re-disable if edit mode
+        if(pk){ deptSel.disabled = true; semSel.disabled = true; }
+      }
+    }).catch(function(){
+      errBox.textContent = 'Network error. Please try again.';
+      errBox.classList.add('show');
+    });
+  });
+})();
+</script>
 {% endblock %}

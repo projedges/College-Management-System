@@ -1,266 +1,415 @@
 {% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}Semester Planner &mdash; Admin{% endblock %}
+{% block title %}Semester Planner{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
 {% block page_title %}Semester Planner{% endblock %}
-{% block page_sub %}Manage semester subjects, faculty allocation, availability, and automatic timetable generation{% endblock %}
+{% block page_sub %}Prepare sections, faculty mappings, rooms, breaks, and timetable slots for a selected semester.{% endblock %}
 {% block sidebar_links %}{% with active_section='planner' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
-  .planner-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:22px}
-  .planner-label{font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px}
-  .fc{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;background:#fff}
-  .fc:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
-  .fg{margin-bottom:14px}
-  .fg label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
-  .planner-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  .tt-matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
-  .tt-matrix{width:100%;border-collapse:separate;border-spacing:0;background:#fff;min-width:780px}
-  .tt-matrix th{background:#17375e;color:#fff;font-size:12px;font-weight:800;padding:12px 10px;text-align:center}
-  .tt-matrix td{background:#f8fafc;border:2px solid #fff;vertical-align:top;padding:10px;min-width:120px}
-  .tt-matrix .time-col{background:#eef2f7;color:var(--deep);font-size:12px;font-weight:700;white-space:nowrap}
-  .tt-matrix .break-row td{background:#eceff3;color:var(--muted);font-size:12px;font-weight:700;text-align:center}
-  .tt-chip{display:block;border-radius:10px;padding:10px 8px;margin-bottom:6px;background:rgba(13,115,119,.08);border:1px solid rgba(13,115,119,.16)}
-  .tt-chip:last-child{margin-bottom:0}
-  .tt-chip-subj{font-size:12px;font-weight:800;color:var(--deep);line-height:1.35}
-  .tt-chip-meta{font-size:11px;color:var(--muted);margin-top:4px}
-  .sec-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:rgba(13,115,119,.1);color:var(--teal)}
-  @media(max-width:700px){.planner-grid{grid-template-columns:1fr}}
+  .planner-summary{display:grid;grid-template-columns:1.35fr repeat(4,minmax(120px,.5fr));gap:14px;margin-bottom:24px}
+  .planner-scope-card,.planner-mini{background:#fff;border:1.5px solid var(--border);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:0;transition:all .2s}
+  .planner-scope-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px}
+  .planner-scope-card:hover{border-color:rgba(13,115,119,.2);box-shadow:0 4px 12px rgba(13,115,119,.08)}
+  .scope-main{display:flex;align-items:center;gap:16px;min-width:0;flex:1}
+  .scope-icon{width:44px;height:44px;border-radius:12px;background:rgba(13,115,119,.09);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .scope-kicker{font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+  .scope-title{font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:var(--deep);line-height:1.1}
+  .scope-sub{font-size:12px;color:var(--muted);margin-top:5px}
+  .planner-mini{padding:18px;display:grid;grid-template-rows:auto 8px auto;gap:12px}
+  .mini-head{display:flex;align-items:flex-start;gap:12px}
+  .mini-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;font-weight:600}
+  .mini-icon.teal{background:rgba(13,115,119,.12);color:var(--teal)}
+  .mini-icon.green{background:rgba(22,163,74,.12);color:#15803d}
+  .mini-icon.blue{background:rgba(37,99,235,.12);color:#2563eb}
+  .mini-icon.gold{background:rgba(230,168,23,.14);color:#d97706}
+  .planner-mini .n{font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:var(--deep);line-height:.95}
+  .planner-mini .l{font-size:12px;color:var(--muted);margin-top:5px;font-weight:600}
+  .mini-line{height:8px;border-radius:999px;background:rgba(13,115,119,.08);overflow:hidden}
+  .mini-line span{display:block;height:100%;border-radius:inherit;background:rgba(13,115,119,.16)}
+  .mini-line.blue{background:rgba(37,99,235,.08)}.mini-line.blue span{background:rgba(37,99,235,.16)}
+  .mini-line.gold{background:rgba(230,168,23,.1)}.mini-line.gold span{background:rgba(230,168,23,.18)}
+  .mini-link{display:inline-flex;align-items:center;gap:6px;color:var(--teal);font-size:12px;font-weight:800;text-decoration:none;width:max-content;transition:all .2s}
+  .mini-link:hover{text-decoration:underline;gap:8px}
+  .planner-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}
+  .planner-step{position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;color:var(--deep);text-decoration:none;min-width:0;transition:all .2s;border:1.5px solid var(--border);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .planner-step:hover{border-color:rgba(13,115,119,.3);transform:translateY(-2px);box-shadow:0 4px 12px rgba(13,115,119,.1)}
+  .planner-step.active{background:rgba(13,115,119,.08);border-color:var(--teal);box-shadow:0 4px 12px rgba(13,115,119,.12)}
+  .step-num{width:36px;height:36px;border-radius:10px;background:var(--surface2);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;position:relative;z-index:1;transition:all .2s}
+  .planner-step.active .step-num{background:var(--teal);color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.2)}
+  .step-text{min-width:0;position:relative;z-index:1}
+  .step-name{display:block;font-size:13px;font-weight:900;color:var(--deep);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step-hint{display:block;font-size:11px;color:var(--muted);line-height:1.3;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .planner-pane{display:none}
+  .planner-pane.active{display:block;animation:fadeIn .3s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .planner-head{margin-bottom:20px;padding-bottom:16px;border-bottom:1.5px solid var(--border)}
+  .planner-eyebrow{font-size:12px;font-weight:900;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+  .planner-title{font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--deep);margin:0}
+  .planner-copy{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6;max-width:700px}
+  .planner-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+  .planner-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:22px;min-width:0;margin-bottom:18px;transition:all .2s}
+  .planner-card:hover{border-color:rgba(13,115,119,.15);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .planner-card-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:900;color:var(--deep);display:flex;align-items:center;gap:11px;margin-bottom:18px}
+  .planner-card-title i{width:28px;height:28px;border-radius:9px;background:rgba(13,115,119,.11);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:13px;flex-shrink:0}
+  .planner-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:800;color:var(--deep);margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px}
+  .input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--deep);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:all .2s}
+  .input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .input:hover{border-color:rgba(13,115,119,.2)}
+  .action-row{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+  .soft-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:11px;border:1.5px solid var(--border);background:#fff;color:var(--deep);font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;transition:all .2s}
+  .soft-btn:hover{border-color:rgba(13,115,119,.3);color:var(--teal);transform:translateY(-2px);box-shadow:0 4px 12px rgba(13,115,119,.1)}
+  .icon-btn{width:30px;height:30px;border-radius:8px;border:none;background:rgba(239,68,68,.08);color:#ef4444;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px}
+  .section-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(13,115,119,.08);color:var(--teal);font-size:10px;font-weight:800}
+  .tt-matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px;background:#fff}
+  .tt-matrix{width:100%;border-collapse:separate;border-spacing:0;min-width:760px}
+  .tt-matrix th{position:sticky;top:0;background:var(--deep);color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:9px;text-align:center;z-index:1}
+  .tt-matrix th:first-child{text-align:left}
+  .tt-matrix td{background:#f8fafc;border-right:1px solid #e8edf2;border-bottom:1px solid #e8edf2;vertical-align:top;padding:7px;min-width:110px}
+  .time-col{background:#eef2f7!important;color:var(--deep);font-size:11px;font-weight:800;white-space:nowrap}
+  .tt-chip{display:block;border-radius:9px;padding:7px;margin-bottom:4px;background:rgba(13,115,119,.06);border:1px solid rgba(13,115,119,.14)}
+  .tt-chip-subj{font-size:10px;font-weight:900;color:var(--deep);line-height:1.2}
+  .tt-chip-meta{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+  .empty-note{text-align:center;padding:28px 16px;color:var(--muted);font-size:12px}
+  .empty-note i{display:block;font-size:26px;color:#d1d5db;margin-bottom:7px}
+  .planner-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
+  .scope-note{display:flex;align-items:flex-start;gap:11px;margin:12px 0 18px;padding:14px 16px;border-radius:10px;background:#f0fafb;border:1.5px solid #d0e8eb;color:var(--muted);font-size:13px;line-height:1.6}
+  .scope-note i{color:var(--teal);margin-top:2px;flex-shrink:0;font-size:14px}
+  .readiness-list{display:grid;gap:10px;margin:0 0 18px;padding:0;list-style:none}
+  .readiness-list li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--deep);font-weight:500}
+  .readiness-list i{width:22px;height:22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;background:#ecfdf5;color:#15803d;flex-shrink:0;font-weight:700}
+  .readiness-list .missing i{background:#fef3c7;color:#d97706}
+  .table-foot{padding-top:14px;color:var(--muted);font-size:12px;font-weight:500}
+  .planner-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;padding-top:18px;border-top:1.5px solid var(--border)}
+  @media(max-width:1200px){.planner-summary{grid-template-columns:1fr repeat(2,minmax(110px,1fr))}.planner-steps{overflow:auto}.planner-step{min-width:200px}.planner-grid{grid-template-columns:1fr}}
+  @media(max-width:760px){.planner-summary{grid-template-columns:1fr}.planner-scope-card{align-items:flex-start;padding:16px}.scope-main{align-items:flex-start}.planner-steps{grid-template-columns:1fr;overflow:visible}.planner-step{min-width:0}.planner-form-grid{grid-template-columns:1fr}.planner-nav{display:block}.planner-nav .qa-btn,.planner-nav .soft-btn,.action-row .qa-btn,.action-row .soft-btn{width:100%;justify-content:center}.planner-nav > * + *{margin-top:9px}.planner-card{padding:16px}}
 </style>
 {% endblock %}
 
 {% block form_content %}
-<!-- Filter bar -->
-<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:24px">
-  <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap">
-    <select name="dept" class="fc" style="width:auto;min-width:200px" onchange="this.form.submit()">
-      {% for d in departments %}
-      <option value="{{ d.pk }}" {% if department and department.pk == d.pk %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>
-      {% endfor %}
-    </select>
-    <select name="sem" class="fc" style="width:auto" onchange="this.form.submit()">
-      {% for i in "12345678" %}
-      <option value="{{ i }}" {% if selected_semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
-      {% endfor %}
-    </select>
-  </form>
-  {% if department %}
-  <form method="POST">
-    {% csrf_token %}
-    <input type="hidden" name="planner_action" value="generate_timetable"/>
-    <input type="hidden" name="department" value="{{ department.pk }}"/>
-    <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-    <button type="submit" class="qa-btn qa-teal"><i class="fas fa-wand-magic-sparkles"></i> Auto Update Timetable</button>
-  </form>
-  {% endif %}
-</div>
-
-{% if department %}
-<!-- Stats -->
-<div class="stat-grid" style="margin-bottom:24px">
-  <div class="stat-card"><div class="s-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-book"></i></div><div class="s-val">{{ subjects|length }}</div><div class="s-lbl">Semester Subjects</div></div>
-  <div class="stat-card"><div class="s-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-user-check"></i></div><div class="s-val">{{ subject_assignments|length }}</div><div class="s-lbl">Faculty Assignments</div></div>
-  <div class="stat-card"><div class="s-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-clock"></i></div><div class="s-val">{{ availability|length }}</div><div class="s-lbl">Availability Slots</div></div>
-  <div class="stat-card"><div class="s-icon" style="background:rgba(16,185,129,.09);color:var(--green)"><i class="fas fa-calendar-days"></i></div><div class="s-val">{{ timetable_entries|length }}</div><div class="s-lbl">Timetable Entries</div></div>
-</div>
-
-<div class="planner-card" style="margin-bottom:20px">
-  <div class="planner-label">Section Strength</div>
-  <div class="section-meta" style="margin-bottom:12px">Students are grouped automatically by section capacity. Current capacity for {{ department.code }} is {{ department.section_capacity }} students per section.</div>
-  {% if section_strength_summary %}
-  <div style="display:flex;gap:10px;flex-wrap:wrap">
-    {% for item in section_strength_summary %}
-    <span class="sec-pill"><i class="fas fa-users"></i> Section {{ item.section }}: {{ item.total }}</span>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty"><i class="fas fa-users"></i>No student sections formed yet for Semester {{ selected_semester }}.</div>
-  {% endif %}
-</div>
-
-<!-- Add subject + Assign faculty -->
-<div class="planner-grid" style="margin-bottom:20px">
-  <div class="planner-card">
-    <div class="planner-label">Add Subject to Semester</div>
-    <form method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="planner_action" value="add_subject"/>
-      <input type="hidden" name="department" value="{{ department.pk }}"/>
-      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="planner-grid">
-        <div class="fg"><label>Subject Name *</label><input type="text" name="name" class="fc" required/></div>
-        <div class="fg"><label>Subject Code *</label><input type="text" name="code" class="fc" required/></div>
+{% with active_step=request.GET.step|default:"1" %}
+<div class="planner-summary">
+  <div class="planner-scope-card">
+    <div class="scope-main">
+      <div class="scope-icon"><i class="fas fa-book-open"></i></div>
+      <div>
+        <div class="scope-kicker">Planning Scope</div>
+        <div class="scope-title">{% if department %}{{ department.code }} - Sem {{ selected_semester }}{% else %}Select department{% endif %}</div>
+        <div class="scope-sub">{% if department %}{{ department.name }}{% else %}Choose a department and semester to begin.{% endif %}</div>
       </div>
-      <button type="submit" class="qa-btn qa-teal"><i class="fas fa-plus"></i> Add Subject</button>
-    </form>
+    </div>
+    {% if department %}<a class="soft-btn" href="?dept={{ department.pk }}&sem={{ selected_semester }}&step=1"><i class="fas fa-sliders"></i> Change Scope</a>{% endif %}
   </div>
+  <div class="planner-mini">
+    <div class="mini-head"><span class="mini-icon teal"><i class="fas fa-book"></i></span><div><div class="n">{{ subjects|length }}</div><div class="l">Subjects</div></div></div>
+    <div class="mini-line"><span style="width:100%"></span></div>
+    <a class="mini-link" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=1#semester-subjects">View subjects <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="planner-mini">
+    <div class="mini-head"><span class="mini-icon green"><i class="fas fa-layer-group"></i></span><div><div class="n">{{ sections|length }}</div><div class="l">Sections</div></div></div>
+    <div class="mini-line"><span style="width:100%"></span></div>
+    <a class="mini-link" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=2">View sections <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="planner-mini">
+    <div class="mini-head"><span class="mini-icon blue"><i class="fas fa-users"></i></span><div><div class="n">{{ section_mappings|length }}</div><div class="l">Mappings</div></div></div>
+    <div class="mini-line blue"><span style="width:100%"></span></div>
+    <a class="mini-link" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=2">View mappings <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="planner-mini">
+    <div class="mini-head"><span class="mini-icon gold"><i class="fas fa-calendar-check"></i></span><div><div class="n">{{ timetable_entries|length }}</div><div class="l">Slots</div></div></div>
+    <div class="mini-line gold"><span style="width:100%"></span></div>
+    <a class="mini-link" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=4">View slots <i class="fas fa-arrow-right"></i></a>
+  </div>
+</div>
 
-  <div class="planner-card">
-    <div class="planner-label">Assign Faculty to Subject</div>
-    <div class="section-meta" style="margin-bottom:12px">Assign one faculty per section. Same subject with 2 faculty = Section A &amp; B. Faculty from any department can be assigned.</div>
-    <form method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="planner_action" value="assign_faculty"/>
-      <input type="hidden" name="department" value="{{ department.pk }}"/>
-      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="planner-grid">
-        <div class="fg"><label>Subject *</label><select name="subject_id" class="fc" required><option value="">Select Subject</option>{% for subject in subjects %}<option value="{{ subject.pk }}">{{ subject.code }} &mdash; {{ subject.name }}</option>{% endfor %}</select></div>
-        <div class="fg"><label>Faculty * <span style="font-size:10px;color:var(--muted);font-weight:400">(any dept)</span></label>
-          <select name="faculty_id" class="fc" required>
-            <option value="">Select Faculty</option>
-            {% for member in faculty %}
-            <option value="{{ member.pk }}">{{ member.user.get_full_name|default:member.user.username }} ({{ member.department.code }})</option>
-            {% endfor %}
-          </select>
+<nav class="planner-steps" aria-label="Semester planner steps">
+  <a class="planner-step {% if active_step == '1' %}active{% endif %}" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=1">
+    <span class="step-num">1</span><span class="step-text"><span class="step-name">Scope</span><span class="step-hint">Department and semester</span></span>
+  </a>
+  <a class="planner-step {% if active_step == '2' %}active{% endif %}" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=2">
+    <span class="step-num">2</span><span class="step-text"><span class="step-name">Sections & Faculty</span><span class="step-hint">Section subject mapping</span></span>
+  </a>
+  <a class="planner-step {% if active_step == '3' %}active{% endif %}" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=3">
+    <span class="step-num">3</span><span class="step-text"><span class="step-name">Rooms</span><span class="step-hint">Breaks and classrooms</span></span>
+  </a>
+  <a class="planner-step {% if active_step == '4' or active_step == '5' %}active{% endif %}" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=4">
+    <span class="step-num">4</span><span class="step-text"><span class="step-name">Timetable</span><span class="step-hint">Generate or upload</span></span>
+  </a>
+</nav>
+
+<section class="planner-pane {% if active_step == '1' %}active{% endif %}">
+  <div class="planner-head">
+    <div class="planner-eyebrow">Step 1 of 4</div>
+    <h2 class="planner-title">Set up your planning scope</h2>
+    <p class="planner-copy">Choose the department and semester you want to plan for. This determines which subjects, sections, and faculty will be available.</p>
+  </div>
+  <div class="planner-grid">
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-sliders"></i> Planning scope</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Select the department and semester you want to plan for. All subsequent steps will use this context.</p>
+      <form method="GET">
+        <input type="hidden" name="step" value="1">
+        <div class="planner-form-grid">
+          <div class="field">
+            <label>Department</label>
+            <select name="dept" class="input" required onchange="this.form.submit()">
+              {% for d in departments %}
+              <option value="{{ d.pk }}" {% if department and department.pk == d.pk %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>
+              {% endfor %}
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Pick the department you're planning for</div>
+          </div>
+          <div class="field">
+            <label>Semester</label>
+            <select name="sem" class="input" required onchange="this.form.submit()">
+              {% for i in "12345678" %}
+              <option value="{{ i }}" {% if selected_semester|stringformat:'s' == i %}selected{% endif %}>Semester {{ i }}</option>
+              {% endfor %}
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Select which semester to plan</div>
+          </div>
         </div>
+        <div class="scope-note"><i class="fas fa-circle-info"></i><span>This sets the context for all planning steps: faculty availability, timetable generation, and room allocation.</span></div>
+        <div class="action-row">
+          <button type="submit" class="qa-btn qa-teal"><i class="fas fa-rotate"></i> Update scope</button>
+          {% if department %}<a class="soft-btn" href="?dept={{ department.pk }}&sem={{ selected_semester }}&step=2">Continue to Step 2 <i class="fas fa-arrow-right"></i></a>{% endif %}
+        </div>
+      </form>
+    </div>
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-scroll"></i> Academic regulation</div>
+      {% if regulations %}
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Select a regulation to view its curriculum structure and requirements.</p>
+      <div class="field">
+        <label>Regulation scheme</label>
+        <select class="input" onchange="if(this.value) window.location.href='/dashboard/admin/regulations/' + this.value + '/curriculum/'">
+          <option value="">Choose a regulation...</option>
+          {% for reg in regulations %}
+          <option value="{{ reg.pk }}">{{ reg.name }} ({{ reg.code }}) — {{ reg.effective_from_year }}+</option>
+          {% endfor %}
+        </select>
       </div>
-      <button type="submit" class="qa-btn" style="background:#6366f1;color:#fff"><i class="fas fa-user-check"></i> Assign (adds a section)</button>
-    </form>
+      {% else %}
+      <div class="empty-note"><i class="fas fa-scroll"></i><p>No regulations defined yet.</p><a href="{% url 'admin_regulations' %}" class="soft-btn" style="margin-top:12px"><i class="fas fa-plus"></i> Create regulation</a></div>
+      {% endif %}
+    </div>
   </div>
-</div>
-
-<!-- Faculty availability + Current subjects -->
-<div class="planner-grid" style="margin-bottom:20px">
   <div class="planner-card">
-    <div class="planner-label">Faculty Availability</div>
-    <form method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="planner_action" value="add_availability"/>
-      <input type="hidden" name="department" value="{{ department.pk }}"/>
-      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="planner-grid">
-        <div class="fg"><label>Faculty *</label><select name="faculty_id" class="fc" required><option value="">Select Faculty</option>{% for member in faculty %}<option value="{{ member.pk }}">{{ member.user.get_full_name|default:member.user.username }}</option>{% endfor %}</select></div>
-        <div class="fg"><label>Day *</label><select name="day_of_week" class="fc" required><option value="MON">Monday</option><option value="TUE">Tuesday</option><option value="WED">Wednesday</option><option value="THU">Thursday</option><option value="FRI">Friday</option><option value="SAT">Saturday</option></select></div>
-      </div>
-      <div class="planner-grid">
-        <div class="fg"><label>Start Time *</label><input type="time" name="start_time" class="fc" required/></div>
-        <div class="fg"><label>End Time *</label><input type="time" name="end_time" class="fc" required/></div>
-      </div>
-      <button type="submit" class="qa-btn qa-gold"><i class="fas fa-clock"></i> Save Availability</button>
-    </form>
-  </div>
-
-  <div class="planner-card">
-    <div class="planner-label">Current Semester Subjects</div>
+    <div class="planner-card-title"><i class="fas fa-book"></i> Semester subjects ({{ subjects|length }})</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">These are the subjects available for {{ department.code|default:"selected department" }} Semester {{ selected_semester }}. You'll map faculty to these subjects in Step 2.</p>
     {% if subjects %}
     <div class="table-scroll">
       <table class="dtable">
-        <thead><tr><th>Code</th><th>Name</th><th>Sem</th></tr></thead>
-        <tbody>{% for subject in subjects %}<tr><td style="font-weight:600;color:var(--teal)">{{ subject.code }}</td><td>{{ subject.name }}</td><td style="text-align:center">{{ subject.semester }}</td></tr>{% endfor %}</tbody>
+        <thead><tr><th>Code</th><th>Subject</th><th>Credits</th></tr></thead>
+        <tbody>{% for s in subjects %}<tr><td style="font-weight:800;color:var(--teal)">{{ s.code }}</td><td>{{ s.name }}</td><td>{{ s.credits|default:"-" }}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
+    <div class="table-foot">Showing {{ subjects|length }} subject{{ subjects|length|pluralize }} for {{ department.code }} Semester {{ selected_semester }}</div>
     {% else %}
-    <div class="empty"><i class="fas fa-book"></i>No subjects yet for this semester.</div>
+    <div class="empty-note"><i class="fas fa-book"></i><p>No subjects available for this scope.</p><div style="font-size:12px;color:var(--muted);margin-top:8px">Create subjects from the Subjects page first.</div></div>
     {% endif %}
   </div>
-</div>
-
-<!-- Faculty assignment map -->
-<div class="planner-card" style="margin-bottom:20px">
-  <div class="planner-label">Faculty Assignment Map &mdash; Sections</div>
-  <div class="section-meta" style="margin-bottom:12px">Each row = one section. Multiple rows for same subject = multiple sections (A, B, C&hellip;). Same faculty can appear across different subjects or departments.</div>
-  {% if subject_assignments %}
-  <div class="table-scroll">
-    <table class="dtable">
-      <thead><tr><th>Subject</th><th>Section</th><th>Faculty</th><th>Dept</th><th></th></tr></thead>
-      <tbody>
-        {% regroup subject_assignments by subject as grouped_assignments %}
-        {% for group in grouped_assignments %}
-          {% for item in group.list %}
-          <tr>
-            {% if forloop.first %}
-            <td rowspan="{{ group.list|length }}" style="font-weight:600;color:var(--deep);vertical-align:top;padding-top:12px">
-              {{ item.subject.code }}<div style="font-size:11px;color:var(--muted);font-weight:400">{{ item.subject.name }}</div>
-            </td>
-            {% endif %}
-            <td><span style="font-size:11px;font-weight:800;background:rgba(13,115,119,.1);color:var(--teal);padding:2px 8px;border-radius:6px">Sec {{ forloop.counter }}</span></td>
-            <td>{{ item.faculty.user.get_full_name|default:item.faculty.user.username }}</td>
-            <td style="font-size:11px;color:var(--muted)">{{ item.faculty.department.code }}</td>
-            <td>
-              <form method="POST" style="display:inline">
-                {% csrf_token %}
-                <input type="hidden" name="planner_action" value="remove_assignment"/>
-                <input type="hidden" name="department" value="{{ department.pk }}"/>
-                <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-                <input type="hidden" name="assignment_id" value="{{ item.pk }}"/>
-                <button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600"><i class="fas fa-unlink"></i></button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty"><i class="fas fa-user-check"></i>No faculty assignments yet. Assign faculty above to define sections.</div>
-  {% endif %}
-</div>
-
-<!-- Timetable CSV Upload -->
-<div class="planner-card" style="margin-bottom:20px">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-    <div class="planner-label" style="margin:0">Upload Timetable from CSV</div>
-    <a href="{% url 'admin_timetable_template_csv' %}" class="qa-btn" style="background:#f3f4f6;color:var(--text);border:1.5px solid var(--border);font-size:12px;padding:7px 14px">
-      <i class="fas fa-download"></i> Download Template
-    </a>
-  </div>
-  <div class="hint-box" style="margin-bottom:14px">
-    Columns: <code>department_code</code>, <code>subject_code</code>, <code>faculty_employee_id</code>, <code>day_of_week</code> (MON/TUE/WED/THU/FRI/SAT), <code>start_time</code> (HH:MM), <code>end_time</code>, <code>room_number</code>, <code>section</code> (A/B/C &mdash; optional, for multiple sections of the same subject). Duplicate slots are skipped automatically.
-  </div>
-  {% if department %}
-  <form method="POST" action="{% url 'admin_timetable_upload_csv' %}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-    {% csrf_token %}
-    <input type="hidden" name="department" value="{{ department.pk }}"/>
-    <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-    <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">CSV File</label>
-      <input type="file" name="csv_file" accept=".csv" required style="font-size:13px;padding:6px 0"/>
-    </div>
-    <button type="submit" class="qa-btn qa-teal"><i class="fas fa-upload"></i> Upload Timetable</button>
-  </form>
-  {% else %}
-  <div style="font-size:13px;color:var(--muted)">Select a department above to upload.</div>
-  {% endif %}
-</div>
-
-<!-- Availability + Timetable -->
-<div class="planner-grid">
+  {% if section_strength_summary %}
   <div class="planner-card">
-    <div class="planner-label">Availability Slots</div>
-    {% if availability %}
+    <div class="planner-card-title"><i class="fas fa-users"></i> Current section strength</div>
     <div class="table-scroll">
       <table class="dtable">
-        <thead><tr><th>Faculty</th><th>Day</th><th>Time</th></tr></thead>
-        <tbody>{% for slot in availability %}<tr><td>{{ slot.faculty.user.get_full_name|default:slot.faculty.user.username }}</td><td>{{ slot.get_day_of_week_display }}</td><td>{{ slot.start_time|time:"g:i A" }} &ndash; {{ slot.end_time|time:"g:i A" }}</td></tr>{% endfor %}</tbody>
+        <thead><tr><th>Section</th><th>Students</th><th>Capacity</th></tr></thead>
+        <tbody>{% for section in section_strength_summary %}<tr><td><span class="section-pill">Sec {{ section.section }}</span></td><td>{{ section.total }}</td><td>-</td></tr>{% endfor %}</tbody>
       </table>
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-clock"></i>No availability slots saved yet.</div>
-    {% endif %}
+  </div>
+  {% endif %}
+  <div class="planner-nav">
+    <span style="color:var(--muted);font-size:13px">Step 1 of 4</span>
+    {% if department %}<a class="qa-btn qa-teal" href="?dept={{ department.pk }}&sem={{ selected_semester }}&step=2">Next: Sections & Faculty <i class="fas fa-arrow-right"></i></a>{% else %}<span class="soft-btn" style="opacity:.5;cursor:not-allowed">Select department first</span>{% endif %}
+  </div>
+</section>
+
+<section class="planner-pane {% if active_step == '2' %}active{% endif %}">
+  <div class="planner-head">
+    <div class="planner-eyebrow">Step 2 of 4</div>
+    <h2 class="planner-title">Configure sections and faculty</h2>
+    <p class="planner-copy">Set up sections for this semester and map faculty to subjects. Each subject needs at least one faculty member assigned to each section.</p>
+  </div>
+  {% if department %}
+  <div class="planner-grid">
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-layer-group"></i> Sections ({{ sections|length }})</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Sections divide students into groups. Each section can have different faculty assignments for the same subject.</p>
+      {% if sections %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Section</th><th>Capacity</th><th>Students</th></tr></thead>
+          <tbody>
+          {% for sec in sections %}
+            <tr>
+              <td><span class="section-pill">Sec {{ sec.label }}</span></td>
+              <td>{{ sec.capacity }}</td>
+              <td><strong>{{ sec.student_count }}</strong></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-note"><i class="fas fa-layer-group"></i><p>No sections created yet.</p></div>
+      {% endif %}
+      <div class="action-row" style="margin-top:16px">
+        <a class="qa-btn qa-teal" href="{% url 'admin_sections' %}?dept={{ department.pk }}&sem={{ selected_semester }}"><i class="fas fa-layer-group"></i> Manage sections</a>
+      </div>
+    </div>
+
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-clock"></i> Faculty availability</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Add time slots when faculty are available for teaching. This helps the timetable generator schedule classes efficiently.</p>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="planner_action" value="add_availability">
+        <input type="hidden" name="department" value="{{ department.pk }}">
+        <input type="hidden" name="semester" value="{{ selected_semester }}">
+        <input type="hidden" name="step" value="2">
+        <div class="field">
+          <label>Faculty member</label>
+          <select name="faculty_id" class="input" required>
+            <option value="">Select faculty...</option>
+            {% for f in faculty %}<option value="{{ f.pk }}">{{ f.user.get_full_name|default:f.user.username }} ({{ f.department.code }})</option>{% endfor %}
+          </select>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Choose a faculty member</div>
+        </div>
+        <div class="planner-form-grid">
+          <div class="field">
+            <label>Day</label>
+            <select name="day_of_week" class="input" required>
+              <option value="">Select day...</option>
+              <option value="MON">Monday</option><option value="TUE">Tuesday</option><option value="WED">Wednesday</option><option value="THU">Thursday</option><option value="FRI">Friday</option><option value="SAT">Saturday</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Which day is faculty available?</div>
+          </div>
+          <div class="field"><label>Start time</label><input type="time" name="start_time" class="input" placeholder="09:00" required><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> e.g. 09:00</div></div>
+          <div class="field"><label>End time</label><input type="time" name="end_time" class="input" placeholder="17:00" required><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> e.g. 17:00</div></div>
+        </div>
+        <button type="submit" class="qa-btn qa-teal"><i class="fas fa-check"></i> Add availability</button>
+      </form>
+    </div>
   </div>
 
+  <div class="planner-grid">
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-diagram-project"></i> Section-faculty mappings ({{ section_mappings|length }})</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Maps each subject to a faculty member for each section. This is essential for timetable generation.</p>
+      {% if section_mappings %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Section</th><th>Subject</th><th>Faculty</th><th>Room</th></tr></thead>
+          <tbody>
+          {% for item in section_mappings %}
+            <tr>
+              <td><span class="section-pill">Sec {{ item.section.label }}</span></td>
+              <td><strong style="color:var(--teal)">{{ item.subject.code }}</strong><div style="font-size:11px;color:var(--muted)">{{ item.subject.name }}</div></td>
+              <td>{{ item.faculty.user.get_full_name|default:item.faculty.user.username }}</td>
+              <td>{{ item.classroom.room_number|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-note"><i class="fas fa-diagram-project"></i><p>No mappings yet.</p></div>
+      {% endif %}
+      {% if unmapped_subjects %}
+      <div class="scope-note" style="margin-top:14px"><i class="fas fa-triangle-exclamation"></i><span><strong>{{ unmapped_subjects|length }}</strong> subject{{ unmapped_subjects|length|pluralize }} not yet mapped to any section.</span></div>
+      {% endif %}
+      <div class="action-row" style="margin-top:16px">
+        <a class="qa-btn qa-teal" href="{% url 'admin_ssf_map' %}?dept={{ department.pk }}&sem={{ selected_semester }}"><i class="fas fa-diagram-project"></i> Manage mappings</a>
+      </div>
+    </div>
+
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-calendar-day"></i> Availability slots ({{ availability|length }})</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Shows all faculty availability slots you've added. Use this to verify coverage before generating timetables.</p>
+      {% if availability %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Faculty</th><th>Day</th><th>Time</th></tr></thead>
+          <tbody>
+            {% for a in availability %}
+            <tr>
+              <td>{{ a.faculty.user.get_full_name|default:a.faculty.user.username }}</td>
+              <td>{{ a.get_day_of_week_display }}</td>
+              <td>{{ a.start_time|time:"g:i A" }} – {{ a.end_time|time:"g:i A" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-note"><i class="fas fa-clock"></i><p>No availability slots added yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="planner-card"><div class="empty-note"><i class="fas fa-building"></i><p>Select a department in Step 1 first.</p></div></div>
+  {% endif %}
+  <div class="planner-nav">
+    <a class="soft-btn" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=1"><i class="fas fa-arrow-left"></i> Back</a>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span style="color:var(--muted);font-size:13px">Step 2 of 4</span>
+      {% if department %}<a class="qa-btn qa-teal" href="?dept={{ department.pk }}&sem={{ selected_semester }}&step=3">Next: Rooms & Breaks <i class="fas fa-arrow-right"></i></a>{% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="planner-pane {% if active_step == '4' or active_step == '5' %}active{% endif %}">
+  <div class="planner-head">
+    <div class="planner-eyebrow">Step 4 of 4</div>
+    <h2 class="planner-title">Generate and manage timetable</h2>
+    <p class="planner-copy">Auto-generate the timetable based on your configuration, or upload a custom CSV file. Review the generated schedule and make adjustments as needed.</p>
+  </div>
+  {% if department %}
   <div class="planner-card">
-    <div class="planner-label">Generated Timetable</div>
-    {% if timetable_matrix %}
-    <div class="section-meta" style="margin-bottom:12px">Weekly timetable matrix built from the current subject, section, faculty, room, and break data.</div>
-    <div class="tt-matrix-wrap" style="margin-bottom:16px">
+    <div class="planner-card-title"><i class="fas fa-wand-magic-sparkles"></i> Readiness checklist</div>
+    <ul class="readiness-list">
+      <li class="{% if not subjects %}missing{% endif %}"><i class="fas {% if subjects %}fa-check{% else %}fa-circle-xmark{% endif %}"></i> <strong>{{ subjects|length }}</strong> subject{{ subjects|length|pluralize }} available</li>
+      <li class="{% if not sections %}missing{% endif %}"><i class="fas {% if sections %}fa-check{% else %}fa-circle-xmark{% endif %}"></i> <strong>{{ sections|length }}</strong> section{{ sections|length|pluralize }} created</li>
+      <li class="{% if not section_mappings %}missing{% endif %}"><i class="fas {% if section_mappings %}fa-check{% else %}fa-circle-xmark{% endif %}"></i> <strong>{{ section_mappings|length }}</strong> faculty mapping{{ section_mappings|length|pluralize }}</li>
+      <li class="{% if not classrooms %}missing{% endif %}"><i class="fas {% if classrooms %}fa-check{% else %}fa-circle-xmark{% endif %}"></i> <strong>{{ classrooms|length }}</strong> classroom{{ classrooms|length|pluralize }} available</li>
+    </ul>
+    <div class="action-row">
+      <form method="POST" style="display:inline">
+        {% csrf_token %}
+        <input type="hidden" name="planner_action" value="generate_timetable">
+        <input type="hidden" name="department" value="{{ department.pk }}">
+        <input type="hidden" name="semester" value="{{ selected_semester }}">
+        <input type="hidden" name="step" value="4">
+        <button type="submit" class="qa-btn qa-teal" {% if not subjects or not sections or not section_mappings %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}><i class="fas fa-wand-magic-sparkles"></i> Auto-generate timetable</button>
+      </form>
+      <a href="{% url 'admin_timetable_template_csv' %}" class="soft-btn"><i class="fas fa-download"></i> Download CSV template</a>
+    </div>
+    <form method="POST" action="{% url 'admin_timetable_upload_csv' %}" enctype="multipart/form-data" style="margin-top:18px;padding-top:18px;border-top:1.5px solid var(--border)">
+      {% csrf_token %}
+      <input type="hidden" name="department" value="{{ department.pk }}">
+      <input type="hidden" name="semester" value="{{ selected_semester }}">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Or upload a custom timetable CSV file:</p>
+      <div class="planner-form-grid">
+        <div class="field"><label>CSV file</label><input type="file" name="timetable_csv" accept=".csv" class="input" required></div>
+      </div>
+      <button type="submit" class="qa-btn qa-indigo"><i class="fas fa-upload"></i> Upload timetable</button>
+    </form>
+  </div>
+  {% if timetable_matrix %}
+  <div class="planner-card">
+    <div class="planner-card-title"><i class="fas fa-calendar-days"></i> Weekly timetable matrix</div>
+    <div class="tt-matrix-wrap">
       <table class="tt-matrix">
-        <thead>
-          <tr>
-            <th style="text-align:left">Period</th>
-            <th>Monday</th>
-            <th>Tuesday</th>
-            <th>Wednesday</th>
-            <th>Thursday</th>
-            <th>Friday</th>
-            <th>Saturday</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Period</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
         <tbody>
-          {% for row in timetable_matrix %}
-          <tr class="{% if row.is_break_row %}break-row{% endif %}">
+        {% for row in timetable_matrix %}
+          <tr>
             <td class="time-col">{{ row.label }}</td>
             {% for cell in row.cells %}
             <td>
@@ -268,164 +417,155 @@
                 {% for entry in cell.entries %}
                 <div class="tt-chip">
                   <div class="tt-chip-subj">{{ entry.subject.name }}</div>
-                  <div class="tt-chip-meta">{{ entry.subject.code }}{% if entry.section %} &middot; Section {{ entry.section }}{% endif %}</div>
-                  <div class="tt-chip-meta">{{ entry.classroom.room_number }} &middot; {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
+                  <div class="tt-chip-meta">{{ entry.subject.code }}{% if entry.section %} - Sec {{ entry.section }}{% endif %}</div>
+                  <div class="tt-chip-meta">{{ entry.classroom.room_number }} - {{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</div>
                 </div>
                 {% endfor %}
               {% elif cell.break_label %}
-                <div style="font-size:12px;font-weight:700;color:var(--muted);text-align:center">{{ cell.break_label }}</div>
+                <div style="font-size:11px;font-weight:800;color:var(--muted);text-align:center;padding:6px">{{ cell.break_label }}</div>
               {% else %}
-                <div style="font-size:12px;color:#94a3b8;text-align:center">&mdash;</div>
+                <div style="font-size:11px;color:#cbd5e1;text-align:center">—</div>
               {% endif %}
             </td>
             {% endfor %}
           </tr>
-          {% endfor %}
+        {% endfor %}
         </tbody>
       </table>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
+  <div class="planner-card">
+    <div class="planner-card-title"><i class="fas fa-list"></i> Timetable entries ({{ timetable_entries|length }})</div>
     {% if timetable_entries %}
     <div class="table-scroll">
       <table class="dtable">
-        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Sec</th><th>Faculty</th><th>Dept</th><th>Room</th></tr></thead>
-        <tbody>{% for entry in timetable_entries %}<tr>
-          <td>{{ entry.get_day_of_week_display }}</td>
-          <td style="white-space:nowrap">{{ entry.start_time|time:"g:i A" }} &ndash; {{ entry.end_time|time:"g:i A" }}</td>
-          <td style="font-weight:600;color:var(--teal)">{{ entry.subject.code }}<div style="font-size:10px;color:var(--muted);font-weight:400">{{ entry.subject.name }}</div></td>
-          <td>{% if entry.section %}<span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.1);color:var(--teal);padding:1px 7px;border-radius:5px">{{ entry.section }}</span>{% else %}<span style="color:var(--muted)">&mdash;</span>{% endif %}</td>
-          <td>{{ entry.faculty.user.get_full_name|default:entry.faculty.user.username }}</td>
-          <td style="font-size:11px;color:var(--muted)">{{ entry.faculty.department.code }}</td>
-          <td>{{ entry.classroom.room_number }}{% if entry.classroom.building %}<div style="font-size:10px;color:var(--muted)">{{ entry.classroom.building }}</div>{% endif %}</td>
-        </tr>{% endfor %}</tbody>
+        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Section</th><th>Faculty</th><th>Room</th></tr></thead>
+        <tbody>{% for e in timetable_entries %}<tr><td>{{ e.get_day_of_week_display }}</td><td style="white-space:nowrap">{{ e.start_time|time:"g:i A" }} – {{ e.end_time|time:"g:i A" }}</td><td><strong style="color:var(--teal)">{{ e.subject.code }}</strong><div style="font-size:11px;color:var(--muted)">{{ e.subject.name }}</div></td><td>{% if e.section %}<span class="section-pill">{{ e.section }}</span>{% else %}—{% endif %}</td><td>{{ e.faculty.user.get_full_name|default:e.faculty.user.username }}</td><td>{{ e.classroom.room_number }}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-calendar-days"></i>No timetable yet. Add assignments and availability, then click Auto Update.</div>
-    {% endif %}
+    {% else %}<div class="empty-note"><i class="fas fa-calendar-days"></i><p>No timetable entries yet. Generate or upload one above.</p></div>{% endif %}
   </div>
-</div>
-
-<!-- Break Management -->
-<div class="planner-grid" style="margin-top:20px">
-  <div class="planner-card">
-    <div class="planner-label"><i class="fas fa-coffee"></i> Add Break Slot</div>
-    <form method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="planner_action" value="add_break"/>
-      <input type="hidden" name="department" value="{{ department.pk }}"/>
-      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="fg"><label>Break Label *</label>
-        <select name="break_label" class="fc">
-          <option value="Lunch Break">Lunch Break</option>
-          <option value="Tea Break">Tea Break</option>
-          <option value="Short Break">Short Break</option>
-          <option value="Prayer Break">Prayer Break</option>
-        </select>
-      </div>
-      <div class="planner-grid">
-        <div class="fg"><label>Day *</label>
-          <select name="break_day" class="fc" required>
-            <option value="MON">Monday</option><option value="TUE">Tuesday</option>
-            <option value="WED">Wednesday</option><option value="THU">Thursday</option>
-            <option value="FRI">Friday</option><option value="SAT">Saturday</option>
-          </select>
-        </div>
-        <div class="fg"><label>Applies To</label>
-          <select name="break_scope" class="fc">
-            <option value="all">All Departments (College-wide)</option>
-            <option value="dept">This Department Only</option>
-          </select>
-        </div>
-      </div>
-      <div class="planner-grid">
-        <div class="fg"><label>Start Time *</label><input type="time" name="break_start" class="fc" required/></div>
-        <div class="fg"><label>End Time *</label><input type="time" name="break_end" class="fc" required/></div>
-      </div>
-      <button type="submit" class="qa-btn" style="background:#92400e;color:#fff"><i class="fas fa-coffee"></i> Add Break</button>
-    </form>
+  {% else %}<div class="planner-card"><div class="empty-note"><i class="fas fa-building"></i><p>Select a department in Step 1 first.</p></div></div>{% endif %}
+  <div class="planner-nav">
+    <a class="soft-btn" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=3"><i class="fas fa-arrow-left"></i> Back</a>
+    <span style="display:flex;align-items:center;gap:8px;color:var(--teal);font-weight:700"><i class="fas fa-circle-check"></i> Planning complete</span>
   </div>
+</section>
 
-  <div class="planner-card">
-    <div class="planner-label">Scheduled Breaks</div>
-    {% if college_breaks %}
-    <div class="table-scroll">
-      <table class="dtable">
-        <thead><tr><th>Label</th><th>Day</th><th>Time</th><th>Scope</th><th></th></tr></thead>
-        <tbody>
-          {% for brk in college_breaks %}
-          <tr>
-            <td style="font-weight:600"><i class="fas fa-coffee" style="color:#92400e;margin-right:5px"></i>{{ brk.label }}</td>
-            <td>{{ brk.get_day_of_week_display }}</td>
-            <td style="white-space:nowrap">{{ brk.start_time|time:"g:i A" }} &ndash; {{ brk.end_time|time:"g:i A" }}</td>
-            <td><span class="dbadge {% if brk.applies_to_all %}dbadge-active{% else %}dbadge-warning{% endif %}">{% if brk.applies_to_all %}College-wide{% else %}Dept{% endif %}</span></td>
-            <td>
-              <form method="POST" style="display:inline">
-                {% csrf_token %}
-                <input type="hidden" name="planner_action" value="delete_break"/>
-                <input type="hidden" name="break_id" value="{{ brk.pk }}"/>
-                <input type="hidden" name="department" value="{{ department.pk }}"/>
-                <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-                <button type="submit" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty"><i class="fas fa-coffee"></i>No breaks scheduled yet.</div>
-    {% endif %}
+<section class="planner-pane {% if active_step == '3' %}active{% endif %}">
+  <div class="planner-head">
+    <div class="planner-eyebrow">Step 3 of 4</div>
+    <h2 class="planner-title">Set up breaks and classrooms</h2>
+    <p class="planner-copy">Configure break times and classroom inventory. These settings help the timetable generator avoid scheduling conflicts and allocate rooms efficiently.</p>
   </div>
-</div>
-
-<!-- Classroom Management -->
-<div class="planner-card" style="margin-top:20px">
-  <div class="planner-label"><i class="fas fa-door-open"></i> Classrooms / Rooms</div>
+  {% if department %}
   <div class="planner-grid">
-    <form method="POST" style="display:contents">
-      {% csrf_token %}
-      <input type="hidden" name="planner_action" value="add_classroom"/>
-      <input type="hidden" name="department" value="{{ department.pk }}"/>
-      <input type="hidden" name="semester" value="{{ selected_semester }}"/>
-      <div class="fg"><label>Room Number *</label><input type="text" name="room_number" class="fc" placeholder="e.g. 101, LAB-A" required/></div>
-      <div class="fg"><label>Building</label><input type="text" name="building" class="fc" placeholder="e.g. Block A, Main Block"/></div>
-      <div class="fg"><label>Capacity</label><input type="number" name="capacity" class="fc" value="60" min="1"/></div>
-      <div class="fg"><label>Room Type</label>
-        <select name="room_type" class="fc">
-          <option value="lecture">Lecture Hall</option>
-          <option value="lab">Lab</option>
-          <option value="seminar">Seminar Hall</option>
-          <option value="tutorial">Tutorial Room</option>
-          <option value="other">Other</option>
-        </select>
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-mug-hot"></i> Add break</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Define break periods during the day. Breaks prevent classes from being scheduled during these times.</p>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="planner_action" value="add_break">
+        <input type="hidden" name="department" value="{{ department.pk }}">
+        <input type="hidden" name="semester" value="{{ selected_semester }}">
+        <input type="hidden" name="step" value="3">
+        <div class="field">
+          <label>Break type</label>
+          <select name="break_label" class="input">
+            <option value="Lunch Break">Lunch Break</option>
+            <option value="Tea Break">Tea Break</option>
+            <option value="Short Break">Short Break</option>
+            <option value="Prayer Break">Prayer Break</option>
+            <option value="Assembly">Assembly</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Select or type a break name</div>
+        </div>
+        <div class="planner-form-grid">
+          <div class="field">
+            <label>Day</label>
+            <select name="break_day" class="input" required>
+              <option value="">Select day...</option>
+              <option value="MON">Monday</option><option value="TUE">Tuesday</option><option value="WED">Wednesday</option><option value="THU">Thursday</option><option value="FRI">Friday</option><option value="SAT">Saturday</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Which day?</div>
+          </div>
+          <div class="field">
+            <label>Scope</label>
+            <select name="break_scope" class="input">
+              <option value="all">College-wide</option>
+              <option value="dept">This department</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Apply to all or just this dept?</div>
+          </div>
+          <div class="field"><label>Start time</label><input type="time" name="break_start" class="input" placeholder="12:00" required><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> e.g. 12:00</div></div>
+          <div class="field"><label>End time</label><input type="time" name="break_end" class="input" placeholder="13:00" required><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> e.g. 13:00</div></div>
+        </div>
+        <button type="submit" class="qa-btn qa-gold"><i class="fas fa-plus"></i> Add break</button>
+      </form>
+    </div>
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-door-open"></i> Add classroom</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Register available classrooms and labs. The timetable generator will allocate these to classes.</p>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="planner_action" value="add_classroom">
+        <input type="hidden" name="department" value="{{ department.pk }}">
+        <input type="hidden" name="semester" value="{{ selected_semester }}">
+        <input type="hidden" name="step" value="3">
+        <div class="planner-form-grid">
+          <div class="field"><label>Room number</label><input type="text" name="room_number" class="input" placeholder="e.g. 101" required><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Unique room identifier</div></div>
+          <div class="field"><label>Building</label><input type="text" name="building" class="input" placeholder="e.g. Block A"><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Which building?</div></div>
+          <div class="field"><label>Capacity</label><input type="number" name="capacity" class="input" value="60" min="1"><div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> How many students?</div></div>
+          <div class="field">
+            <label>Type</label>
+            <select name="room_type" class="input">
+              <option value="lecture">Lecture Hall</option>
+              <option value="lab">Lab</option>
+              <option value="seminar">Seminar Hall</option>
+              <option value="tutorial">Tutorial</option>
+              <option value="other">Other</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px"><i class="fas fa-lightbulb"></i> Room purpose</div>
+          </div>
+        </div>
+        <button type="submit" class="qa-btn qa-deep"><i class="fas fa-plus"></i> Add classroom</button>
+      </form>
+    </div>
+  </div>
+  <div class="planner-grid">
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-list"></i> Scheduled breaks ({{ college_breaks|length }})</div>
+      {% if college_breaks %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Break</th><th>Day</th><th>Time</th><th>Scope</th><th></th></tr></thead>
+          <tbody>{% for brk in college_breaks %}<tr><td><strong>{{ brk.label }}</strong></td><td>{{ brk.get_day_of_week_display }}</td><td>{{ brk.start_time|time:"g:i A" }} – {{ brk.end_time|time:"g:i A" }}</td><td><span class="dbadge {% if brk.applies_to_all %}dbadge-active{% else %}dbadge-warning{% endif %}">{% if brk.applies_to_all %}College{% else %}Dept{% endif %}</span></td><td><form method="POST" style="display:inline">{% csrf_token %}<input type="hidden" name="planner_action" value="delete_break"><input type="hidden" name="break_id" value="{{ brk.pk }}"><input type="hidden" name="department" value="{{ department.pk }}"><input type="hidden" name="semester" value="{{ selected_semester }}"><input type="hidden" name="step" value="3"><button type="submit" class="icon-btn" title="Delete break"><i class="fas fa-trash"></i></button></form></td></tr>{% endfor %}</tbody>
+        </table>
       </div>
-      <div class="fg"><label>Features <span style="font-size:10px;color:var(--muted);font-weight:400">(comma-separated)</span></label><input type="text" name="features" class="fc" placeholder="e.g. projector,computers,ac"/></div>
-      <div class="fg" style="display:flex;align-items:flex-end"><button type="submit" class="qa-btn qa-deep"><i class="fas fa-plus"></i> Add Room</button></div>
-    </form>
+      {% else %}<div class="empty-note"><i class="fas fa-mug-hot"></i><p>No breaks scheduled yet.</p></div>{% endif %}
+    </div>
+    <div class="planner-card">
+      <div class="planner-card-title"><i class="fas fa-table-list"></i> Classrooms ({{ classrooms|length }})</div>
+      {% if classrooms %}
+      <div class="table-scroll">
+        <table class="dtable">
+          <thead><tr><th>Room</th><th>Type</th><th>Building</th><th>Capacity</th></tr></thead>
+          <tbody>{% for r in classrooms %}<tr><td style="font-weight:800;color:var(--teal)">{{ r.room_number }}</td><td>{{ r.get_room_type_display }}</td><td>{{ r.building|default:"—" }}</td><td>{{ r.capacity }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}<div class="empty-note"><i class="fas fa-door-open"></i><p>No classrooms added yet.</p></div>{% endif %}
+    </div>
   </div>
-  {% if classrooms %}
-  <div class="table-scroll" style="margin-top:14px">
-    <table class="dtable">
-      <thead><tr><th>Room</th><th>Type</th><th>Building</th><th>Capacity</th><th>Features</th></tr></thead>
-      <tbody>
-        {% for room in classrooms %}
-        <tr>
-          <td style="font-weight:600;color:var(--teal)">{{ room.room_number }}</td>
-          <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ room.get_room_type_display }}</span></td>
-          <td style="color:var(--muted)">{{ room.building|default:"&mdash;" }}</td>
-          <td style="text-align:center">{{ room.capacity }}</td>
-          <td style="font-size:11px;color:var(--muted)">{{ room.features|default:"&mdash;" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% else %}<div class="planner-card"><div class="empty-note"><i class="fas fa-building"></i><p>Select a department in Step 1 first.</p></div></div>{% endif %}
+  <div class="planner-nav">
+    <a class="soft-btn" href="?dept={% if department %}{{ department.pk }}{% endif %}&sem={{ selected_semester }}&step=2"><i class="fas fa-arrow-left"></i> Back</a>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span style="color:var(--muted);font-size:13px">Step 3 of 4</span>
+      {% if department %}<a class="qa-btn qa-teal" href="?dept={{ department.pk }}&sem={{ selected_semester }}&step=4">Next: Timetable <i class="fas fa-arrow-right"></i></a>{% endif %}
+    </div>
   </div>
-  {% endif %}
-</div>
+</section>
 
-{% else %}
-<div class="empty" style="padding:48px 0"><i class="fas fa-building"></i>Add a department first to use the semester planner.</div>
-{% endif %}
+{% endwith %}
 {% endblock %}

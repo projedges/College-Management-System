@@ -36,12 +36,16 @@
     <button class="mob-ham" id="mob-ham" aria-label="Open menu">
       <span></span><span></span><span></span>
     </button>
-    <div class="mob-brand">
-      {% if college and college.logo %}
-        <img src="{{ college.logo.url }}" alt="{{ college.name }}" class="mob-logo-img"/>
-      {% elif college %}
-        <span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:900;color:var(--deep)">{{ college.name|truncatechars:22 }}</span>
-      {% endif %}
+
+    <!-- Mobile profile badge -->
+    <div style="display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px 8px;box-shadow:var(--sh);flex-shrink:0;cursor:pointer;position:relative" onclick="toggleProfileMenu(this)">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+      <i class="fas fa-chevron-down" style="color:var(--muted);font-size:10px;transition:transform .2s"></i>
+      <div style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:1000;min-width:160px" class="profile-menu">
+        <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:13px"></i> My Profile</a>
+        <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:13px"></i> Support</a>
+        <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:#dc2626;text-decoration:none;font-size:11px;font-weight:600;transition:background .15s" onmouseover="this.style.background='rgba(220,38,38,.05)'" onmouseout="this.style.background=''"><i class="fas fa-sign-out-alt" style="width:13px"></i> Logout</a>
+      </div>
     </div>
     <div class="mob-role-badge">{% block role_label %}User{% endblock %}</div>
   </header>
@@ -67,47 +71,66 @@
       {% block sidebar_links %}{% endblock %}
     </nav>
 
-    <div class="sb-foot">
-      <div class="sb-user">
-        <div class="sb-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
-        <div class="sb-user-info">
-          <div class="sb-user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-          <div class="sb-user-role">{% block role_label_foot %}{% endblock %}</div>
-          {% if college %}<div class="sb-user-college">{{ college.name }}</div>{% endif %}
-        </div>
-      </div>
-      <a href="{% url 'logout' %}" class="sb-logout">
-        <i class="fas fa-sign-out-alt"></i> Sign Out
-      </a>
-    </div>
     <!-- Powered by footer -->
     <div class="sb-powered">Powered by <span>ProEdge EduTrack</span></div>
   </aside>
 
   <!-- Main content -->
   <main class="db-main">
-    <div class="db-page-head">
-      <div class="db-page-head-row">
-        <div>
-          <h1 class="db-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
-          <p class="db-page-sub">{% block page_sub %}Welcome back, {{ request.user.first_name|default:request.user.username }}{% endblock %}</p>
-        </div>
+    <!-- Fixed topbar with profile — always visible -->
+    <div class="db-topbar" id="db-topbar">
+      <div id="db-page-head-text">
+        <h1 class="db-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+        <p class="db-page-sub">{% block page_sub %}Welcome back, {{ request.user.first_name|default:request.user.username }}{% endblock %}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto">
         <div class="topbar-session-timer{% if request.is_college_admin %} admin-timer-hidden{% endif %}" id="sb-session-timer" title="Session time remaining">
           <i class="fas fa-clock"></i>
           <span class="timer-label">Session</span>
           <span id="sb-timer-display" style="font-variant-numeric:tabular-nums;letter-spacing:.5px">--:--</span>
         </div>
+        <!-- Profile dropdown -->
+        <div class="topbar-profile-wrap" id="topbar-profile-wrap">
+          <button class="topbar-profile-btn" id="topbar-profile-btn" aria-label="Profile menu" aria-expanded="false">
+            <div class="topbar-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+            <div class="topbar-profile-info">
+              <span class="topbar-profile-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+              <span class="topbar-profile-role">{% block role_label_foot %}User{% endblock %}</span>
+            </div>
+            <i class="fas fa-chevron-down topbar-profile-caret"></i>
+          </button>
+          <div class="topbar-profile-dropdown" id="topbar-profile-dropdown">
+            <div class="tpd-header">
+              <div class="tpd-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+              <div>
+                <div class="tpd-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                <div class="tpd-role">{% block role_label_drop %}User{% endblock %}</div>
+                {% if college %}<div class="tpd-college">{{ college.name }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="tpd-divider"></div>
+            <a href="#profile" data-section-target="profile" class="tpd-item">
+              <i class="fas fa-user-circle"></i> My Profile
+            </a>
+            <div class="tpd-divider"></div>
+            <a href="{% url 'logout' %}" class="tpd-item tpd-logout">
+              <i class="fas fa-sign-out-alt"></i> Sign Out
+            </a>
+          </div>
+        </div>
       </div>
     </div>
 
     {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} auto-dismiss-msg" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div class="alert alert-{{ message.tags }} auto-dismiss-msg" style="margin:0 32px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <span><i class="fas fa-circle-info"></i> {{ message }}</span>
         <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:16px;color:inherit;opacity:.6;line-height:1">&times;</button>
       </div>
     {% endfor %}
 
-    {% block dashboard_content %}{% endblock %}
+    <div class="db-content">
+      {% block dashboard_content %}{% endblock %}
+    </div>
   </main>
 </div>
 
@@ -209,9 +232,41 @@ body{overflow:hidden}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:299;backdrop-filter:blur(2px)}
 .sb-overlay.open{display:block}
 
+/* ---- Topbar profile dropdown ---- */
+.topbar-profile-wrap{position:relative}
+.topbar-profile-btn{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;border-radius:99px;border:1.5px solid var(--border);background:#fff;cursor:pointer;box-shadow:var(--sh);transition:all .2s}
+.topbar-profile-btn:hover{border-color:rgba(13,115,119,.3);box-shadow:0 4px 14px rgba(13,115,119,.1)}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+.topbar-profile-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.topbar-profile-name{font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.topbar-profile-role{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.topbar-profile-caret{font-size:10px;color:var(--muted);transition:transform .2s;margin-left:2px}
+.topbar-profile-btn[aria-expanded="true"] .topbar-profile-caret{transform:rotate(180deg)}
+.topbar-profile-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:220px;background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 12px 40px rgba(7,30,38,.14);z-index:500;overflow:hidden}
+.topbar-profile-dropdown.open{display:block;animation:tpdIn .18s ease}
+@keyframes tpdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.tpd-header{display:flex;align-items:center;gap:10px;padding:14px 16px}
+.tpd-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+.tpd-name{font-size:13px;font-weight:700;color:var(--deep)}
+.tpd-role{font-size:11px;color:var(--teal);font-weight:600}
+.tpd-college{font-size:10px;color:var(--muted);margin-top:1px}
+.tpd-divider{height:1px;background:var(--border);margin:0}
+.tpd-item{display:flex;align-items:center;gap:9px;padding:11px 16px;font-size:13px;font-weight:500;color:var(--deep);text-decoration:none;transition:background .15s}
+.tpd-item:hover{background:#f8fafb}
+.tpd-item i{width:16px;text-align:center;color:var(--teal)}
+.tpd-logout{color:#ef4444}
+.tpd-logout i{color:#ef4444}
+.tpd-logout:hover{background:#fff5f5}
+@media(max-width:860px){
+  .topbar-profile-info{display:none}
+  .topbar-profile-btn{padding:4px}
+  .topbar-profile-caret{display:none}
+}
+
 /* ---- Main ---- */
-.db-main{flex:1;padding:24px 32px 32px;min-width:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;height:100dvh;-webkit-overflow-scrolling:touch}
-.db-page-head{margin-bottom:16px}
+.db-main{flex:1;padding:0;min-width:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;height:100dvh;-webkit-overflow-scrolling:touch}
+.db-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 32px 12px;flex-wrap:wrap;background:transparent;position:relative;z-index:100;border-bottom:none}
+.db-content{padding:0 32px 32px}
 .db-page-title{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep);margin:0 0 4px}
 .db-page-sub{font-size:14px;color:var(--muted);margin:0}
 
@@ -305,7 +360,8 @@ body{overflow:hidden}
   .db-sidebar.open{transform:translateX(0)}
   .db-main{height:calc(100dvh - 56px);width:100%;max-width:100vw}
   .sb-close{display:block}
-  .db-main{padding:16px 16px 24px}
+  .db-topbar{padding:10px 16px 8px}
+  .db-content{padding:0 16px 24px}
   .two-col,.three-col{grid-template-columns:1fr}
   .hero-grid{grid-template-columns:1fr}
   .d-card [style*="grid-template-columns"]{grid-template-columns:1fr!important}
@@ -314,44 +370,32 @@ body{overflow:hidden}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
   .content-scroll,.content-scroll.soft{max-height:none}
   .db-page-title{font-size:18px}
-  .db-page-head{margin-bottom:12px}
-  .db-page-head-row{align-items:flex-start}
-  .db-page-head-row > *{min-width:0}
+  .db-topbar{align-items:flex-start}
+  .db-topbar > *{min-width:0}
   .mob-role-badge{max-width:36vw;overflow:hidden;text-overflow:ellipsis}
-  /* Tables &mdash; horizontal scroll on mobile */
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .dtable,.table-scroll .dtable{min-width:520px}
-  /* Cards */
   .d-card{padding:16px;margin-bottom:16px}
-  /* Quick action buttons */
   .qa-row{flex-wrap:wrap}
-  /* Topbar session timer hidden on mobile */
   .topbar-session-timer{display:none}
-  /* Panel grid */
   .panel-grid{grid-template-columns:1fr}
-  /* Focus cards */
   .focus-card{padding:16px}
-  /* Stat cards */
   .stat-card{padding:16px}
-  /* Section meta */
   .section-meta{font-size:11px}
 }
 @media(max-width:480px){
   .stat-grid{grid-template-columns:1fr}
   .qa-btn{width:100%;justify-content:center}
   .d-card{padding:14px;margin-bottom:12px}
-  .db-main{padding:10px 10px 20px}
+  .db-content{padding:0 10px 20px}
   .db-page-title{font-size:16px}
   .db-page-sub{font-size:12px}
   .summary-item{display:block}
   .summary-item > * + *{margin-top:6px}
   .quick-chip{width:100%;justify-content:center}
   .table-scroll{margin-left:-4px;margin-right:-4px;padding:0 4px}
-  /* Badges and pills wrap */
   .dbadge{font-size:10px;padding:2px 7px}
-  /* Mini buttons full width on very small screens */
   .mini-btn{font-size:11px;padding:5px 10px}
-  /* Action rows stack */
   .action-row{flex-direction:column;gap:8px}
   .action-row .mini-btn,.action-row .qa-btn{width:100%;justify-content:center}
 }
@@ -419,8 +463,18 @@ body{overflow:hidden}
     });
   });
 
-  var initial = (window.location.hash || '').replace('#', '') || defaultSection;
+  var urlParams = new URLSearchParams(window.location.search);
+  var sectionParam = urlParams.get('section') || '';
+  var hashSection = (window.location.hash || '').replace('#', '');
+  // section query param takes priority (used by filter forms), then hash, then default
+  var initial = sectionParam || hashSection || defaultSection;
   activateSection(initial);
+  // if we arrived via a form submission (section param present), hide loaders immediately
+  if (sectionParam) {
+    hideGlobalLoader();
+    var pgLoader = document.getElementById('dashboard-page-loader');
+    if (pgLoader) pgLoader.style.display = 'none';
+  }
 
   /* ---- Mobile sidebar ---- */
   var sidebar  = document.getElementById('db-sidebar');
@@ -452,6 +506,8 @@ body{overflow:hidden}
 
   document.querySelectorAll('form').forEach(function (form) {
     form.addEventListener('submit', function () {
+      // don't show loader for in-page filter forms that stay on the same page
+      if (form.id === 'finance-filter-form' || form.id === 'student-filter-form') return;
       showGlobalLoader('Loading Page', 'Please wait...');
     });
   });
@@ -462,6 +518,9 @@ body{overflow:hidden}
 
   window.addEventListener('load', function () {
     setTimeout(hideGlobalLoader, 220);
+    // also hide the page-level loader used by admin.html
+    var pgLoader = document.getElementById('dashboard-page-loader');
+    if (pgLoader) pgLoader.style.display = 'none';
   });
 })();
 /* ---- Session countdown ---- */
@@ -500,5 +559,55 @@ body{overflow:hidden}
 })();
 
 {% block extra_js %}{% endblock %}
+
+/* ---- Topbar profile dropdown toggle ---- */
+(function(){
+  var btn = document.getElementById('topbar-profile-btn');
+  var dd  = document.getElementById('topbar-profile-dropdown');
+  if (!btn || !dd) return;
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = dd.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', function(){
+    dd.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+  });
+  dd.addEventListener('click', function(e){ e.stopPropagation(); });
+})();
+
+/* ---- Global profile menu toggle (for both desktop and mobile badges) ---- */
+function toggleProfileMenu(badgeEl) {
+  if (!badgeEl) return;
+  var menu = badgeEl.querySelector('.profile-menu');
+  var chevron = badgeEl.querySelector('i.fa-chevron-down');
+  if (!menu) return;
+  
+  // Close all other menus
+  document.querySelectorAll('.profile-menu').forEach(function(m) {
+    if (m !== menu) m.style.display = 'none';
+  });
+  document.querySelectorAll('[onclick*="toggleProfileMenu"] i.fa-chevron-down').forEach(function(c) {
+    if (c !== chevron) c.style.transform = 'rotate(0deg)';
+  });
+  
+  // Toggle this menu
+  var isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// Close profile menus when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('[onclick*="toggleProfileMenu"]')) {
+    document.querySelectorAll('.profile-menu').forEach(function(m) {
+      m.style.display = 'none';
+    });
+    document.querySelectorAll('[onclick*="toggleProfileMenu"] i.fa-chevron-down').forEach(function(c) {
+      c.style.transform = 'rotate(0deg)';
+    });
+  }
+});
 </script>
 {% endblock %}

@@ -1,6 +1,7 @@
 {% extends 'admin_panel/base_admin.html' %}
 {% block title %}Semester Results{% endblock %}
-{% block breadcrumb %} / Semester Results{% endblock %}
+{% block nav_semester_results %}on{% endblock %}
+{% block breadcrumb %} > Semester Results{% endblock %}
 {% block page_title %}Semester Results{% endblock %}
 {% block page_sub %}Upload cohort marks, generate transcript previews, and approve student semester transcripts{% endblock %}
 {% block extra_css %}
@@ -78,7 +79,7 @@
 <div class="sr-main-grid">
   <div class="d-card sr-student-card">
     <div class="d-title"><i class="fas fa-users"></i> Matching Students</div>
-    <div class="section-meta">{{ selected_students|length }} students found for {{ academic_year }} / {{ selected_department.code }} / Semester {{ semester }}</div>
+    <div class="section-meta">{{ selected_students|length }} students found for {{ academic_year }} > {{ selected_department.code }} > Semester {{ semester }}</div>
     {% if selected_students %}
     <div class="table-scroll sr-student-scroll">
       <table class="dtable">

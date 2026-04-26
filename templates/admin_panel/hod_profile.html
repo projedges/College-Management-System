@@ -55,7 +55,7 @@
         <div><div style="font-size:11px;color:var(--muted)">Joined Date</div><div style="font-size:13px;font-weight:700;color:var(--deep)">{{ hod.joined_date|date:"d M Y"|default:"Not added" }}</div></div>
         <div><div style="font-size:11px;color:var(--muted)">Specialization</div><div style="font-size:13px;font-weight:700;color:var(--deep)">{{ hod.specialization|default:"Not added" }}</div></div>
         <div><div style="font-size:11px;color:var(--muted)">Feedback Avg</div><div style="font-size:13px;font-weight:700;color:var(--deep)">{% if feedback_avg %}{{ feedback_avg }}/5{% else %}No ratings{% endif %}</div></div>
-        <div><div style="font-size:11px;color:var(--muted)">Leave Status</div><div style="font-size:13px;font-weight:700;color:var(--deep)">{{ leave_summary.approved }} approved / {{ leave_summary.pending }} pending</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Leave Status</div><div style="font-size:13px;font-weight:700;color:var(--deep)">{{ leave_summary.approved }} approved > {{ leave_summary.pending }} pending</div></div>
       </div>
     </div>
 
