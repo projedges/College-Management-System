@@ -1,37 +1,217 @@
 {% extends 'admin_panel/base_admin_form.html' %}
-{% block title %}Bulk Promote &mdash; Admin{% endblock %}
+{% block title %}Bulk Promotion &mdash; Admin{% endblock %}
 {% block role_label %}Admin{% endblock %}
 {% block role_label_foot %}College Admin{% endblock %}
-{% block page_title %}Bulk Promote Students{% endblock %}
-{% block page_sub %}Move all active students in a department up one semester{% endblock %}
+{% block page_title %}Bulk Promotion{% endblock %}
+{% block page_sub %}Select students by academic year and department, then promote only the checked records{% if college %} &middot; {{ college.name }}{% endif %}{% endblock %}
 
-{% block sidebar_links %}{% with active_section='bulk' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
+{% block sidebar_links %}{% with active_section='bulk_promotion' %}{% include 'admin_panel/_admin_sidebar.html' %}{% endwith %}{% endblock %}
 
 {% block form_content %}
-<div class="d-card" style="max-width:480px">
+<div class="d-card" style="max-width:980px">
   <div class="hint-box" style="margin-bottom:18px">
-    This will move all <strong>Active</strong> students in the selected department from the chosen semester to the next one. Selecting <strong>Semester 8</strong> will mark students as <strong>Graduated</strong> instead of promoting further. This action cannot be undone.
+    Choose the <strong>Academic Year</strong> and <strong>Department</strong> first. The page will load eligible active students, show their current semester, and let you choose exactly who should move forward. Semester 8 students will be marked as <strong>Graduated</strong>.
   </div>
-  <form method="POST">
-    {% csrf_token %}
-    <div style="margin-bottom:16px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Department *</label>
-      <select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
-        <option value="">Select Department</option>
-        {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }} ({{ d.code }})</option>{% endfor %}
-      </select>
-    </div>
-    <div style="margin-bottom:16px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Current Semester (to promote from) *</label>
-      <select name="from_semester" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
-        {% for i in "1234567" %}<option value="{{ i }}">Semester {{ i }} â†’ Semester {{ i|add:"1" }}</option>{% endfor %}
-        <option value="8">Semester 8 â†’ Mark as Graduated âœ“</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button type="submit" class="qa-btn qa-teal" onclick="return confirm('Promote all matching students? This cannot be undone.')"><i class="fas fa-arrow-up"></i> Promote</button>
-      <a href="{% url 'admin_dashboard' %}#bulk" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Cancel</a>
+
+  <form method="GET" style="margin-bottom:18px">
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Academic Year *</label>
+        <select name="year" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Select Academic Year</option>
+          {% for year in year_options %}
+          <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Department *</label>
+        <select name="department" required style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          <option value="">Select Department</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if selected_department == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="submit" class="qa-btn qa-deep"><i class="fas fa-filter"></i> Load Students</button>
+        {% if selected_year or selected_department %}
+        <a href="{% url 'admin_students_bulk_promote' %}" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Clear</a>
+        {% endif %}
+      </div>
     </div>
   </form>
+
+  {% if selected_year and selected_department %}
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+    <div style="padding:12px 16px;background:var(--surface2);border-radius:12px;min-width:180px">
+      <div style="font-size:11px;color:var(--muted)">Eligible Students</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--deep)">{{ eligible_count }}</div>
+    </div>
+    <div style="padding:12px 16px;background:var(--surface2);border-radius:12px;min-width:220px">
+      <div style="font-size:11px;color:var(--muted)">Current Semester</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">{{ current_semester_label|default:"Not available" }}</div>
+    </div>
+  </div>
+
+  {% if eligible_students %}
+  <form method="POST" id="bulk-promotion-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="promote">
+    <input type="hidden" name="year" value="{{ selected_year }}">
+    <input type="hidden" name="department" value="{{ selected_department }}">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--deep)">
+        <i class="fas fa-arrow-up" style="color:var(--teal);margin-right:6px"></i> Promote To Next Semester
+      </div>
+      <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="select-all-promotions" checked style="width:16px;height:16px;accent-color:var(--teal)">
+        Select all students
+      </label>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <input type="text" id="promotion-student-search" placeholder="Search by student name or roll no..." oninput="filterPromotionStudents()"
+        style="flex:1;min-width:240px;max-width:360px;padding:10px 12px 10px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><path fill=%22%235a7080%22 d=%22M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.242 1.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z%22/></svg>') no-repeat 10px center / 14px"
+        onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor=''">
+      <span id="promotion-student-count" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+    <div class="table-scroll" style="max-height:420px;overflow-y:auto">
+      <table class="dtable">
+        <thead style="position:sticky;top:0;background:#fafbfc;z-index:1">
+          <tr>
+            <th style="width:56px">Select</th>
+            <th>Roll No</th>
+            <th>Name</th>
+            <th>Current Semester</th>
+            <th>Next Action</th>
+          </tr>
+        </thead>
+        <tbody id="promotion-student-tbody">
+          {% for student in eligible_students %}
+          <tr>
+            <td style="text-align:center">
+              <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="promotion-checkbox" checked style="width:16px;height:16px;accent-color:var(--teal)">
+            </td>
+            <td style="font-weight:700;color:var(--teal)">{{ student.roll_number }}</td>
+            <td>{{ student.name }}</td>
+            <td>Semester {{ student.current_semester }}</td>
+            <td>
+              {% if student.next_semester %}
+              <span class="dbadge dbadge-active">Promote to {{ student.next_label }}</span>
+              {% else %}
+              <span class="dbadge dbadge-warning">Mark as Graduated</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+      <button type="button" class="qa-btn qa-teal" onclick="openPromotionConfirmModal()"><i class="fas fa-arrow-up"></i> Promote To Next Semester</button>
+      <a href="{% url 'admin_dashboard' %}#bulk" class="qa-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--border)">Back</a>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty"><i class="fas fa-user-graduate"></i>No eligible students found for the selected academic year and department.</div>
+  {% endif %}
+  {% else %}
+  <div class="empty"><i class="fas fa-filter"></i>Select academic year and department to load students for promotion.</div>
+  {% endif %}
 </div>
+
+<div id="promotion-confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.58);z-index:10020;align-items:center;justify-content:center;padding:20px">
+  <div style="width:min(520px,100%);background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.25);padding:24px">
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="width:48px;height:48px;border-radius:14px;background:rgba(245,158,11,.12);color:#b45309;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fas fa-triangle-exclamation" style="font-size:18px"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--deep)">Confirm Promotion</div>
+        <p id="promotion-confirm-summary" style="margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6">
+          Are you sure you want to promote the selected students to the next semester? This action cannot be undone.
+        </p>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;padding:14px 16px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.7">
+      Only the checked students will be promoted. Unchecked students will remain in their current semester.
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:22px">
+      <button type="button" onclick="closePromotionConfirmModal()" style="padding:10px 16px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-weight:700;cursor:pointer">Cancel</button>
+      <button type="button" onclick="submitBulkPromotion()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--teal);color:#fff;font-weight:700;cursor:pointer">
+        <i class="fas fa-arrow-up" style="margin-right:6px"></i> Confirm Promotion
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var selectAll = document.getElementById('select-all-promotions');
+  var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.promotion-checkbox'));
+  if (!selectAll || !checkboxes.length) return;
+
+  selectAll.addEventListener('change', function () {
+    checkboxes.forEach(function (checkbox) {
+      checkbox.checked = selectAll.checked;
+    });
+  });
+
+  checkboxes.forEach(function (checkbox) {
+    checkbox.addEventListener('change', function () {
+      selectAll.checked = checkboxes.every(function (item) { return item.checked; });
+    });
+  });
+});
+
+function filterPromotionStudents() {
+  var input = document.getElementById('promotion-student-search');
+  var tbody = document.getElementById('promotion-student-tbody');
+  var count = document.getElementById('promotion-student-count');
+  if (!input || !tbody) return;
+
+  var q = (input.value || '').toLowerCase();
+  var rows = tbody.querySelectorAll('tr');
+  var visible = 0;
+  rows.forEach(function (row) {
+    var match = !q || row.textContent.toLowerCase().includes(q);
+    row.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+
+  if (count) {
+    count.textContent = q ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
+  }
+}
+
+function openPromotionConfirmModal() {
+  var modal = document.getElementById('promotion-confirm-modal');
+  var summary = document.getElementById('promotion-confirm-summary');
+  var selected = document.querySelectorAll('.promotion-checkbox:checked').length;
+  if (!selected) {
+    alert('Select at least one student to promote.');
+    return;
+  }
+  if (summary) {
+    summary.textContent = 'Are you sure you want to promote ' + selected + ' selected student' + (selected !== 1 ? 's' : '') + ' to the next semester? This action cannot be undone.';
+  }
+  if (modal) modal.style.display = 'flex';
+}
+
+function closePromotionConfirmModal() {
+  var modal = document.getElementById('promotion-confirm-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function submitBulkPromotion() {
+  var form = document.getElementById('bulk-promotion-form');
+  if (form) form.submit();
+}
+</script>
 {% endblock %}

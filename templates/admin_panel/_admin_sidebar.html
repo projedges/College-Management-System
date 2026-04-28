@@ -10,6 +10,7 @@
 <a href="{% url 'admin_registration_requests' %}" class="sb-link {% if active_section == 'invites' or active_section == 'requests' %}active{% endif %}"><i class="fas fa-link"></i> Invite &amp; Requests</a>
 <a href="{% url 'admin_students' %}" class="sb-link {% if active_section == 'students' %}active{% endif %}"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="{% url 'admin_bulk_import' %}" class="sb-link {% if active_section == 'bulk' %}active{% endif %}"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
+<a href="{% url 'admin_students_bulk_promote' %}" class="sb-link {% if active_section == 'bulk_promotion' %}active{% endif %}"><i class="fas fa-arrow-up"></i> Bulk Promotion</a>
 <a href="{% url 'admin_faculty_list' %}" class="sb-link {% if active_section == 'faculty' or active_section == 'feedback' %}active{% endif %}"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="{% url 'admin_academic_planner' %}" class="sb-link {% if active_section == 'planner' %}active{% endif %}"><i class="fas fa-calendar-days"></i> Semester Planner</a>
 <a href="{% url 'admin_exams' %}" class="sb-link {% if active_section == 'exams' or active_section == 'hall_tickets' %}active{% endif %}"><i class="fas fa-file-pen"></i> Exams</a>

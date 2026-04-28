@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}College Admin Dashboard{% endblock %}
 {% block dashboard_default_section %}overview{% endblock %}
 {% block role_label %}Admin{% endblock %}
@@ -7,6 +7,7 @@
 {% block page_sub %}{% endblock %}
 
 {% block sidebar_links %}
+
 <p class="sb-nav-label">Overview</p>
 <a href="#overview"      data-section-target="overview"      class="sb-link active"><i class="fas fa-home"></i> Dashboard</a>
 <a href="#profile"       data-section-target="profile"       class="sb-link"><i class="fas fa-user-circle"></i> My Profile</a>
@@ -18,6 +19,7 @@
 <a href="{% url 'admin_registration_requests' %}" class="sb-link"><i class="fas fa-inbox"></i> Invite &amp; Requests{% if pending_requests %} <span style="margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">{{ pending_requests }}</span>{% endif %}</a>
 <a href="{% url 'admin_students' %}" class="sb-link"><i class="fas fa-user-graduate"></i> Students</a>
 <a href="{% url 'admin_bulk_import' %}" class="sb-link"><i class="fas fa-cloud-upload-alt"></i> Bulk Import</a>
+<a href="{% url 'admin_students_bulk_promote' %}" class="sb-link"><i class="fas fa-arrow-up"></i> Bulk Promotion</a>
 <a href="{% url 'admin_faculty_list' %}" class="sb-link"><i class="fas fa-chalkboard-teacher"></i> Faculty</a>
 <a href="{% url 'admin_academic_planner' %}" class="sb-link"><i class="fas fa-calendar-days"></i> Semester Planner</a>
 <a href="{% url 'admin_exams' %}" class="sb-link"><i class="fas fa-file-pen"></i> Exams</a>

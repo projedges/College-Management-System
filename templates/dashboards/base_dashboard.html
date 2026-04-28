@@ -3,16 +3,16 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'students/css/mobile_dashboard.css' %}"/>
-{% if branding %}
+{% if branding or request.user.userrole.college.branding %}
 <style>
 :root{
-  --teal:{{ branding.primary_color }};
-  --teal-lt:{{ branding.primary_color }}cc;
-  --teal-dk:{{ branding.primary_color }}dd;
-  --gold:{{ branding.accent_color }};
-  --gold-lt:{{ branding.accent_color }}cc;
-  --deep:{{ branding.sidebar_deep|default:"#071e26" }};
-  --deep2:{{ branding.sidebar_deep|default:"#071e26" }}ee;
+  --teal:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }};
+  --teal-lt:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}cc;
+  --teal-dk:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}dd;
+  --gold:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }};
+  --gold-lt:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}cc;
+  --deep:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }};
+  --deep2:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }}ee;
 }
 </style>
 {% endif %}
@@ -55,11 +55,18 @@
     <!-- College identity header -->
     <div class="sb-head">
       {% if college and college.logo %}
-        <img src="{{ college.logo.url }}" alt="{{ college.name }}" class="sb-college-logo"/>
+        <img src="{{ college.logo.url }}" alt="{{ college.name }}" class="sb-college-logo" style="color:#fff"/>
+        <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
+      {% elif request.user.userrole.college and request.user.userrole.college.logo %}
+        <img src="{{ request.user.userrole.college.logo.url }}" alt="{{ request.user.userrole.college.name }}" class="sb-college-logo"/>
         <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
       {% elif college %}
         <div class="sb-college-initials">{{ college.code|slice:":2"|upper }}</div>
         <div class="sb-college-head-name">{{ college.name }}</div>
+        <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
+      {% elif request.user.userrole.college %}
+        <div class="sb-college-initials">{{ request.user.userrole.college.code|slice:":2"|upper }}</div>
+        <div class="sb-college-head-name">{{ request.user.userrole.college.name }}</div>
         <button class="sb-close" id="sb-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
       {% else %}
         <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:#fff">Edu<span style="color:var(--teal-lt)">Track</span></div>
@@ -105,7 +112,11 @@
               <div>
                 <div class="tpd-name">{{ request.user.get_full_name|default:request.user.username }}</div>
                 <div class="tpd-role">{% block role_label_drop %}User{% endblock %}</div>
-                {% if college %}<div class="tpd-college">{{ college.name }}</div>{% endif %}
+                {% if college %}
+                  <div class="tpd-college">{{ college.name }}</div>
+                {% elif request.user.userrole.college %}
+                  <div class="tpd-college">{{ request.user.userrole.college.name }}</div>
+                {% endif %}
               </div>
             </div>
             <div class="tpd-divider"></div>
