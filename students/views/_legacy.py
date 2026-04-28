@@ -7613,7 +7613,11 @@ def admin_department_add(request):
             )
             messages.success(request, f'Department "{name}" added.')
             return redirect('/dashboard/admin/#departments')
-    return render(request, 'admin_panel/department_form.html', {'action': 'Add'})
+    return render(request, 'admin_panel/department_form.html', {
+        'action': 'Add',
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required
@@ -7627,13 +7631,28 @@ def admin_department_edit(request, pk):
         new_code   = request.POST.get('code', dept.code).strip().upper()
         if not new_name or not new_code:
             messages.error(request, 'Name and code are required.')
-            return render(request, 'admin_panel/department_form.html', {'action': 'Edit', 'dept': dept})
+            return render(request, 'admin_panel/department_form.html', {
+                'action': 'Edit',
+                'dept': dept,
+                'college': dept.college,
+                'branding': _get_college_branding(dept.college),
+            })
         if Department.objects.filter(college=dept.college, code=new_code).exclude(pk=dept.pk).exists():
             messages.error(request, f'Department code "{new_code}" already exists in this college.')
-            return render(request, 'admin_panel/department_form.html', {'action': 'Edit', 'dept': dept})
+            return render(request, 'admin_panel/department_form.html', {
+                'action': 'Edit',
+                'dept': dept,
+                'college': dept.college,
+                'branding': _get_college_branding(dept.college),
+            })
         if Department.objects.filter(college=dept.college, name__iexact=new_name).exclude(pk=dept.pk).exists():
             messages.error(request, f'Department "{new_name}" already exists in this college.')
-            return render(request, 'admin_panel/department_form.html', {'action': 'Edit', 'dept': dept})
+            return render(request, 'admin_panel/department_form.html', {
+                'action': 'Edit',
+                'dept': dept,
+                'college': dept.college,
+                'branding': _get_college_branding(dept.college),
+            })
         dept.name  = new_name
         dept.description = request.POST.get('description', '').strip() or None
         year = request.POST.get('established_year', '').strip()
@@ -7653,7 +7672,12 @@ def admin_department_edit(request, pk):
                 messages.info(request, f'Department code changed: {updated} roll number(s) updated to use "{new_code}".')
         messages.success(request, 'Department updated.')
         return redirect('/dashboard/admin/#departments')
-    return render(request, 'admin_panel/department_form.html', {'action': 'Edit', 'dept': dept})
+    return render(request, 'admin_panel/department_form.html', {
+        'action': 'Edit',
+        'dept': dept,
+        'college': dept.college,
+        'branding': _get_college_branding(dept.college),
+    })
 
 
 @login_required
@@ -8300,7 +8324,132 @@ def admin_students_bulk_promote(request):
                     messages.success(request, f'{affected} student(s) promoted to Semester {from_sem + 1}. Semester data reset.')
             return redirect('/dashboard/admin/#students')
 
-    return render(request, 'admin_panel/bulk_promote.html', {'departments': departments})
+    return render(request, 'admin_panel/bulk_promote.html', {
+        'departments': departments,
+        'college': _get_admin_college(request),
+        'branding': _get_college_branding(_get_admin_college(request)),
+    })
+
+
+@login_required
+def admin_students_bulk_promote(request):
+    if not _admin_guard(request):
+        return redirect('dashboard')
+
+    departments = _scope_departments(request).order_by('name')
+    students_base = Student.objects.select_related('user', 'department').filter(
+        department__in=departments,
+        status='ACTIVE',
+        is_deleted=False,
+    ).order_by('roll_number')
+    year_options = list(
+        students_base.order_by('-admission_year').values_list('admission_year', flat=True).distinct()
+    )
+
+    filter_source = request.POST if request.method == 'POST' else request.GET
+    selected_year = (filter_source.get('year') or '').strip()
+    selected_department = (filter_source.get('department') or '').strip()
+
+    eligible_students_qs = students_base
+    if selected_year:
+        eligible_students_qs = eligible_students_qs.filter(admission_year=selected_year)
+    if selected_department:
+        eligible_students_qs = eligible_students_qs.filter(department_id=selected_department)
+    eligible_students = list(eligible_students_qs)
+
+    semester_set = sorted({student.current_semester for student in eligible_students if student.current_semester})
+    current_semester_label = ''
+    if len(semester_set) == 1:
+        current_semester_label = f'Semester {semester_set[0]}'
+    elif len(semester_set) > 1:
+        current_semester_label = 'Multiple semesters'
+
+    preview_students = []
+    for student in eligible_students:
+        next_semester = student.current_semester + 1 if student.current_semester and student.current_semester < 8 else None
+        preview_students.append({
+            'pk': student.pk,
+            'roll_number': student.roll_number,
+            'name': student.user.get_full_name() or student.user.username,
+            'current_semester': student.current_semester,
+            'next_semester': next_semester,
+            'next_label': f'Semester {next_semester}' if next_semester else 'Graduate',
+        })
+
+    if request.method == 'POST' and (request.POST.get('action') or '').strip() == 'promote':
+        selected_ids = request.POST.getlist('student_ids')
+
+        if not selected_year or not selected_department:
+            messages.error(request, 'Select academic year and department first.')
+        elif not eligible_students:
+            messages.error(request, 'No eligible students found for the selected academic year and department.')
+        elif not selected_ids:
+            messages.error(request, 'Select at least one student to promote.')
+        else:
+            selected_students = list(eligible_students_qs.filter(pk__in=selected_ids))
+            if not selected_students:
+                messages.error(request, 'The selected students could not be found.')
+            else:
+                promoted_count = 0
+                graduated_count = 0
+                with transaction.atomic():
+                    for student in selected_students:
+                        from_sem = student.current_semester or 1
+                        if from_sem >= 8:
+                            StudentLifecycleEvent.objects.create(
+                                student=student,
+                                event_type='GRADUATED',
+                                from_status='ACTIVE',
+                                to_status='GRADUATED',
+                                from_semester=from_sem,
+                                to_semester=from_sem,
+                                reason='Bulk promotion graduation',
+                                performed_by=request.user,
+                            )
+                            student.status = 'GRADUATED'
+                            student.save(update_fields=['status'])
+                            graduated_count += 1
+                        else:
+                            StudentLifecycleEvent.objects.create(
+                                student=student,
+                                event_type='PROMOTED',
+                                from_status='ACTIVE',
+                                to_status='ACTIVE',
+                                from_semester=from_sem,
+                                to_semester=from_sem + 1,
+                                reason=f'Bulk promotion Sem {from_sem} to Sem {from_sem + 1}',
+                                performed_by=request.user,
+                            )
+                            student.current_semester = from_sem + 1
+                            student.save(update_fields=['current_semester'])
+                            promoted_count += 1
+
+                selected_department_obj = departments.filter(pk=selected_department).first()
+                dept_code = selected_department_obj.code if selected_department_obj else selected_department
+                _audit(
+                    'USER_PROMOTED',
+                    request.user,
+                    f'Selective bulk promotion for {dept_code} {selected_year}: {promoted_count} promoted, {graduated_count} graduated',
+                    college=_get_admin_college(request),
+                    request=request,
+                )
+                messages.success(
+                    request,
+                    f'{promoted_count} student(s) promoted and {graduated_count} student(s) marked as graduated.'
+                )
+                return redirect(f"{reverse('admin_students_bulk_promote')}?year={selected_year}&department={selected_department}")
+
+    return render(request, 'admin_panel/bulk_promote.html', {
+        'college': _get_admin_college(request),
+        'branding': _get_college_branding(_get_admin_college(request)),
+        'departments': departments,
+        'year_options': year_options,
+        'selected_year': selected_year,
+        'selected_department': selected_department,
+        'eligible_students': preview_students,
+        'eligible_count': len(preview_students),
+        'current_semester_label': current_semester_label,
+    })
 
 
 @login_required
@@ -8532,6 +8681,7 @@ def admin_faculty_list(request):
 def admin_faculty_add(request):
     if not _admin_guard(request):
         return redirect('dashboard')
+    college = _get_admin_college(request)
     departments = _scope_departments(request).order_by('name')
     if request.method == 'POST':
         first_name   = request.POST.get('first_name', '').strip()
@@ -8576,7 +8726,12 @@ def admin_faculty_add(request):
             else:
                 messages.success(request, f'Faculty {first_name} {last_name} added.')
             return redirect('/dashboard/admin/#faculty')
-    return render(request, 'admin_panel/faculty_form.html', {'departments': departments, 'action': 'Add'})
+    return render(request, 'admin_panel/faculty_form.html', {
+        'departments': departments,
+        'action': 'Add',
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required
@@ -8699,7 +8854,11 @@ def admin_faculty_edit(request, pk):
             messages.success(request, 'Faculty updated.')
             return redirect('/dashboard/admin/#faculty')
     return render(request, 'admin_panel/faculty_form.html', {
-        'faculty': faculty, 'departments': departments, 'action': 'Edit'
+        'faculty': faculty,
+        'departments': departments,
+        'action': 'Edit',
+        'college': faculty.department.college,
+        'branding': _get_college_branding(faculty.department.college),
     })
 
 
@@ -8958,6 +9117,8 @@ def admin_hod_edit(request, pk):
         'departments': departments,
         'hod': hod,
         'action': 'Edit',
+        'college': hod.department.college,
+        'branding': _get_college_branding(hod.department.college),
     })
 
 
@@ -8983,6 +9144,7 @@ def admin_hods(request):
 def admin_hod_add(request):
     if not _admin_guard(request):
         return redirect('dashboard')
+    college = _get_admin_college(request)
     departments = _scope_departments(request).order_by('name')
     if request.method == 'POST':
         first_name    = request.POST.get('first_name', '').strip()
@@ -9065,7 +9227,11 @@ def admin_hod_add(request):
             else:
                 messages.success(request, f'HOD {first_name} {last_name} added.')
             return redirect('/dashboard/admin/#faculty')
-    return render(request, 'admin_panel/hod_form.html', {'departments': departments})
+    return render(request, 'admin_panel/hod_form.html', {
+        'departments': departments,
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required
@@ -10520,7 +10686,10 @@ def admin_announcement_add(request):
             Announcement.objects.create(title=title, message=message, created_by=request.user, college=college or _get_user_college(request.user))
             messages.success(request, 'Announcement posted.')
             return redirect('/dashboard/admin/#announcements')
-    return render(request, 'admin_panel/announcement_form.html')
+    return render(request, 'admin_panel/announcement_form.html', {
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required
@@ -10683,7 +10852,10 @@ def admin_exam_add(request):
             )
             messages.success(request, f'Exam "{name}" created.')
             return redirect('/dashboard/admin/#exams')
-    return render(request, 'admin_panel/exam_form.html')
+    return render(request, 'admin_panel/exam_form.html', {
+        'college': college,
+        'branding': _get_college_branding(college),
+    })
 
 
 @login_required
