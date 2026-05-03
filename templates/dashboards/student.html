@@ -22,6 +22,14 @@
 
 {% block extra_css %}
 <style>
+  .att-course-row.clickable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  }
+  .att-course-row.clickable:hover {
+    background-color: #f8fafc; /\* Or any highlight color you prefer \*/
+  }
+
   /* Stat card navigation */
   .stat-card-link{display:flex;flex-direction:column;position:relative;transition:box-shadow .18s,transform .18s,border-color .18s}
   .stat-card-link:hover{box-shadow:0 6px 24px rgba(13,115,119,.13);transform:translateY(-2px);border-color:var(--teal)!important}
@@ -653,10 +661,17 @@
         </thead>
         <tbody id="att-tbody">
           {% for a in attendance_data %}
-          <tr class="att-course-row" data-name="{{ a.subject.name|lower }}" data-code="{{ a.subject.code|lower }}" data-pct="{{ a.pct }}" data-sem="{{ student.current_semester }}" style="border-bottom:1px solid #f3f4f6">
-            <td style="padding:12px 16px;font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--deep)">{{ a.subject.name }}</td>
-            <td style="padding:12px 16px">
+          <tr class="att-course-row clickable" 
+               onclick="window.location.href='{% url 'subject_detail' a.subject.id %}'" 
+               data-name="{{ a.subject.name|lower }}" 
+               data-code="{{ a.subject.code|lower }}" 
+               data-pct="{{ a.pct }}" 
+               data-sem="{{ student.current_semester }}" 
+               style="border-bottom:1px solid #f3f4f6">
+
+             <td style="padding:12px 16px;font-size:12px;font-weight:700;color:var(--deep)">{{ a.subject.code }}</td>
+             <td style="padding:12px 16px;font-size:13px;color:var(--deep)">{{ a.subject.name }}</td>
+             <td style="padding:12px 16px">
               {% if a.total > 0 %}
               <div style="display:flex;align-items:center;gap:8px">
                 <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;min-width:100px">

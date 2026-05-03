@@ -3746,7 +3746,18 @@ def faculty_dashboard(request):
     ).select_related('subject', 'classroom').order_by('start_time').distinct()
     today_timetable = _merge_timetable_section_rows(list(raw_timetable))
     today_sessions = today_timetable
-    has_unmarked_today = any(t.subject_id not in marked_subject_ids for t in today_timetable)
+    today_subject_ids = {t.subject_id for t in today_timetable}
+    marked_subject_ids = set(AttendanceSession.objects.filter(
+        subject_id__in=today_subject_ids, date=today
+    ).values_list('subject_id', flat=True)) if today_subject_ids else set()
+    unmarked_subjects = []
+    seen_unmarked_subject_ids = set()
+    for slot in today_timetable:
+        if slot.subject_id in marked_subject_ids or slot.subject_id in seen_unmarked_subject_ids:
+            continue
+        unmarked_subjects.append(slot.subject)
+        seen_unmarked_subject_ids.add(slot.subject_id)
+    has_unmarked_today = bool(unmarked_subjects)
 
     # Full week timetable + matrix for the new matrix view
     week_days = ['MON','TUE','WED','THU','FRI','SAT']
@@ -3893,6 +3904,7 @@ def faculty_dashboard(request):
         'week_timetable_matrix': week_timetable_matrix,
         'availability_slots': availability_slots,
         'marked_subject_ids': marked_subject_ids,
+        'unmarked_subjects': unmarked_subjects,
         'has_unmarked_today': has_unmarked_today,
         'recent_sessions': recent_sessions,
         'pending_submissions': pending_submissions_qs[:10],
@@ -4224,19 +4236,37 @@ def faculty_mark_attendance(request, subject_id):
     students = _get_section_students(faculty, subject)
     today = timezone.localdate()
 
+    selected_date = today
+    if request.method == 'GET':
+        requested_date = request.GET.get('date')
+        if requested_date:
+            try:
+                parsed_date = datetime.fromisoformat(requested_date).date()
+                if parsed_date > today:
+                    messages.error(request, 'Cannot view attendance for a future date.')
+                    return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+                if parsed_date.weekday() == 6:
+                    messages.error(request, 'Attendance cannot be marked on Sundays.')
+                    return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+                selected_date = parsed_date
+            except (ValueError, TypeError):
+                messages.error(request, 'Invalid attendance date selected.')
+                return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+
     # Check for accepted substitution today — look up by subject+faculty+date directly
     # (do NOT filter by day_of_week; the sub slot may be from a different weekday)
     active_sub = None
-    if faculty:
+    if faculty and selected_date == today:
         active_sub = Substitution.objects.filter(
             timetable_slot__subject=subject,
             substitute_faculty=faculty,
-            date=today,
+            date=selected_date,
             status='ACCEPTED',
         ).select_related('timetable_slot').first()
 
-    # Existing session for today (pre-fill topic + attendance)
-    existing_session = AttendanceSession.objects.filter(subject=subject, date=today).first()
+    # Existing session for selected date (pre-fill topic + attendance)
+    existing_session = AttendanceSession.objects.filter(subject=subject, date=selected_date).first()
+
 
     # Lesson plan topics → quick-select chips
     topic_suggestions = []
@@ -4259,25 +4289,28 @@ def faculty_mark_attendance(request, subject_id):
         }
 
     if request.method == 'POST':
-        date_str = request.POST.get('date', str(today))
+        topic_covered = request.POST.get('topic_covered', '').strip()
+        if not topic_covered:
+            messages.error(request, 'Topic covered is required before saving attendance.')
+            return render(request, 'faculty/mark_attendance.html', {
+                'subject': subject, 'students': students, 'today': today, 'selected_date': selected_date,
+                'active_sub': active_sub, 'topic_suggestions': topic_suggestions,
+                'existing_session': existing_session, 'existing_att': existing_att,
+            })
+
+        date_str = request.POST.get('date', str(selected_date))
         try:
             session_date = datetime.fromisoformat(date_str).date()
         except (ValueError, TypeError):
-            session_date = today
+            session_date = selected_date
 
         if session_date > today:
             messages.error(request, 'Cannot mark attendance for a future date.')
-            return redirect('faculty_dashboard')
+            return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+        if session_date.weekday() == 6:
+            messages.error(request, 'Attendance cannot be marked on Sundays.')
+            return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
 
-        topic_covered = request.POST.get('topic_covered', '').strip()
-        if not topic_covered:
-            prior_session = AttendanceSession.objects.filter(subject=subject, date=session_date).first()
-            topic_covered = (
-                (prior_session.topic_covered if prior_session else '')
-                or (active_sub.topic_covered if active_sub else '')
-                or (topic_suggestions[0] if topic_suggestions else '')
-                or f'Attendance session for {subject.code}'
-            )
 
         # Always store topic on the session
         session, created = AttendanceSession.objects.update_or_create(
@@ -4314,6 +4347,7 @@ def faculty_mark_attendance(request, subject_id):
         'subject': subject,
         'students': students,
         'today': today,
+        'selected_date': selected_date,
         'active_sub': active_sub,
         'topic_suggestions': topic_suggestions,
         'existing_session': existing_session,

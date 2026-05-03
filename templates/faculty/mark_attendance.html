@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% load att_extras %}
 {% block title %}Mark Attendance — {{ subject.name }}{% endblock %}
 {% block role_label %}Faculty{% endblock %}
@@ -115,14 +115,18 @@
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Session Date</div>
-        <input type="date" id="date-picker" value="{{ today }}" class="date-input"/>
+        <input type="date" id="date-picker" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" class="date-input"/>
+        
+        <div id="sunday-error" style="display:none; font-size:10px; color:var(--red); font-weight:700; margin-top:4px;">
+          <i class="fas fa-circle-exclamation"></i> Sundays are not allowed
+        </div>
       </div>
     </div>
 
     {% if existing_session %}
     <div class="session-banner">
       <i class="fas fa-check-circle"></i>
-      Attendance already marked today.
+      Attendance already marked for {{ selected_date|date:"d M Y" }}.
       {% if existing_session.topic_covered %}Topic: <em>{{ existing_session.topic_covered }}</em>.{% endif %}
       You can update it below.
     </div>
@@ -131,7 +135,7 @@
     {% if students %}
     <form method="POST" id="att-form">
       {% csrf_token %}
-      <input type="hidden" name="date" id="form-date" value="{{ today }}"/>
+      <input type="hidden" name="date" id="form-date" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}"/>
 
       <!-- ── Topic Covered ──────────────────────────────────────────────── -->
       <div class="topic-section">
@@ -276,10 +280,56 @@ var statusMap = {};
   {% endif %}
 {% endfor %}
 
-// ── Date picker ───────────────────────────────────────────────────────────────
-document.getElementById('date-picker').addEventListener('change', function() {
-  document.getElementById('form-date').value = this.value;
+// ── Date picker with Inline Sunday Validation ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  const datePicker = document.getElementById('date-picker');
+  const formDate = document.getElementById('form-date');
+  const errorMsg = document.getElementById('sunday-error');
+  const submitLabel = document.getElementById('submit-label');
+
+  // 1. GUARANTEE DEFAULT DATE: If Django leaves it blank, set to Today
+  if (!datePicker.value) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    datePicker.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  if (submitLabel && datePicker.value) {
+    submitLabel.dataset.baseText = existingSessionText();
+  }
+
+  // 2. Remember the valid date so we can undo a mistake
+  let lastValidDate = datePicker.value;
+  if (formDate) formDate.value = lastValidDate;
+
+  // 3. Listen for the user picking a new date
+  datePicker.addEventListener('change', function() {
+    const dateStr = this.value;
+    if (!dateStr) return;
+
+    // Safely parse the selected date (YYYY-MM-DD) to avoid timezone bugs
+    const parts = dateStr.split('-');
+    const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]);
+
+    // JavaScript .getDay() returns 0 for Sunday
+    if (selectedDate.getDay() === 0) {
+      // It's a Sunday! Show the inline text and revert the input box
+      errorMsg.style.display = 'block';
+      this.value = lastValidDate;
+      if (formDate) formDate.value = lastValidDate;
+      return; 
+    }
+
+    // If it's a valid working day, hide the error, update form, and reload!
+    errorMsg.style.display = 'none';
+    lastValidDate = dateStr;
+    if (formDate) formDate.value = dateStr;
+    window.location.href = window.location.pathname + "?date=" + dateStr;
+  });
 });
+
 
 // ── Topic chip selection ──────────────────────────────────────────────────────
 var _topicStatus = 'completed';
