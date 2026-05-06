@@ -17,8 +17,16 @@ urlpatterns = [
     path('superadmin1/colleges/<int:pk>/', views.super_admin_college_detail, name='super_admin_college_detail'),
     path('superadmin1/college-admins/add/', views.super_admin_college_admin_add, name='super_admin_college_admin_add'),
     path('superadmin1/college-admins/<int:pk>/delete/', views.super_admin_college_admin_delete, name='super_admin_college_admin_delete'),
+    path('superadmin1/principals/add/', views.super_admin_principal_add, name='super_admin_principal_add'),
+    path('superadmin1/principals/<int:pk>/edit/', views.super_admin_principal_edit, name='super_admin_principal_edit'),
+    path('superadmin1/principals/<int:pk>/delete/', views.super_admin_principal_delete, name='super_admin_principal_delete'),
+    path('superadmin1/exam-controllers/add/', views.super_admin_exam_controller_add, name='super_admin_exam_controller_add'),
+    path('superadmin1/exam-controllers/<int:pk>/edit/', views.super_admin_exam_controller_edit, name='super_admin_exam_controller_edit'),
+    path('superadmin1/exam-controllers/<int:pk>/delete/', views.super_admin_exam_controller_delete, name='super_admin_exam_controller_delete'),
     path('superadmin1/announcements/', views.super_admin_platform_announcement, name='super_admin_platform_announcement'),
     path('superadmin1/announcements/<int:pk>/delete/', views.super_admin_platform_announcement_delete, name='super_admin_platform_announcement_delete'),
+    path('superadmin1/impersonate/<str:target_type>/<int:target_id>/start/', views.super_admin_impersonate_start, name='super_admin_impersonate_start'),
+    path('superadmin1/impersonate/stop/', views.super_admin_impersonate_stop, name='super_admin_impersonate_stop'),
     path(
         'password-reset/',
         auth_views.PasswordResetView.as_view(

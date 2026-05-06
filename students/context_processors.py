@@ -28,3 +28,21 @@ def college_branding(request):
     result = {'college': college, 'branding': branding}
     cache.set(cache_key, result, 300)
     return result
+
+
+def impersonation_state(request):
+    if not request.user.is_authenticated:
+        return {
+            'is_impersonating': False,
+            'impersonator_name': '',
+            'impersonated_target_label': '',
+            'impersonated_role_label': '',
+        }
+
+    session = getattr(request, 'session', {})
+    return {
+        'is_impersonating': bool(session.get('_impersonator_user_id')),
+        'impersonator_name': session.get('_impersonator_name', ''),
+        'impersonated_target_label': session.get('_impersonated_target_label', ''),
+        'impersonated_role_label': session.get('_impersonated_role_label', ''),
+    }
