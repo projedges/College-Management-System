@@ -123,8 +123,8 @@ class StudentProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
     # Basic Info — first_name/last_name live on User model, not duplicated here
-    date_of_birth = models.DateField()
-    gender = models.CharField(max_length=10)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=10, null=True, blank=True)
 
     # Contact
     phone_number = models.CharField(max_length=15)
