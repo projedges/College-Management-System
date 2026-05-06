@@ -428,6 +428,7 @@
             <label style="{{ lbl }}">College Email</label>
             <input type="email" value="{% if profile and profile.college_email %}{{ profile.college_email }}{% else %}{{ request.user.email }}{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <input type="hidden" name="email" value="{{ request.user.email }}">
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Institutional email &mdash; managed by admin</div>
           </div>
           <div>
@@ -458,18 +459,21 @@
             <label style="{{ lbl }}">Date of Birth</label>
             <input type="date" value="{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <input type="hidden" name="date_of_birth" value="{% if profile and profile.date_of_birth %}{{ profile.date_of_birth|date:'Y-m-d' }}{% endif %}">
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
           <div>
             <label style="{{ lbl }}">Gender</label>
             <input type="text" value="{% if profile and profile.gender %}{{ profile.gender }}{% else %}&mdash;{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <input type="hidden" name="gender" value="{% if profile and profile.gender %}{{ profile.gender }}{% endif %}">
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
           <div>
             <label style="{{ lbl }}">Blood Group</label>
             <input type="text" value="{% if profile and profile.blood_group %}{{ profile.blood_group }}{% else %}&mdash;{% endif %}" readonly
                    style="{{ s }};background:#f8fafc;color:var(--muted);cursor:not-allowed"/>
+            <input type="hidden" name="blood_group" value="{% if profile and profile.blood_group %}{{ profile.blood_group }}{% endif %}">
             <div style="font-size:10px;color:var(--muted);margin-top:2px"><i class="fas fa-lock" style="font-size:9px"></i> Managed by admin</div>
           </div>
           <div><label style="{{ lbl }}">Nationality</label><input type="text" name="nationality" value="{% if profile %}{{ profile.nationality }}{% else %}Indian{% endif %}" maxlength="50" style="{{ s }}"/></div>
