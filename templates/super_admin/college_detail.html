@@ -58,6 +58,34 @@
   </div>
 
   <div class="d-card">
+    <div class="d-title"><i class="fas fa-user-tie"></i> Principal</div>
+    <div class="section-meta">College-level principal account assigned to this institution.</div>
+    {% if principal %}
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+      <div style="width:34px;height:34px;border-radius:50%;background:#b45309;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">
+        {{ principal.user.first_name|first|upper }}{{ principal.user.last_name|first|upper }}
+      </div>
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ principal.user.get_full_name|default:principal.user.username }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ principal.user.username }} &middot; {{ principal.employee_id }}</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <a href="{% url 'super_admin_principal_edit' principal.pk %}" class="qa-btn qa-gold" style="font-size:12px"><i class="fas fa-pen"></i> Edit Principal</a>
+      <form method="POST" action="{% url 'super_admin_principal_delete' principal.pk %}" style="margin:0" onsubmit="return confirm('Remove this principal account? This cannot be undone.')">
+        {% csrf_token %}
+        <button type="submit" class="qa-btn qa-red" style="font-size:12px"><i class="fas fa-trash"></i> Remove Principal</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="empty"><i class="fas fa-user-tie"></i>No principal assigned yet.</div>
+    <div style="margin-top:12px">
+      <a href="{% url 'super_admin_principal_add' %}?college={{ college.pk }}" class="qa-btn qa-gold" style="font-size:12px"><i class="fas fa-user-plus"></i> Assign Principal</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="d-card">
     <div class="d-title"><i class="fas fa-user-shield"></i> College Admins</div>
     <div class="section-meta">Admin accounts you created for this college.</div>
     {% if admins %}
@@ -78,6 +106,42 @@
     <div style="margin-top:12px">
       <a href="{% url 'super_admin_college_admin_add' %}" class="qa-btn qa-deep" style="font-size:12px"><i class="fas fa-user-plus"></i> Add Admin</a>
     </div>
+  </div>
+</div>
+
+<div class="d-card">
+  <div class="d-title"><i class="fas fa-file-signature"></i> Exam Controllers</div>
+  <div class="section-meta">Legacy exam controller accounts used for exam dashboard access and impersonation.</div>
+  {% if exam_controllers %}
+  <div class="table-scroll">
+    <table class="dtable">
+      <thead><tr><th>Name</th><th>Username</th><th>Employee ID</th><th>Designation</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for item in exam_controllers %}
+        <tr>
+          <td style="font-weight:600;color:var(--deep)">{{ item.user.get_full_name|default:item.user.username }}</td>
+          <td style="color:var(--muted)">{{ item.user.username }}</td>
+          <td>{{ item.employee_id }}</td>
+          <td>{{ item.designation }}</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <a href="{% url 'super_admin_exam_controller_edit' item.pk %}" class="qa-btn qa-indigo" style="font-size:12px;padding:6px 10px"><i class="fas fa-pen"></i> Edit</a>
+              <form method="POST" action="{% url 'super_admin_exam_controller_delete' item.pk %}" style="margin:0" onsubmit="return confirm('Remove this exam controller account? This cannot be undone.')">
+                {% csrf_token %}
+                <button type="submit" class="qa-btn qa-red" style="font-size:12px;padding:6px 10px"><i class="fas fa-trash"></i> Remove</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty"><i class="fas fa-file-signature"></i>No exam controllers assigned yet.</div>
+  {% endif %}
+  <div style="margin-top:12px">
+    <a href="{% url 'super_admin_exam_controller_add' %}?college={{ college.pk }}" class="qa-btn qa-indigo" style="font-size:12px"><i class="fas fa-user-plus"></i> Add Exam Controller</a>
   </div>
 </div>
 {% endblock %}

@@ -1169,7 +1169,7 @@
   <div class="dex-stat-grid">
     <div class="dex-stat-card">
       <div class="dex-stat-icon" style="background:rgba(37,99,235,.08);color:#2563eb"><i class="fas fa-file-pen"></i></div>
-      <div class="dex-stat-val">{{ exams|length }}</div>
+      <div class="dex-stat-val">{{ exam_total_count|default:0 }}</div>
       <div class="dex-stat-lbl">Total Exams</div>
       <div class="dex-stat-sub">All programs</div>
     </div>
@@ -1193,7 +1193,7 @@
     </div>
     <div class="dex-stat-card">
       <div class="dex-stat-icon" style="background:rgba(239,68,68,.08);color:#ef4444"><i class="fas fa-book-open"></i></div>
-      <div class="dex-stat-val">{{ exams|length }}</div>
+      <div class="dex-stat-val">{{ exam_total_count|default:0 }}</div>
       <div class="dex-stat-lbl">Subjects Covered</div>
       <div class="dex-stat-sub">Across all exams</div>
     </div>
@@ -1273,7 +1273,7 @@
           </tbody>
         </table>
         <div style="padding:12px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)">
-          Showing {{ exams|length }} exam{{ exams|length|pluralize }}
+          Showing {{ exams|length }} of {{ exam_total_count|default:0 }} exam{{ exam_total_count|default:0|pluralize }}{% if exam_preview_limited %} on first load{% endif %}
         </div>
       </div>
       {% else %}
@@ -1332,7 +1332,7 @@
         <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-user-graduate" style="color:var(--teal)"></i> Total Students</span><strong>{{ all_students_total|default:"--" }}</strong></div>
         <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-chalkboard-teacher" style="color:#2563eb"></i> Total Invigilators</span><strong>{{ all_faculty_total|default:"--" }}</strong></div>
         <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-door-open" style="color:#d97706"></i> Total Rooms</span><strong>--</strong></div>
-        <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-file-lines" style="color:#7c3aed"></i> Question Papers</span><strong>{{ exams|length }}</strong></div>
+        <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-file-lines" style="color:#7c3aed"></i> Question Papers</span><strong>{{ exam_total_count|default:0 }}</strong></div>
       </div>
     </div>
   </div>

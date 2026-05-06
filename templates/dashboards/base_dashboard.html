@@ -43,6 +43,9 @@
       <i class="fas fa-chevron-down" style="color:var(--muted);font-size:10px;transition:transform .2s"></i>
       <div style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:1000;min-width:160px" class="profile-menu">
         <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:13px"></i> My Profile</a>
+        {% if is_impersonating %}
+        <a href="{% url 'super_admin_impersonate_stop' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:#9a3412;text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(154,52,18,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-shield" style="width:13px"></i> Stop Impersonation</a>
+        {% endif %}
         <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:13px"></i> Support</a>
         <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:#dc2626;text-decoration:none;font-size:11px;font-weight:600;transition:background .15s" onmouseover="this.style.background='rgba(220,38,38,.05)'" onmouseout="this.style.background=''"><i class="fas fa-sign-out-alt" style="width:13px"></i> Logout</a>
       </div>
@@ -123,6 +126,11 @@
             <a href="#profile" data-section-target="profile" class="tpd-item">
               <i class="fas fa-user-circle"></i> My Profile
             </a>
+            {% if is_impersonating %}
+            <a href="{% url 'super_admin_impersonate_stop' %}" class="tpd-item" style="color:#9a3412">
+              <i class="fas fa-user-shield"></i> Stop Impersonation
+            </a>
+            {% endif %}
             <div class="tpd-divider"></div>
             <a href="{% url 'logout' %}" class="tpd-item tpd-logout">
               <i class="fas fa-sign-out-alt"></i> Sign Out
@@ -131,6 +139,21 @@
         </div>
       </div>
     </div>
+
+    {% if is_impersonating %}
+      <div style="margin:0 32px 20px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#9a3412;text-transform:uppercase;letter-spacing:.4px">Impersonation Active</div>
+          <div style="font-size:13px;color:#7c2d12;margin-top:4px">
+            You are viewing this dashboard as <strong>{{ impersonated_target_label|default:request.user.username }}</strong>.
+            Original account: <strong>{{ impersonator_name }}</strong>.
+          </div>
+        </div>
+        <a href="{% url 'super_admin_impersonate_stop' %}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#9a3412;color:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">
+          <i class="fas fa-user-shield"></i> Stop Impersonation
+        </a>
+      </div>
+    {% endif %}
 
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }} auto-dismiss-msg" style="margin:0 32px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px">

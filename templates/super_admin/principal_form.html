@@ -1,0 +1,54 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}{% if mode == 'edit' %}Edit Principal{% else %}Add Principal{% endif %} - EduTrack{% endblock %}
+{% block role_label %}Super Admin{% endblock %}
+{% block page_title %}{% if mode == 'edit' %}Edit Principal{% else %}Add Principal{% endif %}{% endblock %}
+{% block page_sub %}{% if mode == 'edit' %}Update the principal account for {{ principal.college.name }}{% else %}Create a college-scoped principal account{% endif %}{% endblock %}
+
+{% block sidebar_links %}
+<a href="{% url 'super_admin_dashboard' %}#principals" class="sb-link"><i class="fas fa-arrow-left"></i> Back to Principals</a>
+{% if principal %}
+<a href="{% url 'super_admin_college_detail' principal.college.pk %}" class="sb-link"><i class="fas fa-building"></i> View College</a>
+{% endif %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card" style="max-width:920px">
+  <div style="background:var(--surface2);border:1px dashed #bcd2db;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--muted);line-height:1.7">
+    {% if mode == 'edit' %}
+    Update the principal login and profile from here. If you set a new password, the old password will stop working immediately.
+    {% else %}
+    Each college can have only one principal. Leave the password blank to generate a strong temporary password automatically.
+    {% endif %}
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">First Name</label><input type="text" name="first_name" value="{{ principal.user.first_name|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Last Name</label><input type="text" name="last_name" value="{{ principal.user.last_name|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Email</label><input type="email" name="email" value="{{ principal.user.email|default:'' }}" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Username</label><input type="text" name="username" value="{{ principal.user.username|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">{% if mode == 'edit' %}New Password{% else %}Temporary Password{% endif %}</label><input type="text" name="password" placeholder="{% if mode == 'edit' %}Leave blank to keep current password{% else %}Leave blank to auto-generate{% endif %}" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Employee ID</label><input type="text" name="employee_id" value="{{ principal.employee_id|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Phone Number</label><input type="text" name="phone_number" value="{{ principal.phone_number|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Qualification</label><input type="text" name="qualification" value="{{ principal.qualification|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div><label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Experience Years</label><input type="number" min="0" name="experience_years" value="{{ principal.experience_years|default:'' }}" required style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px"></div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">College</label>
+        <select name="college" {% if mode == 'edit' %}disabled{% else %}required{% endif %} style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:{% if mode == 'edit' %}#f8fafb{% else %}#fff{% endif %}">
+          <option value="">Select College</option>
+          {% for college in colleges %}
+          <option value="{{ college.id }}" {% if selected_college_id == college.id|stringformat:'s' %}selected{% endif %}>{{ college.name }} ({{ college.code }})</option>
+          {% endfor %}
+        </select>
+        {% if mode == 'edit' %}
+        <input type="hidden" name="college" value="{{ principal.college_id }}">
+        {% endif %}
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-teal"><i class="fas fa-user-tie"></i> {% if mode == 'edit' %}Update Principal{% else %}Create Principal{% endif %}</button>
+      <a href="{% url 'super_admin_dashboard' %}#principals" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
