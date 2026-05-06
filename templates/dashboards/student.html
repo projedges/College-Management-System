@@ -714,7 +714,7 @@
     <div class="d-title"><i class="fas fa-chart-line"></i> Academics &amp; Results</div>
     <div class="section-meta">Official semester results, credit progress, academic standing, and feedback in one place.</div>
     <div class="action-row">
-      <a href="{% url 'student_transcript_pdf' %}" class="mini-btn mini-btn-deep"><i class="fas fa-scroll"></i> Full Transcript</a>
+      <a href="{% url 'student_transcript_pdf' %}" class="mini-btn mini-btn-deep" download="transcript.pdf" onclick="event.stopPropagation()"><i class="fas fa-scroll"></i> Full Transcript</a>
       {% if result_breakdown %}
       <div style="position:relative;display:inline-block">
         <button onclick="toggleSemTranscriptMenu()" class="mini-btn" style="background:var(--surface2);color:var(--deep);border:1px solid var(--border);cursor:pointer">
@@ -2743,4 +2743,3 @@ function supplySelectSem(sem) {
   supplyRecalc();
 }
 {% endblock %}
-

@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import DataError, IntegrityError, transaction
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import validate_email
@@ -19,8 +20,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.db.models import Sum, Q, Count, F, ExpressionWrapper, FloatField, Avg
-from django.db.models.functions import TruncWeek, Cast
+from django.db.models import Sum, Q, Count, F, ExpressionWrapper, FloatField, Avg, OuterRef, Subquery, IntegerField, Value
+from django.db.models.functions import TruncWeek, Cast, Coalesce
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -501,6 +502,11 @@ ADMIN_DASHBOARD_ANNOUNCEMENT_LIMIT = 30
 ADMIN_DASHBOARD_INVITE_LIMIT = 30
 ADMIN_DASHBOARD_REQUEST_LIMIT = 50
 ADMIN_DASHBOARD_HELPDESK_LIMIT = 50
+ADMIN_DASHBOARD_EXAM_LIMIT = 40
+ADMIN_DASHBOARD_HOD_LIMIT = 50
+SUPER_ADMIN_COLLEGE_LIMIT = 60
+SUPER_ADMIN_COLLEGE_ADMIN_LIMIT = 80
+SUPER_ADMIN_IMPERSONATION_LIMIT = 40
 
 
 # ── PDF BUILDER (reportlab) ───────────────────────────────────────────────────
@@ -1272,6 +1278,66 @@ def _get_admin_college(request):
     return role.college or _default_college()
 
 
+def _effective_dashboard_name(user):
+    if user.is_superuser:
+        return 'super_admin_dashboard'
+    try:
+        role = user.userrole.role
+    except Exception:
+        role = None
+    role_map = {
+        1: 'admin_dashboard',
+        2: 'hod_dashboard',
+        3: 'faculty_dashboard',
+        4: 'student_dashboard',
+        5: 'lab_staff_dashboard',
+        6: 'principal_dashboard',
+        7: 'exam_dashboard',
+    }
+    if role in role_map:
+        return role_map[role]
+    if hasattr(user, 'principal'):
+        return 'principal_dashboard'
+    if hasattr(user, 'hod'):
+        return 'hod_dashboard'
+    if hasattr(user, 'faculty'):
+        return 'faculty_dashboard'
+    if hasattr(user, 'student'):
+        return 'student_dashboard'
+    return 'dashboard'
+
+
+def _set_session_role_cache_for_user(request, user):
+    role_obj = UserRole.objects.select_related('college').filter(user=user).first()
+    if role_obj:
+        request.session['_user_role'] = role_obj.role
+        request.session['_user_college_id'] = role_obj.college_id
+        return
+    request.session['_user_role'] = None
+    if hasattr(user, 'principal'):
+        request.session['_user_college_id'] = user.principal.college_id
+    elif hasattr(user, 'hod'):
+        request.session['_user_college_id'] = user.hod.department.college_id
+    elif hasattr(user, 'faculty'):
+        request.session['_user_college_id'] = user.faculty.department.college_id
+    elif hasattr(user, 'student'):
+        request.session['_user_college_id'] = user.student.department.college_id
+    elif hasattr(user, 'examcontroller'):
+        request.session['_user_college_id'] = user.examcontroller.college_id
+    else:
+        request.session['_user_college_id'] = None
+
+
+def _clear_impersonation_session(request):
+    for key in (
+        '_impersonator_user_id',
+        '_impersonator_name',
+        '_impersonated_target_label',
+        '_impersonated_role_label',
+    ):
+        request.session.pop(key, None)
+
+
 def _scope_departments(request, queryset=None):
     queryset = queryset or Department.objects.all()
     college = _get_admin_college(request)
@@ -1969,24 +2035,12 @@ def ticket_detail_view(request, pk):
 @login_required
 def dashboard_redirect(request):
     user = request.user
-    if user.is_superuser:
-        return redirect("super_admin_dashboard")
-    try:
-        role = user.userrole.role
-    except UserRole.DoesNotExist:
+    target_dashboard = _effective_dashboard_name(user)
+    if target_dashboard == 'dashboard':
         messages.warning(request, "Your account has no role assigned. Contact admin.")
         logout(request)
         return redirect("login")
-    role_map = {
-        1: "admin_dashboard",
-        2: "hod_dashboard",
-        3: "faculty_dashboard",
-        4: "student_dashboard",
-        5: "lab_staff_dashboard",
-        6: "principal_dashboard",
-        7: "exam_dashboard",
-    }
-    return redirect(role_map.get(role, "student_dashboard"))
+    return redirect(target_dashboard)
 
 
 @login_required
@@ -2035,14 +2089,41 @@ def lab_staff_dashboard(request):
 @login_required
 @super_admin_required
 def super_admin_dashboard(request):
-    colleges = College.objects.annotate(
-        department_count=Count('departments', distinct=True),
-        admin_count=Count('user_roles', filter=Q(user_roles__role=1), distinct=True),
-        # student/faculty counts shown as aggregate only — no PII exposed
-        student_count=Count('departments__student', distinct=True),
-        faculty_count=Count('departments__faculty', distinct=True),
-    ).order_by('name')
-    college_admins = UserRole.objects.filter(role=1).select_related('user', 'college').order_by('college__name', 'user__username')
+    colleges_base = College.objects.order_by('name')
+    department_count_sq = Department.objects.filter(
+        college=OuterRef('pk'),
+        is_deleted=False,
+    ).values('college').annotate(total=Count('pk')).values('total')[:1]
+    admin_count_sq = UserRole.objects.filter(
+        college=OuterRef('pk'),
+        role=1,
+    ).values('college').annotate(total=Count('pk')).values('total')[:1]
+    student_count_sq = Student.objects.filter(
+        department__college=OuterRef('pk'),
+        is_deleted=False,
+    ).values('department__college').annotate(total=Count('pk')).values('total')[:1]
+    faculty_count_sq = Faculty.objects.filter(
+        department__college=OuterRef('pk'),
+        is_deleted=False,
+    ).values('department__college').annotate(total=Count('pk')).values('total')[:1]
+
+    colleges = colleges_base.annotate(
+        department_count=Coalesce(Subquery(department_count_sq, output_field=IntegerField()), Value(0)),
+        admin_count=Coalesce(Subquery(admin_count_sq, output_field=IntegerField()), Value(0)),
+        student_count=Coalesce(Subquery(student_count_sq, output_field=IntegerField()), Value(0)),
+        faculty_count=Coalesce(Subquery(faculty_count_sq, output_field=IntegerField()), Value(0)),
+    ).only('id', 'name', 'code', 'city', 'is_active')[:SUPER_ADMIN_COLLEGE_LIMIT]
+
+    college_admins = UserRole.objects.filter(role=1).select_related('user', 'college').only(
+        'id',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'user__email',
+        'college__id',
+        'college__name',
+    ).order_by('college__name', 'user__username')[:SUPER_ADMIN_COLLEGE_ADMIN_LIMIT]
     platform_announcements = Announcement.objects.filter(college__isnull=True).select_related('created_by').order_by('-created_at')[:5]
 
     # Activity log: only super-admin actions, NOT college user activity
@@ -2050,20 +2131,351 @@ def super_admin_dashboard(request):
         user__is_superuser=True
     ).select_related('user').order_by('-timestamp')[:15]
 
+    total_colleges = colleges_base.count()
+    total_college_admins = UserRole.objects.filter(role=1).count()
+    total_principals = Principal.objects.count()
+    total_exam_controllers = ExamController.objects.count()
+    total_users = User.objects.count()
+    total_students = Student.objects.filter(is_deleted=False).count()
+    total_faculty = Faculty.objects.filter(is_deleted=False).count()
+    total_departments = Department.objects.filter(is_deleted=False).count()
+
+    impersonation_college_filter = request.GET.get('imp_college', '').strip()
+    impersonation_department_filter = request.GET.get('imp_department', '').strip()
+    impersonation_search = request.GET.get('imp_search', '').strip()
+    impersonation_semester_filter = request.GET.get('imp_semester', '').strip()
+    impersonation_show_all = request.GET.get('imp_show_all', '').strip() == '1'
+    impersonation_colleges = colleges_base.only('id', 'name')
+    impersonation_departments = Department.objects.filter(is_deleted=False).select_related('college').only(
+        'id',
+        'name',
+        'code',
+        'college__id',
+        'college__name',
+    ).order_by('college__name', 'name')
+
+    college_admin_targets = UserRole.objects.filter(role=1).select_related('user', 'college').only(
+        'id',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'user__email',
+        'college__id',
+        'college__name',
+    )
+    principal_targets = Principal.objects.select_related('user', 'college').only(
+        'id',
+        'employee_id',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'college__id',
+        'college__name',
+    )
+    hod_targets = HOD.objects.select_related('user', 'department__college').only(
+        'id',
+        'employee_id',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'department__id',
+        'department__name',
+        'department__code',
+        'department__college__id',
+        'department__college__name',
+    )
+    faculty_targets = Faculty.objects.filter(is_deleted=False).select_related('user', 'department__college').only(
+        'id',
+        'employee_id',
+        'designation',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'department__id',
+        'department__name',
+        'department__code',
+        'department__college__id',
+        'department__college__name',
+    )
+    student_targets = Student.objects.filter(is_deleted=False).select_related('user', 'department__college').only(
+        'id',
+        'roll_number',
+        'current_semester',
+        'section',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'department__id',
+        'department__name',
+        'department__code',
+        'department__college__id',
+        'department__college__name',
+    )
+    exam_controller_targets = ExamController.objects.select_related('user', 'college').only(
+        'id',
+        'employee_id',
+        'designation',
+        'user__id',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'college__id',
+        'college__name',
+    )
+
+    if impersonation_college_filter:
+        college_admin_targets = college_admin_targets.filter(college_id=impersonation_college_filter)
+        principal_targets = principal_targets.filter(college_id=impersonation_college_filter)
+        hod_targets = hod_targets.filter(department__college_id=impersonation_college_filter)
+        faculty_targets = faculty_targets.filter(department__college_id=impersonation_college_filter)
+        student_targets = student_targets.filter(department__college_id=impersonation_college_filter)
+        exam_controller_targets = exam_controller_targets.filter(college_id=impersonation_college_filter)
+        impersonation_departments = impersonation_departments.filter(college_id=impersonation_college_filter)
+
+    if impersonation_department_filter:
+        hod_targets = hod_targets.filter(department_id=impersonation_department_filter)
+        faculty_targets = faculty_targets.filter(department_id=impersonation_department_filter)
+        student_targets = student_targets.filter(department_id=impersonation_department_filter)
+
+    if impersonation_semester_filter:
+        student_targets = student_targets.filter(current_semester=impersonation_semester_filter)
+
+    if impersonation_search:
+        college_admin_targets = college_admin_targets.filter(
+            Q(user__username__icontains=impersonation_search) |
+            Q(user__first_name__icontains=impersonation_search) |
+            Q(user__last_name__icontains=impersonation_search) |
+            Q(user__email__icontains=impersonation_search) |
+            Q(college__name__icontains=impersonation_search) |
+            Q(college__code__icontains=impersonation_search)
+        )
+        principal_targets = principal_targets.filter(
+            Q(user__username__icontains=impersonation_search) |
+            Q(user__first_name__icontains=impersonation_search) |
+            Q(user__last_name__icontains=impersonation_search) |
+            Q(employee_id__icontains=impersonation_search) |
+            Q(college__name__icontains=impersonation_search) |
+            Q(college__code__icontains=impersonation_search)
+        )
+        hod_targets = hod_targets.filter(
+            Q(user__username__icontains=impersonation_search) |
+            Q(user__first_name__icontains=impersonation_search) |
+            Q(user__last_name__icontains=impersonation_search) |
+            Q(employee_id__icontains=impersonation_search) |
+            Q(department__name__icontains=impersonation_search) |
+            Q(department__code__icontains=impersonation_search) |
+            Q(department__college__name__icontains=impersonation_search)
+        )
+        faculty_targets = faculty_targets.filter(
+            Q(user__username__icontains=impersonation_search) |
+            Q(user__first_name__icontains=impersonation_search) |
+            Q(user__last_name__icontains=impersonation_search) |
+            Q(employee_id__icontains=impersonation_search) |
+            Q(designation__icontains=impersonation_search) |
+            Q(department__name__icontains=impersonation_search) |
+            Q(department__code__icontains=impersonation_search) |
+            Q(department__college__name__icontains=impersonation_search)
+        )
+        student_targets = student_targets.filter(
+            Q(user__username__icontains=impersonation_search) |
+            Q(user__first_name__icontains=impersonation_search) |
+            Q(user__last_name__icontains=impersonation_search) |
+            Q(roll_number__icontains=impersonation_search) |
+            Q(section__icontains=impersonation_search) |
+            Q(department__name__icontains=impersonation_search) |
+            Q(department__code__icontains=impersonation_search) |
+            Q(department__college__name__icontains=impersonation_search)
+        )
+        exam_controller_targets = exam_controller_targets.filter(
+            Q(user__username__icontains=impersonation_search) |
+            Q(user__first_name__icontains=impersonation_search) |
+            Q(user__last_name__icontains=impersonation_search) |
+            Q(employee_id__icontains=impersonation_search) |
+            Q(designation__icontains=impersonation_search) |
+            Q(college__name__icontains=impersonation_search) |
+            Q(college__code__icontains=impersonation_search)
+        )
+
+    impersonation_admin_total = college_admin_targets.count()
+    impersonation_principal_total = principal_targets.count()
+    impersonation_hod_total = hod_targets.count()
+    impersonation_faculty_total = faculty_targets.count()
+    impersonation_student_total = student_targets.count()
+    impersonation_exam_controller_total = exam_controller_targets.count()
+
+    college_admin_targets = college_admin_targets.order_by('college__name', 'user__username')
+    principal_targets = principal_targets.order_by('college__name', 'user__username')
+    hod_targets = hod_targets.order_by('department__college__name', 'department__name', 'user__username')
+    faculty_targets = faculty_targets.order_by('department__college__name', 'department__name', 'user__username')
+    student_targets = student_targets.order_by('department__college__name', 'department__name', 'roll_number')
+    exam_controller_targets = exam_controller_targets.order_by('college__name', 'user__username')
+
+    if not impersonation_show_all:
+        college_admin_targets = college_admin_targets[:SUPER_ADMIN_IMPERSONATION_LIMIT]
+        principal_targets = principal_targets[:SUPER_ADMIN_IMPERSONATION_LIMIT]
+        hod_targets = hod_targets[:SUPER_ADMIN_IMPERSONATION_LIMIT]
+        faculty_targets = faculty_targets[:SUPER_ADMIN_IMPERSONATION_LIMIT]
+        student_targets = student_targets[:SUPER_ADMIN_IMPERSONATION_LIMIT]
+        exam_controller_targets = exam_controller_targets[:SUPER_ADMIN_IMPERSONATION_LIMIT]
+
     context = {
         'colleges': colleges,
         'college_admins': college_admins,
+        'principals': Principal.objects.select_related('user', 'college').order_by('college__name', 'user__username')[:SUPER_ADMIN_COLLEGE_ADMIN_LIMIT],
+        'exam_controllers': ExamController.objects.select_related('user', 'college').order_by('college__name', 'user__username')[:SUPER_ADMIN_COLLEGE_ADMIN_LIMIT],
         'recent_activity': recent_activity,
         'platform_announcements': platform_announcements,
-        'total_colleges': colleges.count(),
-        'total_college_admins': college_admins.count(),
+        'total_colleges': total_colleges,
+        'total_college_admins': total_college_admins,
+        'total_principals': total_principals,
+        'total_exam_controllers': total_exam_controllers,
         # Platform-level counts only — no breakdown by college
-        'total_users': User.objects.count(),
-        'total_students': Student.objects.count(),
-        'total_faculty': Faculty.objects.count(),
-        'total_departments': Department.objects.count(),
+        'total_users': total_users,
+        'total_students': total_students,
+        'total_faculty': total_faculty,
+        'total_departments': total_departments,
+        'colleges_preview_limited': total_colleges > SUPER_ADMIN_COLLEGE_LIMIT,
+        'college_admins_preview_limited': total_college_admins > SUPER_ADMIN_COLLEGE_ADMIN_LIMIT,
+        'principals_preview_limited': total_principals > SUPER_ADMIN_COLLEGE_ADMIN_LIMIT,
+        'exam_controllers_preview_limited': total_exam_controllers > SUPER_ADMIN_COLLEGE_ADMIN_LIMIT,
+        'colleges_preview_limit': SUPER_ADMIN_COLLEGE_LIMIT,
+        'college_admins_preview_limit': SUPER_ADMIN_COLLEGE_ADMIN_LIMIT,
+        'impersonation_colleges': impersonation_colleges,
+        'impersonation_departments': impersonation_departments,
+        'impersonation_college_filter': impersonation_college_filter,
+        'impersonation_department_filter': impersonation_department_filter,
+        'impersonation_search': impersonation_search,
+        'impersonation_semester_filter': impersonation_semester_filter,
+        'impersonation_show_all': impersonation_show_all,
+        'impersonation_limit': SUPER_ADMIN_IMPERSONATION_LIMIT,
+        'impersonation_admin_total': impersonation_admin_total,
+        'impersonation_principal_total': impersonation_principal_total,
+        'impersonation_hod_total': impersonation_hod_total,
+        'impersonation_faculty_total': impersonation_faculty_total,
+        'impersonation_student_total': impersonation_student_total,
+        'impersonation_exam_controller_total': impersonation_exam_controller_total,
+        'impersonation_admin_targets': college_admin_targets,
+        'impersonation_principal_targets': principal_targets,
+        'impersonation_hod_targets': hod_targets,
+        'impersonation_faculty_targets': faculty_targets,
+        'impersonation_student_targets': student_targets,
+        'impersonation_exam_controller_targets': exam_controller_targets,
     }
     return render(request, 'dashboards/super_admin.html', context)
+
+
+@login_required
+@super_admin_required
+def super_admin_impersonate_start(request, target_type, target_id):
+    if request.method != 'POST':
+        return redirect('super_admin_dashboard')
+
+    if request.session.get('_impersonator_user_id'):
+        messages.warning(request, 'Stop the current impersonation before starting a new one.')
+        return redirect('super_admin_dashboard')
+
+    target_map = {
+        'college-admin': (
+            UserRole.objects.select_related('user', 'college').filter(role=1),
+            lambda obj: obj.user,
+            lambda obj: f'College Admin {obj.user.get_full_name() or obj.user.username} ({obj.college.name})',
+            lambda obj: 'College Admin',
+        ),
+        'principal': (
+            Principal.objects.select_related('user', 'college').all(),
+            lambda obj: obj.user,
+            lambda obj: f'Principal {obj.user.get_full_name() or obj.user.username} ({obj.college.name})',
+            lambda obj: 'Principal',
+        ),
+        'hod': (
+            HOD.objects.select_related('user', 'department__college').all(),
+            lambda obj: obj.user,
+            lambda obj: f'HOD {obj.user.get_full_name() or obj.user.username} ({obj.department.code})',
+            lambda obj: 'HOD',
+        ),
+        'faculty': (
+            Faculty.objects.select_related('user', 'department__college').filter(is_deleted=False),
+            lambda obj: obj.user,
+            lambda obj: f'Faculty {obj.user.get_full_name() or obj.user.username} ({obj.department.code})',
+            lambda obj: 'Faculty',
+        ),
+        'student': (
+            Student.objects.select_related('user', 'department__college').filter(is_deleted=False),
+            lambda obj: obj.user,
+            lambda obj: f'Student {obj.roll_number} ({obj.department.code})',
+            lambda obj: 'Student',
+        ),
+        'exam-controller': (
+            ExamController.objects.select_related('user', 'college').all(),
+            lambda obj: obj.user,
+            lambda obj: f'Exam Controller {obj.user.get_full_name() or obj.user.username} ({obj.college.name})',
+            lambda obj: 'Exam Controller',
+        ),
+    }
+
+    config = target_map.get(target_type)
+    if not config:
+        messages.error(request, 'Invalid impersonation target.')
+        return redirect('super_admin_dashboard')
+
+    queryset, user_getter, label_getter, role_label_getter = config
+    target_obj = get_object_or_404(queryset, pk=target_id)
+    target_user = user_getter(target_obj)
+    if target_user.is_superuser:
+        messages.error(request, 'Super admins cannot be impersonated.')
+        return redirect('super_admin_dashboard')
+
+    impersonator = request.user
+    target_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+    login(request, target_user)
+    request.session['_impersonator_user_id'] = impersonator.pk
+    request.session['_impersonator_name'] = impersonator.get_full_name() or impersonator.username
+    request.session['_impersonated_target_label'] = label_getter(target_obj)
+    request.session['_impersonated_role_label'] = role_label_getter(target_obj)
+    _set_session_role_cache_for_user(request, target_user)
+    request.session['_last_activity'] = time.time()
+
+    ActivityLog.objects.create(
+        user=impersonator,
+        action=f"Started impersonation as {request.session['_impersonated_target_label']}",
+        ip_address=get_client_ip(request),
+    )
+    messages.success(request, f"Now impersonating {request.session['_impersonated_target_label']}.")
+    return redirect(_effective_dashboard_name(target_user))
+
+
+@login_required
+def super_admin_impersonate_stop(request):
+    impersonator_id = request.session.get('_impersonator_user_id')
+    if not impersonator_id:
+        return redirect('dashboard')
+
+    impersonated_user = request.user
+    impersonator = User.objects.filter(pk=impersonator_id, is_superuser=True).first()
+    if not impersonator:
+        _clear_impersonation_session(request)
+        logout(request)
+        messages.error(request, 'Original super admin session could not be restored. Please sign in again.')
+        return redirect('super_admin_login')
+
+    impersonator.backend = settings.AUTHENTICATION_BACKENDS[0]
+    login(request, impersonator)
+    _clear_impersonation_session(request)
+    _set_session_role_cache_for_user(request, impersonator)
+    request.session['_last_activity'] = time.time()
+
+    ActivityLog.objects.create(
+        user=impersonator,
+        action=f"Stopped impersonation and returned from {impersonated_user.get_full_name() or impersonated_user.username}",
+        ip_address=get_client_ip(request),
+    )
+    messages.info(request, 'Returned to your super admin account.')
+    return redirect('super_admin_dashboard')
 
 
 @login_required
@@ -2135,6 +2547,272 @@ def super_admin_college_admin_add(request):
 
 @login_required
 @super_admin_required
+def super_admin_principal_add(request):
+    selected_college_id = request.GET.get('college', '').strip() or request.POST.get('college', '').strip()
+    colleges = College.objects.order_by('name')
+    colleges_without_principal = colleges.exclude(principal__isnull=False)
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        employee_id = request.POST.get('employee_id', '').strip().upper()
+        phone_number = request.POST.get('phone_number', '').strip()
+        qualification = request.POST.get('qualification', '').strip()
+        experience_years = request.POST.get('experience_years', '').strip()
+        college_id = request.POST.get('college', '').strip()
+
+        if not college_id:
+            messages.error(request, 'Select a college for the principal.')
+        elif not employee_id or not phone_number or not qualification or not experience_years:
+            messages.error(request, 'Employee ID, phone number, qualification, and experience are required.')
+        elif User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+        elif email and User.objects.filter(email=email).exists():
+            messages.error(request, 'A user with this email already exists.')
+        elif Principal.objects.filter(employee_id=employee_id).exists():
+            messages.error(request, 'A principal with this employee ID already exists.')
+        else:
+            college = get_object_or_404(College, pk=college_id)
+            if hasattr(college, 'principal'):
+                messages.error(request, f'{college.name} already has a principal. Edit or remove that principal first.')
+            else:
+                password_value, password_generated = _resolve_password(password)
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password_value,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                UserRole.objects.create(user=user, role=6, college=college)
+                Principal.objects.create(
+                    user=user,
+                    college=college,
+                    employee_id=employee_id,
+                    phone_number=phone_number,
+                    qualification=qualification,
+                    experience_years=int(experience_years or 0),
+                )
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action=f'Created principal {user.username} for {college.name}',
+                    ip_address=get_client_ip(request),
+                )
+                if password_generated:
+                    messages.success(request, f'Principal created successfully. Temporary password: {password_value}')
+                else:
+                    messages.success(request, 'Principal created successfully.')
+                return redirect('super_admin_dashboard')
+
+    return render(request, 'super_admin/principal_form.html', {
+        'colleges': colleges_without_principal if not selected_college_id else colleges,
+        'selected_college_id': selected_college_id,
+        'mode': 'add',
+    })
+
+
+@login_required
+@super_admin_required
+def super_admin_principal_edit(request, pk):
+    principal = get_object_or_404(Principal.objects.select_related('user', 'college'), pk=pk)
+    if request.method == 'POST':
+        principal.user.first_name = request.POST.get('first_name', principal.user.first_name).strip()
+        principal.user.last_name = request.POST.get('last_name', principal.user.last_name).strip()
+        new_email = request.POST.get('email', principal.user.email).strip()
+        new_username = request.POST.get('username', principal.user.username).strip()
+        employee_id = request.POST.get('employee_id', principal.employee_id).strip().upper()
+        phone_number = request.POST.get('phone_number', principal.phone_number).strip()
+        qualification = request.POST.get('qualification', principal.qualification).strip()
+        experience_years = request.POST.get('experience_years', principal.experience_years)
+        new_password = request.POST.get('password', '').strip()
+
+        if User.objects.exclude(pk=principal.user_id).filter(username=new_username).exists():
+            messages.error(request, 'Username already exists.')
+        elif new_email and User.objects.exclude(pk=principal.user_id).filter(email=new_email).exists():
+            messages.error(request, 'A user with this email already exists.')
+        elif Principal.objects.exclude(pk=principal.pk).filter(employee_id=employee_id).exists():
+            messages.error(request, 'A principal with this employee ID already exists.')
+        else:
+            principal.user.username = new_username
+            principal.user.email = new_email
+            if new_password:
+                principal.user.set_password(new_password)
+            principal.user.save()
+            principal.employee_id = employee_id
+            principal.phone_number = phone_number
+            principal.qualification = qualification
+            principal.experience_years = int(experience_years or 0)
+            principal.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f'Updated principal {principal.user.username} for {principal.college.name}',
+                ip_address=get_client_ip(request),
+            )
+            messages.success(request, 'Principal updated successfully.')
+            return redirect('super_admin_dashboard')
+
+    return render(request, 'super_admin/principal_form.html', {
+        'principal': principal,
+        'colleges': College.objects.filter(pk=principal.college_id),
+        'selected_college_id': str(principal.college_id),
+        'mode': 'edit',
+    })
+
+
+@login_required
+@super_admin_required
+def super_admin_principal_delete(request, pk):
+    principal = get_object_or_404(Principal.objects.select_related('user', 'college'), pk=pk)
+    if request.method == 'POST':
+        username = principal.user.username
+        college_name = principal.college.name
+        user = principal.user
+        UserRole.objects.filter(user=user, role=6).delete()
+        principal.delete()
+        user.delete()
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f'Removed principal {username} from {college_name}',
+            ip_address=get_client_ip(request),
+        )
+        messages.success(request, 'Principal account removed.')
+    return redirect('super_admin_dashboard')
+
+
+@login_required
+@super_admin_required
+def super_admin_exam_controller_add(request):
+    selected_college_id = request.GET.get('college', '').strip() or request.POST.get('college', '').strip()
+    colleges = College.objects.order_by('name')
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
+        employee_id = request.POST.get('employee_id', '').strip().upper()
+        phone_number = request.POST.get('phone_number', '').strip()
+        designation = request.POST.get('designation', 'Exam Controller').strip() or 'Exam Controller'
+        college_id = request.POST.get('college', '').strip()
+
+        if not college_id:
+            messages.error(request, 'Select a college for the exam controller.')
+        elif not first_name or not last_name or not username or not employee_id:
+            messages.error(request, 'First name, last name, username, and employee ID are required.')
+        elif User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+        elif email and User.objects.filter(email=email).exists():
+            messages.error(request, 'A user with this email already exists.')
+        elif ExamController.objects.filter(employee_id=employee_id).exists():
+            messages.error(request, 'An exam controller with this employee ID already exists.')
+        else:
+            college = get_object_or_404(College, pk=college_id)
+            password_value, password_generated = _resolve_password(password)
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password_value,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            UserRole.objects.create(user=user, role=7, college=college)
+            ExamController.objects.create(
+                user=user,
+                college=college,
+                employee_id=employee_id,
+                phone_number=phone_number,
+                designation=designation,
+            )
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f'Created exam controller {user.username} for {college.name}',
+                ip_address=get_client_ip(request),
+            )
+            if password_generated:
+                messages.success(request, f'Exam controller created successfully. Temporary password: {password_value}')
+            else:
+                messages.success(request, 'Exam controller created successfully.')
+            return redirect('super_admin_dashboard')
+
+    return render(request, 'super_admin/exam_controller_form.html', {
+        'colleges': colleges,
+        'selected_college_id': selected_college_id,
+        'mode': 'add',
+    })
+
+
+@login_required
+@super_admin_required
+def super_admin_exam_controller_edit(request, pk):
+    exam_controller = get_object_or_404(ExamController.objects.select_related('user', 'college'), pk=pk)
+    if request.method == 'POST':
+        exam_controller.user.first_name = request.POST.get('first_name', exam_controller.user.first_name).strip()
+        exam_controller.user.last_name = request.POST.get('last_name', exam_controller.user.last_name).strip()
+        new_email = request.POST.get('email', exam_controller.user.email).strip()
+        new_username = request.POST.get('username', exam_controller.user.username).strip()
+        employee_id = request.POST.get('employee_id', exam_controller.employee_id).strip().upper()
+        phone_number = request.POST.get('phone_number', exam_controller.phone_number).strip()
+        designation = request.POST.get('designation', exam_controller.designation).strip() or 'Exam Controller'
+        new_password = request.POST.get('password', '').strip()
+
+        if User.objects.exclude(pk=exam_controller.user_id).filter(username=new_username).exists():
+            messages.error(request, 'Username already exists.')
+        elif new_email and User.objects.exclude(pk=exam_controller.user_id).filter(email=new_email).exists():
+            messages.error(request, 'A user with this email already exists.')
+        elif ExamController.objects.exclude(pk=exam_controller.pk).filter(employee_id=employee_id).exists():
+            messages.error(request, 'An exam controller with this employee ID already exists.')
+        else:
+            exam_controller.user.username = new_username
+            exam_controller.user.email = new_email
+            if new_password:
+                exam_controller.user.set_password(new_password)
+            exam_controller.user.save()
+            exam_controller.employee_id = employee_id
+            exam_controller.phone_number = phone_number
+            exam_controller.designation = designation
+            exam_controller.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                action=f'Updated exam controller {exam_controller.user.username} for {exam_controller.college.name}',
+                ip_address=get_client_ip(request),
+            )
+            messages.success(request, 'Exam controller updated successfully.')
+            return redirect('super_admin_dashboard')
+
+    return render(request, 'super_admin/exam_controller_form.html', {
+        'exam_controller': exam_controller,
+        'colleges': College.objects.filter(pk=exam_controller.college_id),
+        'selected_college_id': str(exam_controller.college_id),
+        'mode': 'edit',
+    })
+
+
+@login_required
+@super_admin_required
+def super_admin_exam_controller_delete(request, pk):
+    exam_controller = get_object_or_404(ExamController.objects.select_related('user', 'college'), pk=pk)
+    if request.method == 'POST':
+        username = exam_controller.user.username
+        college_name = exam_controller.college.name
+        user = exam_controller.user
+        UserRole.objects.filter(user=user, role=7).delete()
+        exam_controller.delete()
+        user.delete()
+        ActivityLog.objects.create(
+            user=request.user,
+            action=f'Removed exam controller {username} from {college_name}',
+            ip_address=get_client_ip(request),
+        )
+        messages.success(request, 'Exam controller account removed.')
+    return redirect('super_admin_dashboard')
+
+
+@login_required
+@super_admin_required
 def super_admin_college_edit(request, pk):
     college = get_object_or_404(College, pk=pk)
     if request.method == 'POST':
@@ -2197,10 +2875,14 @@ def super_admin_college_detail(request, pk):
     # Counts only — no names, no PII, no financials
     total_students = Student.objects.filter(department__college=college).count()
     total_faculty  = Faculty.objects.filter(department__college=college).count()
+    principal = Principal.objects.select_related('user').filter(college=college).first()
+    exam_controllers = ExamController.objects.select_related('user').filter(college=college).order_by('user__username')
     return render(request, 'super_admin/college_detail.html', {
         'college': college,
         'departments': departments,
         'admins': admins,
+        'principal': principal,
+        'exam_controllers': exam_controllers,
         'total_students': total_students,
         'total_faculty': total_faculty,
         # Financial and activity data intentionally excluded —
@@ -2246,44 +2928,96 @@ def admin_dashboard(request):
 
     college = _get_admin_college(request)
     department_qs = _scope_departments(request)
-    student_qs = Student.objects.select_related("user", "department").filter(department__in=department_qs)
-    faculty_qs = Faculty.objects.select_related("user", "department").filter(department__in=department_qs)
-    hod_qs = HOD.objects.select_related("user", "department").filter(department__in=department_qs)
-    fee_qs = Fee.objects.select_related("student__department").filter(student__department__in=department_qs)
+    student_qs = Student.objects.filter(department__in=department_qs)
+    faculty_qs = Faculty.objects.filter(department__in=department_qs)
+    hod_qs = HOD.objects.filter(department__in=department_qs)
+    fee_qs = Fee.objects.filter(student__department__in=department_qs)
     announcement_qs = _scope_announcements_for_college(college).select_related("created_by")
     request_qs = RegistrationRequest.objects.filter(college=college).select_related('desired_department').order_by('-created_at')
     invite_qs = RegistrationInvite.objects.filter(college=college).order_by('-created_at')
     helpdesk_qs = HelpDeskTicket.objects.filter(Q(college=college) | Q(college__isnull=True)).order_by('-created_at')
+    exams_qs = _scope_exams(request).select_related('created_by').order_by('-start_date', '-id')
 
     # System Health Dashboard Metrics
-    active_users_count = User.objects.filter(
-        last_login__gte=timezone.now() - timedelta(hours=24),
-        userrole__college=college
-    ).count()
-    
+    metrics_cache_key = f"admin_dashboard_metrics:{college.pk if college else 'global'}"
+    metrics = cache.get(metrics_cache_key)
+    now_local = timezone.localtime(timezone.now())
+
+    if metrics is None:
+        active_users_count = User.objects.filter(
+            last_login__gte=now_local - timedelta(hours=24),
+            userrole__college=college
+        ).count()
+
+        total_students = student_qs.count()
+        total_faculty = faculty_qs.count()
+        total_departments = department_qs.count()
+        total_hods = hod_qs.count()
+        total_fees = fee_qs.count()
+        pending_fees = fee_qs.filter(Q(status="PENDING") | Q(status="PARTIAL")).count()
+        total_collected = fee_qs.aggregate(s=Sum("paid_amount"))["s"] or 0
+        total_pending_agg = fee_qs.exclude(status="PAID").aggregate(
+            pending=Sum(F('total_amount') - F('paid_amount'))
+        )
+        total_pending = total_pending_agg['pending'] or 0
+        fee_paid_count = fee_qs.filter(status="PAID").count()
+        fee_partial_count = fee_qs.filter(status="PARTIAL").count()
+        pending_requests = request_qs.filter(
+            status__in=['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_CORRECTION', 'APPROVED']
+        ).count()
+        active_invites = invite_qs.filter(used_at__isnull=True).count()
+        open_helpdesk_tickets = helpdesk_qs.exclude(status='RESOLVED').count()
+        exams_without_schedule = exams_qs.exclude(
+            pk__in=ExamSchedule.objects.values_list('exam_id', flat=True)
+        ).count()
+        today = now_local.date()
+        upcoming_count = exams_qs.filter(start_date__gt=today).count()
+        ongoing_count = exams_qs.filter(start_date__lte=today, end_date__gte=today).count()
+        completed_count = exams_qs.filter(end_date__lt=today).count()
+
+        metrics = {
+            "active_users_count": active_users_count,
+            "total_students": total_students,
+            "total_faculty": total_faculty,
+            "total_departments": total_departments,
+            "total_hods": total_hods,
+            "total_fees": total_fees,
+            "pending_fees": pending_fees,
+            "total_collected": total_collected,
+            "total_pending": total_pending,
+            "fee_paid_count": fee_paid_count,
+            "fee_partial_count": fee_partial_count,
+            "pending_requests": pending_requests,
+            "active_invites": active_invites,
+            "open_helpdesk_tickets": open_helpdesk_tickets,
+            "exams_without_schedule": exams_without_schedule,
+            "upcoming_count": upcoming_count,
+            "ongoing_count": ongoing_count,
+            "completed_count": completed_count,
+        }
+        cache.set(metrics_cache_key, metrics, 60)
+
     # Attendance Completion Rate: (Marked Sessions Today / Scheduled Slots Today)
-    today_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}.get(timezone.localtime(timezone.now()).weekday())
+    today_day = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}.get(now_local.weekday())
     scheduled_today = Timetable.objects.filter(subject__department__college=college, day_of_week=today_day).count()
-    marked_today = AttendanceSession.objects.filter(subject__department__college=college, date=timezone.localtime(timezone.now()).date()).count()
+    marked_today = AttendanceSession.objects.filter(subject__department__college=college, date=now_local.date()).count()
     attendance_rate = round((marked_today / scheduled_today * 100), 1) if scheduled_today > 0 else 100.0
 
-    total_students    = student_qs.count()
-    total_faculty     = faculty_qs.count()
-    total_departments = department_qs.count()
-    total_hods        = hod_qs.count()
-    pending_fees      = fee_qs.filter(Q(status="PENDING") | Q(status="PARTIAL")).count()
-    recent_students   = student_qs.order_by("-created_at")[:5]
+    total_students = metrics["total_students"]
+    total_faculty = metrics["total_faculty"]
+    total_departments = metrics["total_departments"]
+    total_hods = metrics["total_hods"]
+    total_fees = metrics["total_fees"]
+    pending_fees = metrics["pending_fees"]
+    total_collected = metrics["total_collected"]
+    total_pending = metrics["total_pending"]
+    fee_paid_count = metrics["fee_paid_count"]
+    fee_partial_count = metrics["fee_partial_count"]
+    recent_students = student_qs.select_related("user", "department").order_by("-created_at")[:5]
     recent_announcements = announcement_qs.order_by("-created_at")[:5]
     recent_requests = request_qs[:5]
     recent_helpdesk_tickets = helpdesk_qs[:10]
-    departments       = department_qs
-    total_collected   = fee_qs.aggregate(s=Sum("paid_amount"))["s"] or 0
-    total_pending_agg = fee_qs.exclude(status="PAID").aggregate(
-        pending=Sum(F('total_amount') - F('paid_amount'))
-    )
-    total_pending = total_pending_agg['pending'] or 0
-    fee_paid_count    = fee_qs.filter(status="PAID").count()
-    fee_partial_count = fee_qs.filter(status="PARTIAL").count()
+    departments = department_qs
 
     student_year_filter = request.GET.get("year", "").strip()
     student_dept_filter = request.GET.get("dept", "").strip()
@@ -2301,13 +3035,13 @@ def admin_dashboard(request):
     )
     filtered_students = student_filter_qs.order_by("department__code", "admission_year", "current_semester", "roll_number")
     filtered_students_total = filtered_students.count()
-    filtered_students = filtered_students[:ADMIN_DASHBOARD_STUDENT_LIMIT]
+    filtered_students = filtered_students.select_related("user", "department")[:ADMIN_DASHBOARD_STUDENT_LIMIT]
 
     fee_academic_year_filter = request.GET.get("fee_year", "").strip()
     fee_dept_filter = request.GET.get("fee_dept", "").strip()
     fee_sem_filter = request.GET.get("fee_sem", "").strip()
     fee_status_filter = request.GET.get("fee_status", "").strip()
-    fee_filter_qs = fee_qs.select_related('student__user', 'student__department')
+    fee_filter_qs = fee_qs
     if fee_academic_year_filter:
         fee_filter_qs = fee_filter_qs.filter(academic_year=fee_academic_year_filter)
     if fee_dept_filter:
@@ -2323,13 +3057,21 @@ def admin_dashboard(request):
         balance=ExpressionWrapper(F('total_amount') - F('paid_amount'), output_field=FloatField())
     ).order_by('status', 'student__roll_number')
     filtered_fees_total = filtered_fees.count()
-    filtered_fees = filtered_fees[:ADMIN_DASHBOARD_FEE_LIMIT]
+    filtered_fees = filtered_fees.select_related('student__user', 'student__department')[:ADMIN_DASHBOARD_FEE_LIMIT]
 
     faculty_preview = faculty_qs.select_related('user', 'department').order_by('department__name', 'user__first_name')[:ADMIN_DASHBOARD_FACULTY_LIMIT]
+    hod_preview = hod_qs.filter(is_active=True).select_related('user', 'department').order_by('department__name')[:ADMIN_DASHBOARD_HOD_LIMIT]
     helpdesk_preview = helpdesk_qs[:ADMIN_DASHBOARD_HELPDESK_LIMIT]
     announcement_preview = announcement_qs.order_by('-created_at')[:ADMIN_DASHBOARD_ANNOUNCEMENT_LIMIT]
     invite_preview = invite_qs.order_by('-created_at')[:ADMIN_DASHBOARD_INVITE_LIMIT]
     request_preview = request_qs.select_related('desired_department').order_by('-created_at')[:ADMIN_DASHBOARD_REQUEST_LIMIT]
+    exams_total = exams_qs.count()
+    exams_preview = exams_qs[:ADMIN_DASHBOARD_EXAM_LIMIT]
+    all_departments = department_qs.annotate(
+        student_count=Count('student', distinct=True),
+        faculty_count=Count('faculty', distinct=True),
+        subject_count=Count('subject', distinct=True),
+    ).order_by('name')
 
     context = {
         "total_students": total_students, "total_faculty": total_faculty,
@@ -2337,37 +3079,36 @@ def admin_dashboard(request):
         "pending_fees": pending_fees, "recent_students": recent_students,
         "recent_announcements": recent_announcements, "departments": departments,
         "fee_summary": {"total_collected": total_collected, "total_pending": total_pending},
-        "pending_requests": request_qs.filter(status__in=['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_CORRECTION', 'APPROVED']).count(),
+        "pending_requests": metrics["pending_requests"],
         "recent_requests": recent_requests,
         "recent_helpdesk_tickets": recent_helpdesk_tickets,
-        "active_invites": invite_qs.filter(used_at__isnull=True).count(),
-        "open_helpdesk_tickets": helpdesk_qs.exclude(status='RESOLVED').count(),
-        "active_users_24h": active_users_count,
+        "active_invites": metrics["active_invites"],
+        "open_helpdesk_tickets": metrics["open_helpdesk_tickets"],
+        "active_users_24h": metrics["active_users_count"],
         "attendance_completion_rate": attendance_rate,
         "college": college,
         "branding": _get_college_branding(college),
-        "exams_without_schedule": _scope_exams(request).exclude(
-            pk__in=ExamSchedule.objects.values_list('exam_id', flat=True)
-        ).count(),
+        "exams_without_schedule": metrics["exams_without_schedule"],
         "all_helpdesk_tickets": helpdesk_preview,
-        "exams": _scope_exams(request).select_related('created_by').order_by('-start_date'),
-        "all_departments": department_qs.annotate(
-            student_count=Count('student', distinct=True),
-            faculty_count=Count('faculty', distinct=True),
-            subject_count=Count('subject', distinct=True),
-        ).order_by('name'),
+        "exams": exams_preview,
+        "exam_total_count": exams_total,
+        "exam_preview_limited": exams_total > ADMIN_DASHBOARD_EXAM_LIMIT,
+        "upcoming_count": metrics["upcoming_count"],
+        "ongoing_count": metrics["ongoing_count"],
+        "completed_count": metrics["completed_count"],
+        "all_departments": all_departments,
         "all_students_full": filtered_students,
-        "all_students_total": student_qs.count(),
+        "all_students_total": total_students,
         "all_students_filtered_total": filtered_students_total,
         "student_year_filter": student_year_filter,
         "student_dept_filter": student_dept_filter,
         "student_sem_filter": student_sem_filter,
         "student_year_options": student_year_options,
         "all_faculty_full": faculty_preview,
-        "all_faculty_total": faculty_qs.count(),
-        "all_hods_full": hod_qs.filter(is_active=True).select_related('user', 'department').order_by('department__name')[:50],
+        "all_faculty_total": total_faculty,
+        "all_hods_full": hod_preview,
         "all_fees": filtered_fees,
-        "all_fees_total": fee_qs.count(),
+        "all_fees_total": total_fees,
         "all_fees_filtered_total": filtered_fees_total,
         "fee_paid_count": fee_paid_count,
         "fee_partial_count": fee_partial_count,
@@ -13224,10 +13965,13 @@ def student_transcript_pdf(request):
     ))
 
     doc.build(elems)
-    buf.seek(0)
+    pdf_bytes = buf.getvalue()
+    buf.close()
     roll = student.roll_number.replace('/', '-')
-    response = HttpResponse(buf, content_type='application/pdf')
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="transcript_{roll}.pdf"'
+    response['Content-Length'] = str(len(pdf_bytes))
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
 
 
