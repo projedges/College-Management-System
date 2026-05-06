@@ -6700,14 +6700,7 @@ def student_dashboard(request):
 
 @login_required
 def student_profile_edit(request):
-    """
-    Student profile edit — inline form posted from the dashboard #profile section.
-    Rules:
-      - Editable: first_name, last_name, email, phone_number (max 10 digits),
-                  date_of_birth, gender, blood_group, nationality, profile_photo,
-                  address fields, emergency contact
-      - Read-only (admin only): aadhaar_number, parent phone, parent name, parent type
-    """
+    """Student profile edit posted from the dashboard profile section."""
     try:
         student = Student.objects.select_related('user', 'department').get(user=request.user)
     except Student.DoesNotExist:
@@ -6722,15 +6715,27 @@ def student_profile_edit(request):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # ── User fields — first_name/last_name are read-only for student ─
-                # Only phone is editable from user-facing fields
-                request.user.save()
+                first_name = request.POST.get('first_name', '').strip()
+                last_name = request.POST.get('last_name', '').strip()
+                email = request.POST.get('email', '').strip() or request.user.email
+                if not first_name or not last_name:
+                    messages.error(request, 'First name and last name are required.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
+                if not email:
+                    messages.error(request, 'Email is required.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
+                validate_email(email)
+                if User.objects.exclude(pk=request.user.pk).filter(email__iexact=email).exists():
+                    messages.error(request, 'That email address is already in use.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
 
-                # ── Phone validation (max 10 digits) ──────────────────────────
                 phone = request.POST.get('phone_number', '').strip()
                 digits_only = ''.join(c for c in phone if c.isdigit())
                 if len(digits_only) > 10:
                     messages.error(request, 'Phone number must be at most 10 digits.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
+                if not digits_only:
+                    messages.error(request, 'Phone number is required.')
                     return redirect(f"{reverse('student_dashboard')}#profile")
 
                 alt_phone = request.POST.get('alternate_phone', '').strip()
@@ -6739,26 +6744,43 @@ def student_profile_edit(request):
                     messages.error(request, 'Alternate phone must be at most 10 digits.')
                     return redirect(f"{reverse('student_dashboard')}#profile")
 
-                # ── Profile — keep all admin-managed fields from existing record ─
-                existing_aadhaar = profile.aadhaar_number if profile else ''
+                dob_raw = request.POST.get('date_of_birth', '').strip()
+                if dob_raw:
+                    try:
+                        date_of_birth = datetime.strptime(dob_raw, '%Y-%m-%d').date()
+                    except ValueError:
+                        messages.error(request, 'Enter a valid date of birth.')
+                        return redirect(f"{reverse('student_dashboard')}#profile")
+                else:
+                    date_of_birth = profile.date_of_birth if profile else None
+
+                gender = request.POST.get('gender', '').strip() or (profile.gender if profile else '')
+                if gender and gender not in {'Male', 'Female', 'Other'}:
+                    messages.error(request, 'Select a valid gender.')
+                    return redirect(f"{reverse('student_dashboard')}#profile")
+
+                request.user.first_name = first_name
+                request.user.last_name = last_name
+                request.user.email = email
+                request.user.save()
+
                 profile_data = {
-                    'date_of_birth': profile.date_of_birth if profile else None,  # read-only
-                    'gender':        profile.gender if profile else '',            # read-only
-                    'phone_number':  phone,
+                    'date_of_birth': date_of_birth,
+                    'gender': gender,
+                    'phone_number': digits_only,
                     'alternate_phone': alt_phone,
-                    'aadhaar_number': existing_aadhaar,
-                    'blood_group':   profile.blood_group if profile else None,     # read-only
-                    'nationality':   request.POST.get('nationality', '').strip() or 'Indian',
-                    # keep education history unchanged
-                    'inter_college_name':  profile.inter_college_name  if profile else '',
-                    'inter_passed_year':   profile.inter_passed_year   if profile else 0,
-                    'inter_percentage':    profile.inter_percentage     if profile else 0,
-                    'school_name':         profile.school_name          if profile else '',
-                    'school_passed_year':  profile.school_passed_year   if profile else 0,
-                    'school_percentage':   profile.school_percentage     if profile else 0,
-                    'category':            profile.category             if profile else None,
-                    'college_email':       profile.college_email        if profile else None,  # read-only
-                    'personal_email':      profile.personal_email       if profile else None,  # read-only
+                    'aadhaar_number': profile.aadhaar_number if profile else f'PENDING-{request.user.pk}',
+                    'blood_group': request.POST.get('blood_group', '').strip() or (profile.blood_group if profile else None),
+                    'nationality': request.POST.get('nationality', '').strip() or 'Indian',
+                    'inter_college_name': profile.inter_college_name if profile else '',
+                    'inter_passed_year': profile.inter_passed_year if profile else 0,
+                    'inter_percentage': profile.inter_percentage if profile else 0,
+                    'school_name': profile.school_name if profile else '',
+                    'school_passed_year': profile.school_passed_year if profile else 0,
+                    'school_percentage': profile.school_percentage if profile else 0,
+                    'category': profile.category if profile else None,
+                    'college_email': profile.college_email if profile else None,
+                    'personal_email': profile.personal_email if profile else email,
                 }
                 if profile is None:
                     profile = StudentProfile.objects.create(user=request.user, **profile_data)
@@ -6771,11 +6793,10 @@ def student_profile_edit(request):
                     profile.profile_photo = request.FILES['profile_photo']
                     profile.save(update_fields=['profile_photo'])
 
-                # ── Address ───────────────────────────────────────────────────
                 address_data = {
-                    'street':  request.POST.get('street', '').strip(),
-                    'city':    request.POST.get('city', '').strip(),
-                    'state':   request.POST.get('state', '').strip(),
+                    'street': request.POST.get('street', '').strip(),
+                    'city': request.POST.get('city', '').strip(),
+                    'state': request.POST.get('state', '').strip(),
                     'pincode': request.POST.get('pincode', '').strip(),
                     'country': request.POST.get('country', '').strip() or 'India',
                 }
@@ -6786,12 +6807,9 @@ def student_profile_edit(request):
                         setattr(address, field, value)
                     address.save()
 
-                # ── Parent details are managed only by college admin ───────────
-
-                # ── Emergency contact ─────────────────────────────────────────
                 emergency_data = {
-                    'name':         request.POST.get('emergency_name', '').strip(),
-                    'relation':     request.POST.get('emergency_relation', '').strip(),
+                    'name': request.POST.get('emergency_name', '').strip(),
+                    'relation': request.POST.get('emergency_relation', '').strip(),
                     'phone_number': request.POST.get('emergency_phone_number', '').strip(),
                 }
                 if emergency_contact is None:
