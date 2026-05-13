@@ -22,15 +22,15 @@
   .reg-table th{background:var(--deep);color:#fff;padding:12px 14px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-size:10px}
   .reg-table td{padding:12px 14px;border-bottom:1px solid #f3f4f6;color:var(--text)}
   .reg-table tr:hover td{background:#f8fafc}
-  .reg-avatar{width:32px;height:32px;border-radius:50%;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .reg-avatar{width:32px;height:32px;border-radius:50%;background:var(--teal-10);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
   .reg-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700}
   .reg-badge-approved{background:#d1fae5;color:#065f46}
   .reg-badge-pending{background:#fef3c7;color:#92400e}
   .reg-badge-rejected{background:#fee2e2;color:#991b1b}
-  .reg-badge-converted{background:rgba(13,115,119,.1);color:var(--teal)}
+  .reg-badge-converted{background:var(--teal-10);color:var(--teal)}
   .reg-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .reg-action-btn{padding:8px 12px;border-radius:7px;border:none;background:rgba(13,115,119,.08);color:var(--teal);cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
-  .reg-action-btn:hover{background:rgba(13,115,119,.15)}
+  .reg-action-btn{padding:8px 12px;border-radius:7px;border:none;background:var(--teal-08);color:var(--teal);cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
+  .reg-action-btn:hover{background:var(--teal-15)}
   .reg-action-btn.del{background:rgba(239,68,68,.08);color:#ef4444}
   .reg-action-btn.del:hover{background:rgba(239,68,68,.15)}
   .reg-empty{text-align:center;padding:40px 20px;color:var(--muted)}
@@ -63,7 +63,7 @@
         {% endfor %}
       </select>
       <button type="submit" class="reg-filter-btn"><i class="fas fa-search"></i> Search</button>
-      {% if search_query or dept_filter %}<a href="{% url 'admin_registration_request_list' %}" class="reg-filter-btn" style="background:rgba(13,115,119,.08);color:var(--teal)">Clear</a>{% endif %}
+      {% if search_query or dept_filter %}<a href="{% url 'admin_registration_request_list' %}" class="reg-filter-btn" style="background:var(--teal-08);color:var(--teal)">Clear</a>{% endif %}
     </form>
   </div>
 

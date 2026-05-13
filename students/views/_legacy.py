@@ -4475,10 +4475,6 @@ def faculty_dashboard(request):
     now = timezone.localtime(timezone.now())
     today = now.date()
 
-    marked_subject_ids = set(AttendanceSession.objects.filter(
-        faculty=faculty, date=today
-    ).values_list('subject_id', flat=True))
-
     day_map = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}
     today_day = day_map.get(today.weekday(), '')
     raw_timetable = Timetable.objects.filter(
@@ -4937,18 +4933,35 @@ def faculty_request_add(request):
 def _get_section_students(faculty, subject):
     """
     Returns the queryset of students this faculty should see for a subject.
-    If a SectionSubjectFacultyMap exists for this faculty+subject, scope to that section.
+    If section mappings exist for this faculty+subject, prefer a mapped section that
+    currently has active students. This avoids stale/empty historical mappings hiding
+    the real class list.
     Otherwise fall back to all active students in the department+semester.
     """
-    ssf = SectionSubjectFacultyMap.objects.filter(faculty=faculty, subject=subject).select_related('section').first()
     base_qs = Student.objects.filter(
         department=subject.department,
         current_semester=subject.semester,
         status='ACTIVE',
         is_deleted=False,
     ).select_related('user').order_by('roll_number')
-    if ssf:
-        return base_qs.filter(section=ssf.section.label)
+
+    if not faculty:
+        return base_qs
+
+    mappings = list(
+        SectionSubjectFacultyMap.objects.filter(
+            faculty=faculty,
+            subject=subject,
+            section__department=subject.department,
+            section__semester=subject.semester,
+        )
+        .select_related('section')
+        .order_by('section__label', 'created_at')
+    )
+    for mapping in mappings:
+        scoped_qs = base_qs.filter(section=mapping.section.label)
+        if scoped_qs.exists():
+            return scoped_qs
     return base_qs
 
 
@@ -10052,13 +10065,16 @@ def admin_hod_delete(request, pk):
 def admin_subjects(request):
     if not _admin_guard(request):
         return redirect('dashboard')
+        
     departments = _scope_departments(request).order_by('name')
     dept_filter = request.GET.get('dept', '').strip()
     semester_filter = request.GET.get('sem', '').strip()
     search_query = request.GET.get('q', '').strip()
+    
     subjects = Subject.objects.filter(
         department__in=departments
     ).select_related('department').order_by('department__code', 'semester', 'code')
+    
     if dept_filter:
         subjects = subjects.filter(department_id=dept_filter)
     if semester_filter:
@@ -10070,8 +10086,23 @@ def admin_subjects(request):
             Q(department__name__icontains=search_query) |
             Q(department__code__icontains=search_query)
         )
+        
+    # --- ADDED: Real Pagination Logic ---
+    per_page = request.GET.get('per_page', '10')
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 10
+        
+    paginator = Paginator(subjects, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    # ------------------------------------
+
     return render(request, 'admin_panel/subjects.html', {
-        'subjects': subjects,
+        'subjects': page_obj,              # Pass the paginated page object instead of raw list
+        'total_subjects': paginator.count, # Total count of subjects across all pages
+        'per_page': per_page,              # Current per-page count to keep the UI in sync
         'departments': departments,
         'dept_filter': dept_filter,
         'semester_filter': semester_filter,
@@ -11530,6 +11561,10 @@ def admin_save_colors(request):
         else:
             branding.sidebar_deep = deep
     branding.save()
+    cache.delete_many([
+        f'college_branding_{user_id}'
+        for user_id in UserRole.objects.filter(college=college).values_list('user_id', flat=True)
+    ])
     messages.success(request, 'Colors saved. They will apply on next page load for all users.')
     return redirect('/dashboard/admin/#profile')
 

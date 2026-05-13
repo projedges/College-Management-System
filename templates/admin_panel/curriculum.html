@@ -51,7 +51,7 @@
           <td style="font-size:12px;color:var(--muted)">{{ e.subject.lecture_hours }}-{{ e.subject.tutorial_hours }}-{{ e.subject.practical_hours }}-{{ e.subject.credits }}</td>
           <td>
             {% if e.elective_type == 'FIXED' %}<span class="dbadge dbadge-active">Fixed</span>
-            {% elif e.elective_type == 'PE' %}<span class="dbadge" style="background:rgba(230,168,23,.12);color:#b88510">PE</span>
+            {% elif e.elective_type == 'PE' %}<span class="dbadge" style="background:var(--gold-12);color:var(--gold)">PE</span>
             {% else %}<span class="dbadge" style="background:rgba(99,102,241,.12);color:#4338ca">OE</span>{% endif %}
           </td>
           <td>

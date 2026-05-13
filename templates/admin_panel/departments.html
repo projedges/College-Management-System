@@ -14,19 +14,19 @@
 <div class="stat-row" style="margin-bottom:22px">
   <div class="stat-mini">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-building"></i></div>
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-building"></i></div>
       <div><div class="n">{{ departments|length }}</div><div class="l">Total Departments</div></div>
     </div>
   </div>
   <div class="stat-mini">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-user-graduate"></i></div>
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-user-graduate"></i></div>
       <div><div class="n">{{ total_students|default:"0" }}</div><div class="l">Total Students</div></div>
     </div>
   </div>
   <div class="stat-mini">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(230,168,23,.1);color:#b88510;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--gold-10);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-chalkboard-teacher"></i></div>
       <div><div class="n">{{ total_faculty|default:"0" }}</div><div class="l">Total Faculty</div></div>
     </div>
   </div>
@@ -67,14 +67,14 @@
       <tr class="dept-row">
         <td style="padding-left:20px">
           <div style="display:flex;align-items:center;gap:12px">
-            <div style="width:36px;height:36px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-building"></i></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"><i class="fas fa-building"></i></div>
             <div>
               <div style="font-weight:700;color:var(--deep)">{{ d.name }}</div>
               {% if d.established_year %}<div style="font-size:11px;color:var(--muted)">Est. {{ d.established_year }}</div>{% endif %}
             </div>
           </div>
         </td>
-        <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal);padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700">{{ d.code }}</span></td>
+        <td><span class="ap-badge" style="background:var(--teal-08);color:var(--teal);padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700">{{ d.code }}</span></td>
         <td>
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-weight:600;color:var(--deep)">{{ d.student_count }}</span>

@@ -41,7 +41,7 @@
         </td>
         <td>
           {% if sel.status == 'CONFIRMED' %}<span class="dbadge dbadge-active">Confirmed</span>
-          {% elif sel.status == 'PENDING' %}<span class="dbadge" style="background:rgba(230,168,23,.12);color:#b88510">Pending</span>
+          {% elif sel.status == 'PENDING' %}<span class="dbadge" style="background:var(--gold-12);color:var(--gold)">Pending</span>
           {% elif sel.status == 'REJECTED' %}<span class="dbadge dbadge-red">Rejected</span>
           {% else %}<span class="dbadge">Changed</span>{% endif %}
           {% if sel.note %}<div style="font-size:10px;color:var(--muted);margin-top:2px">{{ sel.note }}</div>{% endif %}

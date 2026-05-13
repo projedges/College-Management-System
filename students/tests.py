@@ -32,6 +32,8 @@ from .models import (
     RegistrationInvite,
     RegistrationRequest,
     RevaluationRequest,
+    Section,
+    SectionSubjectFacultyMap,
     Student,
     StudentProfile,
     Subject,
@@ -1249,6 +1251,22 @@ class FacultyAndExamWorkflowTests(TestCase):
         response = self.client.get(reverse("faculty_enter_marks", args=[self.subject.pk, exam.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_mark_attendance_prefers_mapped_section_with_active_students(self):
+        self.client.force_login(self.faculty_user)
+        stale_section = Section.objects.create(department=self.dept, semester=3, label="A")
+        active_section = Section.objects.create(department=self.dept, semester=3, label="B")
+        SectionSubjectFacultyMap.objects.create(section=stale_section, subject=self.subject, faculty=self.faculty)
+        SectionSubjectFacultyMap.objects.create(section=active_section, subject=self.subject, faculty=self.faculty)
+        self.student.section = "B"
+        self.student.save(update_fields=["section"])
+
+        with patch.dict(os.environ, {"ATTENDANCE_TIME_LOCK_DISABLED": "1"}):
+            response = self.client.get(reverse("faculty_mark_attendance", args=[self.subject.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        students = list(response.context["students"])
+        self.assertEqual(students, [self.student])
 
 
 class StudentAcademicWorkflowTests(TestCase):

@@ -1,23 +1,51 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block extra_css %}
-{% if branding or request.user.userrole.college.branding %}
-<style>
-:root{
-  --teal:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }};
-  --teal-lt:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}cc;
-  --teal-dk:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}dd;
-  --gold:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }};
-  --gold-lt:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}cc;
-  --deep:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }};
-  --deep2:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }}ee;
-}
-</style>
-{% endif %}
 {% endblock %}
 
 {% block body %}
+{% if branding or request.user.userrole.college.branding %}
+<style>
+:root{
+  --teal:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }} !important;
+  --teal-lt:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}cc !important;
+  --teal-dk:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}dd !important;
+  --teal-03:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}08 !important;
+  --teal-04:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}0a !important;
+  --teal-05:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}0d !important;
+  --teal-06:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}0f !important;
+  --teal-07:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}12 !important;
+  --teal-08:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}14 !important;
+  --teal-09:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}17 !important;
+  --teal-10:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}1a !important;
+  --teal-11:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}1c !important;
+  --teal-12:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}1f !important;
+  --teal-14:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}24 !important;
+  --teal-15:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}26 !important;
+  --teal-16:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}29 !important;
+  --teal-18:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}2e !important;
+  --teal-20:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}33 !important;
+  --teal-24:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}3d !important;
+  --teal-25:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}40 !important;
+  --teal-30:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}4d !important;
+  --gold:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }} !important;
+  --gold-lt:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}cc !important;
+  --gold-05:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}0d !important;
+  --gold-06:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}0f !important;
+  --gold-07:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}12 !important;
+  --gold-10:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}1a !important;
+  --gold-12:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}1f !important;
+  --gold-14:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}24 !important;
+  --gold-15:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}26 !important;
+  --gold-18:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}2e !important;
+  --gold-20:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}33 !important;
+  --gold-25:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}40 !important;
+  --deep:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }} !important;
+  --deep2:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }}ee !important;
+}
+</style>
+{% endif %}
 
 <!-- Mobile top bar -->
 <div class="adm-mob-bar" id="adm-mob-bar">
@@ -38,7 +66,7 @@
       <span style="font-size:12px;font-weight:700;color:var(--deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ request.user.userrole.college.name }}</span>
     {% endif %}
   </div>
-  <span style="font-size:11px;font-weight:700;color:var(--teal);background:rgba(13,115,119,.08);padding:3px 10px;border-radius:99px">Admin</span>
+  <span style="font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-08);padding:3px 10px;border-radius:99px">Admin</span>
 </div>
 <div class="adm-overlay" id="adm-overlay"></div>
 
@@ -210,7 +238,7 @@
   /* ---- Profile dropdown (same as base_dashboard) ---- */
   .topbar-profile-wrap{position:relative}
   .topbar-profile-btn{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;border-radius:99px;border:1.5px solid var(--border);background:#fff;cursor:pointer;box-shadow:var(--sh);transition:all .2s}
-  .topbar-profile-btn:hover{border-color:rgba(13,115,119,.3);box-shadow:0 4px 14px rgba(13,115,119,.1)}
+  .topbar-profile-btn:hover{border-color:var(--teal-30);box-shadow:0 4px 14px var(--teal-10)}
   .topbar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
   .topbar-profile-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
   .topbar-profile-name{font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
@@ -243,15 +271,15 @@
   .ap-table tbody tr:hover td{background:#f9fafb}
   .ap-badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600}
   .badge-active{background:#d1fae5;color:#065f46}
-  .badge-graduated{background:rgba(13,115,119,.1);color:var(--teal)}
+  .badge-graduated{background:var(--teal-10);color:var(--teal)}
   .badge-dropped{background:#fee2e2;color:#991b1b}
   .badge-paid{background:#d1fae5;color:#065f46}
   .badge-partial{background:#fef3c7;color:#92400e}
   .badge-pending{background:#fee2e2;color:#991b1b}
   .btn-add{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;background:var(--teal);color:#fff;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;border:none;cursor:pointer}
   .btn-add:hover{background:var(--teal-dk);transform:translateY(-1px)}
-  .btn-edit{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);font-size:12px;font-weight:600;text-decoration:none;transition:all .2s}
-  .btn-edit:hover{background:rgba(13,115,119,.15)}
+  .btn-edit{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;background:var(--teal-08);color:var(--teal);font-size:12px;font-weight:600;text-decoration:none;transition:all .2s}
+  .btn-edit:hover{background:var(--teal-15)}
   .btn-del{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;background:rgba(239,68,68,.08);color:#ef4444;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s}
   .btn-del:hover{background:rgba(239,68,68,.15)}
   .form-card{background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh);padding:28px;max-width:640px}
@@ -259,7 +287,7 @@
   .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
   .form-group label span{color:#ef4444}
   .form-control{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
-  .form-control:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .form-control:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-10)}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .form-hint{font-size:11px;color:var(--muted);margin-top:4px}
   .btn-submit{padding:11px 24px;border-radius:9px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
@@ -336,7 +364,7 @@
   /* ---- Topbar profile dropdown (shared) ---- */
   .topbar-profile-wrap{position:relative}
   .topbar-profile-btn{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;border-radius:99px;border:1.5px solid var(--border);background:#fff;cursor:pointer;box-shadow:var(--sh);transition:all .2s}
-  .topbar-profile-btn:hover{border-color:rgba(13,115,119,.3);box-shadow:0 4px 14px rgba(13,115,119,.1)}
+  .topbar-profile-btn:hover{border-color:var(--teal-30);box-shadow:0 4px 14px var(--teal-10)}
   .topbar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
   .topbar-profile-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
   .topbar-profile-name{font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}

@@ -48,15 +48,57 @@
 
 {% block extra_css %}
 <style>
-  /* Hide topbar profile for admin dashboard, show in welcome section instead */
-  .topbar-profile-wrap { display: none; }
-  .topbar-session-timer { display: none; }
+  /* --- LAYOUT FIX: Perfect Top Spacing & No Overlaps --- */
+  main { position: relative; }
   
-  /* The overview pane has its own header; avoid a detached profile-only top bar. */
-  #db-page-head-text{ display:none }
-  .db-topbar{ display:none }
-  .dashboard-pane{display:none}.dashboard-pane.active{display:block}
-  section.dashboard-pane::before{content:"";position:fixed;top:50%;left:50%;width:40vw;height:40vw;transform:translate(-50%,-50%);background:url('{% if college and college.logo %}{{ college.logo.url }}{% else %}https://img.icons8.com/ios-filled/500/000000/university.png{% endif %}') no-repeat center;background-size:contain;opacity:.03;z-index:-1;pointer-events:none}
+  /* Hide the redundant base title text */
+  #db-page-head-text { display: none !important; }
+  
+  @media (min-width: 861px) {
+      /* 1. Give the entire page beautiful breathing room at the top */
+      .db-content {
+          padding-top: 36px !important;
+      }
+      
+      /* 2. Pin the profile dropdown exactly to the top right */
+      .db-topbar {
+          position: absolute !important;
+          top: 32px !important;
+          right: 32px !important;
+          width: auto !important;
+          padding: 0 !important;
+          background: transparent !important;
+          border: none !important;
+          z-index: 100;
+      }
+      
+      /* 3. Push the Date/College chips to the left so they never overlap the profile dropdown */
+      .adm-header-actions {
+          margin-right: 240px !important;
+      }
+  }
+
+  /* --- Original admin.html styles below --- */
+  .dashboard-pane { display: none; }
+  .dashboard-pane.active { display: block; }
+  
+  .adm-pane-shell{display:grid;gap:20px}
+  .adm-pane-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .adm-pane-title{font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:var(--deep);line-height:1.05}
+  .adm-pane-sub{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6;max-width:760px}
+  .adm-breadcrumb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;font-size:12px}
+  .adm-breadcrumb a{color:var(--teal);text-decoration:none;font-weight:700}
+  .adm-breadcrumb span{color:var(--muted)}
+  .adm-header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+  .adm-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;border:1.5px solid var(--border);background:#fff;box-shadow:var(--sh);font-size:12px;font-weight:700;color:var(--deep)}
+  .adm-chip i{color:var(--teal)}
+  .adm-pane-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:22px 24px;border-radius:18px;border:1px solid var(--teal-15);background:linear-gradient(135deg,var(--teal-04),var(--teal-08));box-shadow:var(--sh)}
+  .adm-hero-main{display:flex;align-items:center;gap:16px;min-width:0}
+  .adm-hero-icon{width:56px;height:56px;border-radius:16px;background:var(--teal-10);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+  .adm-hero-title{font-family:'Outfit',sans-serif;font-size:18px;font-weight:900;color:var(--deep);line-height:1.1}
+  .adm-hero-copy{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+  .adm-hero-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid var(--teal-15);color:var(--teal);font-size:12px;font-weight:800}
+  .adm-hero-badge i{color:var(--gold)}
   .hd-tab{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
   .hd-tab:hover{border-color:var(--teal);color:var(--teal)}
   .hd-tab-active{background:var(--teal);color:#fff;border-color:var(--teal)}
@@ -76,29 +118,35 @@
   .ov-stat-lbl{font-size:12px;color:var(--muted);margin-top:3px;margin-bottom:6px}
   .ov-stat-trend{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
   .ov-trend-up{color:var(--teal)}
+  .ov-trend-down{color:#ef4444}
   .ov-trend-flat{color:var(--muted)}
 
   /* ---- Quick actions grid ---- */
   .ov-two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
   .ov-qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .ov-qa-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;text-decoration:none;transition:all .2s;background:#fff}
-  .ov-qa-btn:hover{border-color:var(--teal);background:rgba(13,115,119,.03);transform:translateY(-1px)}
+  .ov-qa-btn:hover{border-color:var(--teal);background:var(--teal-03);transform:translateY(-1px)}
   .ov-qa-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
   .ov-qa-label{font-size:12px;font-weight:700;color:var(--deep)}
   .ov-qa-sub{font-size:10px;color:var(--muted);margin-top:1px}
   .ov-qa-arrow{margin-left:auto;color:var(--teal);font-size:11px;flex-shrink:0}
   .ov-import-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;text-decoration:none;transition:all .2s}
-  .ov-import-row:hover{border-color:var(--teal);background:rgba(13,115,119,.03)}
+  .ov-import-row:hover{border-color:var(--teal);background:var(--teal-03)}
 
   /* ---- Profile fields ---- */
   .pf-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #f3f4f6}
-  .pf-icon{width:34px;height:34px;border-radius:9px;background:rgba(13,115,119,.07);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .pf-icon{width:34px;height:34px;border-radius:9px;background:var(--teal-07);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
   .pf-lbl{font-size:13px;color:var(--muted);font-weight:500;width:120px;flex-shrink:0}
   .pf-val{flex:1;font-size:13px;font-weight:700;color:var(--deep)}
   .pf-edit{width:30px;height:30px;border-radius:8px;background:#f3f4f6;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0;transition:all .2s}
-  .pf-edit:hover{background:rgba(13,115,119,.1);color:var(--teal)}
+  .pf-edit:hover{background:var(--teal-10);color:var(--teal)}
 
   @media(max-width:860px){
+    .adm-pane-header{align-items:stretch}
+    .adm-pane-title{font-size:21px}
+    .adm-pane-hero{padding:18px}
+    .adm-hero-main{align-items:flex-start}
+    .adm-header-actions{justify-content:flex-start}
     .ov-two-col{grid-template-columns:1fr}
     .ov-qa-grid{grid-template-columns:1fr}
     .panel-grid{grid-template-columns:1fr}
@@ -133,7 +181,7 @@
 </script>
 <div id="dashboard-page-loader" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.22);backdrop-filter:blur(2px);z-index:10040;align-items:center;justify-content:center;padding:20px">
   <div style="min-width:240px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 28px;text-align:center">
-    <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:dashboardSpin .8s linear infinite"></div>
+    <div style="width:42px;height:42px;border-radius:50%;border:4px solid var(--teal-15);border-top-color:var(--teal);margin:0 auto 12px;animation:dashboardSpin .8s linear infinite"></div>
     <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Page</div>
     <div style="font-size:12px;color:var(--muted);margin-top:4px">Please wait...</div>
   </div>
@@ -141,7 +189,7 @@
 
 <div id="student-loader" style="display:none;position:fixed;inset:0;background:rgba(7,30,38,.18);backdrop-filter:blur(2px);z-index:10030;align-items:center;justify-content:center;padding:20px">
   <div style="min-width:220px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 26px;text-align:center">
-    <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:dashboardSpin .8s linear infinite"></div>
+    <div style="width:42px;height:42px;border-radius:50%;border:4px solid var(--teal-15);border-top-color:var(--teal);margin:0 auto 12px;animation:dashboardSpin .8s linear infinite"></div>
     <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Students</div>
     <div style="font-size:12px;color:var(--muted);margin-top:4px">Applying student filters...</div>
   </div>
@@ -149,39 +197,35 @@
 
 <!-- OVERVIEW -->
 <section data-dashboard-pane="overview" class="dashboard-pane active">
+  <div class="adm-pane-shell">
+    <div class="adm-pane-header">
+      <div>
+        <div class="adm-pane-title">Dashboard</div>
+        <div class="adm-pane-sub">Track the most important activity across your college and jump directly into the next admin task without leaving this workspace.</div>
+        <div class="adm-breadcrumb"><span>College Admin</span><span>&rsaquo;</span><span>Dashboard</span></div>
+      </div>
+      <div class="adm-header-actions">
+        <div class="adm-chip"><i class="fas fa-calendar-days"></i><span>{{ now|date:"N j, Y, l" }}</span></div>
+        <div class="adm-chip"><i class="fas fa-building-columns"></i><span>{% if college %}{{ college.name }}{% else %}College Workspace{% endif %}</span></div>
+      </div>
+    </div>
 
-  <!-- Welcome bar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px">
-    <div>
-      <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--deep)">Welcome back, {{ request.user.get_full_name|default:request.user.username }} 👋</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:3px">Here's what's happening{% if college %} at {{ college.name }}{% endif %} today.</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap">
-      <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 14px;box-shadow:var(--sh);white-space:nowrap">
-        <i class="fas fa-calendar-days" style="color:var(--teal)"></i>
-        <span>{{ now|date:"N j, Y, l" }}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 12px;box-shadow:var(--sh);flex-shrink:0;cursor:pointer;position:relative" onclick="toggleProfileMenu(this)">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
-        <div style="display:flex;flex-direction:column;gap:1px">
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
-          <div style="font-size:11px;color:var(--muted)">Admin</div>
-        </div>
-        <i class="fas fa-chevron-down" style="color:var(--muted);font-size:12px;margin-left:4px;transition:transform .2s"></i>
-        <div style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:1000;min-width:200px" class="profile-menu">
-          <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--deep);text-decoration:none;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:16px"></i> My Profile</a>
-          <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--deep);text-decoration:none;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:16px"></i> Support</a>
-          <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:#dc2626;text-decoration:none;font-size:13px;font-weight:600;transition:background .15s" onmouseover="this.style.background='rgba(220,38,38,.05)'" onmouseout="this.style.background=''"><i class="fas fa-sign-out-alt" style="width:16px"></i> Logout</a>
+    <div class="adm-pane-hero">
+      <div class="adm-hero-main">
+        <div class="adm-hero-icon"><i class="fas fa-wave-square"></i></div>
+        <div>
+          <div class="adm-hero-title">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="adm-hero-copy">Your active theme now drives this area too, so the dashboard, profile, and onboarding flow match the rest of the college admin experience.</div>
         </div>
       </div>
+      <div class="adm-hero-badge"><i class="fas fa-palette"></i><span>Theme-synced admin workspace</span></div>
     </div>
-  </div>
 
   <!-- Stat cards -->
   <div class="ov-stat-grid">
     <div class="ov-stat-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div class="ov-stat-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-user-graduate"></i></div>
+        <div class="ov-stat-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-user-graduate"></i></div>
         <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,25 15,18 30,20 45,10 60,14 80,8" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="ov-stat-val">{{ total_students }}</div>
@@ -190,8 +234,8 @@
     </div>
     <div class="ov-stat-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div class="ov-stat-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-chalkboard-teacher"></i></div>
-        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,22 20,16 40,18 55,12 70,15 80,10" fill="none" stroke="#e6a817" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="ov-stat-icon" style="background:var(--gold-10);color:var(--gold)"><i class="fas fa-chalkboard-teacher"></i></div>
+        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,22 20,16 40,18 55,12 70,15 80,10" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="ov-stat-val">{{ total_faculty }}</div>
       <div class="ov-stat-lbl">Faculty</div>
@@ -199,8 +243,8 @@
     </div>
     <div class="ov-stat-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div class="ov-stat-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-building"></i></div>
-        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,20 25,20 50,20 80,20" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="ov-stat-icon" style="background:var(--teal-12);color:var(--teal)"><i class="fas fa-building"></i></div>
+        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,20 25,20 50,20 80,20" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="ov-stat-val">{{ total_departments }}</div>
       <div class="ov-stat-lbl">Departments</div>
@@ -213,12 +257,12 @@
       </div>
       <div class="ov-stat-val">{{ pending_fees }}</div>
       <div class="ov-stat-lbl">Fee Follow-ups</div>
-      <div class="ov-stat-trend" style="color:#ef4444"><i class="fas fa-arrow-up"></i> vs last month</div>
+      <div class="ov-stat-trend ov-trend-down"><i class="fas fa-arrow-up"></i> vs last month</div>
     </div>
     <div class="ov-stat-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div class="ov-stat-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-inbox"></i></div>
-        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,20 40,20 80,20" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="ov-stat-icon" style="background:var(--gold-12);color:var(--gold)"><i class="fas fa-inbox"></i></div>
+        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,20 40,20 80,20" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="ov-stat-val">{{ pending_requests }}</div>
       <div class="ov-stat-lbl">Pending Requests</div>
@@ -226,8 +270,8 @@
     </div>
     <div class="ov-stat-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div class="ov-stat-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-link"></i></div>
-        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,20 40,20 80,20" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="ov-stat-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-link"></i></div>
+        <svg class="ov-spark" viewBox="0 0 80 30" preserveAspectRatio="none"><polyline points="0,20 40,20 80,20" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="ov-stat-val">{{ active_invites }}</div>
       <div class="ov-stat-lbl">Active Invites</div>
@@ -255,17 +299,17 @@
       <div class="d-card-title"><i class="fas fa-bolt"></i> Quick Actions <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:4px">Perform common tasks in one click</span></div>
       <div class="ov-qa-grid">
         <a href="{% url 'admin_registration_invites' %}" class="ov-qa-btn">
-          <div class="ov-qa-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-paper-plane"></i></div>
+          <div class="ov-qa-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-paper-plane"></i></div>
           <div><div class="ov-qa-label">Send Invite</div><div class="ov-qa-sub">Invite students, faculty or staff</div></div>
           <i class="fas fa-arrow-right ov-qa-arrow"></i>
         </a>
         <a href="{% url 'admin_student_add' %}" class="ov-qa-btn">
-          <div class="ov-qa-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-user-plus"></i></div>
+          <div class="ov-qa-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-user-plus"></i></div>
           <div><div class="ov-qa-label">Add Student</div><div class="ov-qa-sub">Register a new student</div></div>
           <i class="fas fa-arrow-right ov-qa-arrow"></i>
         </a>
         <a href="{% url 'admin_faculty_add' %}" class="ov-qa-btn">
-          <div class="ov-qa-icon" style="background:rgba(230,168,23,.1);color:#b88510"><i class="fas fa-chalkboard-teacher"></i></div>
+          <div class="ov-qa-icon" style="background:var(--gold-10);color:var(--gold)"><i class="fas fa-chalkboard-teacher"></i></div>
           <div><div class="ov-qa-label">Add Faculty</div><div class="ov-qa-sub">Add a new faculty member</div></div>
           <i class="fas fa-arrow-right ov-qa-arrow"></i>
         </a>
@@ -275,12 +319,12 @@
           <i class="fas fa-arrow-right ov-qa-arrow"></i>
         </a>
         <a href="{% url 'admin_exam_add' %}" class="ov-qa-btn">
-          <div class="ov-qa-icon" style="background:rgba(99,102,241,.08);color:#6366f1"><i class="fas fa-file-pen"></i></div>
+          <div class="ov-qa-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-file-pen"></i></div>
           <div><div class="ov-qa-label">Schedule Exam</div><div class="ov-qa-sub">Create and manage examinations</div></div>
           <i class="fas fa-arrow-right ov-qa-arrow"></i>
         </a>
         <a href="{% url 'admin_announcement_add' %}" class="ov-qa-btn">
-          <div class="ov-qa-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-bullhorn"></i></div>
+          <div class="ov-qa-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-bullhorn"></i></div>
           <div><div class="ov-qa-label">Send Notice</div><div class="ov-qa-sub">Broadcast important announcements</div></div>
           <i class="fas fa-arrow-right ov-qa-arrow"></i>
         </a>
@@ -291,25 +335,25 @@
       <div class="d-card-title"><i class="fas fa-cloud-upload-alt"></i> Bulk Import <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:4px">Import large data sets quickly</span></div>
       <a href="{% url 'admin_bulk_import' %}" class="ov-import-row">
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-file-import"></i></div>
+          <div style="width:38px;height:38px;border-radius:10px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-file-import"></i></div>
           <div><div style="font-size:13px;font-weight:700;color:var(--deep)">Import File</div><div style="font-size:11px;color:var(--muted)">Upload Excel or CSV files</div></div>
         </div>
         <i class="fas fa-arrow-right" style="color:var(--teal)"></i>
       </a>
       <a href="{% url 'admin_sample_csv' %}?type=student" class="ov-import-row" style="margin-top:8px">
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:38px;height:38px;border-radius:10px;background:rgba(230,168,23,.1);color:#b88510;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-download"></i></div>
+          <div style="width:38px;height:38px;border-radius:10px;background:var(--gold-10);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-download"></i></div>
           <div><div style="font-size:13px;font-weight:700;color:var(--deep)">Download Template</div><div style="font-size:11px;color:var(--muted)">Get the correct format</div></div>
         </div>
         <i class="fas fa-arrow-right" style="color:var(--teal)"></i>
       </a>
 
       {% if pending_requests > 0 or exams_without_schedule > 0 %}
-      <div style="margin-top:18px;padding:14px 16px;background:rgba(230,168,23,.05);border:1.5px solid rgba(230,168,23,.2);border-radius:12px">
+      <div style="margin-top:18px;padding:14px 16px;background:var(--gold-05);border:1.5px solid var(--gold-20);border-radius:12px">
         <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:4px;display:flex;align-items:center;gap:7px"><i class="fas fa-triangle-exclamation" style="color:var(--gold)"></i> Pending Setup Items</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Complete these to unlock all features</div>
         {% if exams_without_schedule > 0 %}
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(230,168,23,.15)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gold-15)">
           <div style="display:flex;align-items:center;gap:8px">
             <i class="fas fa-file-pen" style="color:var(--gold);width:14px"></i>
             <div><div style="font-size:12px;font-weight:600;color:var(--deep)">Exams Need Setup</div><div style="font-size:10px;color:var(--muted)">Create exam types and configurations</div></div>
@@ -320,10 +364,10 @@
         {% if pending_requests > 0 %}
         <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
           <div style="display:flex;align-items:center;gap:8px">
-            <i class="fas fa-inbox" style="color:#6366f1;width:14px"></i>
+            <i class="fas fa-inbox" style="color:var(--gold);width:14px"></i>
             <div><div style="font-size:12px;font-weight:600;color:var(--deep)">Pending Requests</div><div style="font-size:10px;color:var(--muted)">Review admission requests</div></div>
           </div>
-          <span style="font-size:12px;font-weight:700;color:#6366f1">{{ pending_requests }}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--gold)">{{ pending_requests }}</span>
         </div>
         {% endif %}
         <a href="{% url 'admin_registration_requests' %}" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:700;color:var(--teal);text-decoration:none">View All Setup Tasks <i class="fas fa-arrow-right"></i></a>
@@ -356,51 +400,50 @@
     <div class="empty"><i class="fas fa-check-circle"></i>No active support tickets.</div>
     {% endif %}
   </div>
+</div>
 </section>
 
 <!-- PROFILE -->
 <section data-dashboard-pane="profile" class="dashboard-pane">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px">
-    <div>
-      <div style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:var(--deep)">My Profile</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">
-        <a href="#overview" data-section-target="overview" style="color:var(--teal);text-decoration:none">Dashboard</a>
-        <span style="margin:0 5px;color:var(--border)">›</span>
-        <span style="color:var(--teal);font-weight:600">My Profile</span>
+  <div class="adm-pane-shell">
+    <div class="adm-pane-header">
+      <div>
+        <div class="adm-pane-title">My Profile</div>
+        <div class="adm-pane-sub">Review your admin account details and control the branding colors that now flow through the full college admin workspace.</div>
+        <div class="adm-breadcrumb"><a href="#overview" data-section-target="overview">Dashboard</a><span>&rsaquo;</span><span>My Profile</span></div>
+      </div>
+      <div class="adm-header-actions">
+        <div class="adm-chip"><i class="fas fa-user-shield"></i><span>College Administrator</span></div>
+        {% if college %}<div class="adm-chip"><i class="fas fa-school"></i><span>{{ college.code }}</span></div>{% endif %}
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap">
-      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 12px;box-shadow:var(--sh);flex-shrink:0;cursor:pointer;position:relative" onclick="toggleProfileMenu(this)">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
-        <div style="display:flex;flex-direction:column;gap:1px">
-          <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
-          <div style="font-size:11px;color:var(--muted)">Admin</div>
-        </div>
-        <i class="fas fa-chevron-down" style="color:var(--muted);font-size:12px;margin-left:4px;transition:transform .2s"></i>
-        <div style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:1000;min-width:200px" class="profile-menu">
-          <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--deep);text-decoration:none;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:16px"></i> My Profile</a>
-          <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--deep);text-decoration:none;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:16px"></i> Support</a>
-          <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:#dc2626;text-decoration:none;font-size:13px;font-weight:600;transition:background .15s" onmouseover="this.style.background='rgba(220,38,38,.05)'" onmouseout="this.style.background=''"><i class="fas fa-sign-out-alt" style="width:16px"></i> Logout</a>
+
+    <div class="adm-pane-hero">
+      <div class="adm-hero-main">
+        <div class="adm-hero-icon"><i class="fas fa-id-badge"></i></div>
+        <div>
+          <div class="adm-hero-title">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="adm-hero-copy">This panel controls your college admin identity and the theme colors shared across the connected dashboard experience.</div>
         </div>
       </div>
+      <div class="adm-hero-badge"><i class="fas fa-shield-halved"></i><span>Secure admin account</span></div>
     </div>
-  </div>
 
   <div class="d-card" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
       <div style="display:flex;align-items:center;gap:18px">
         <div style="position:relative;flex-shrink:0">
-          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:#fff;border:3px solid rgba(13,115,119,.15)">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+          <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:24px;font-weight:900;color:#fff;border:3px solid var(--teal-15)">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
           <div style="position:absolute;bottom:2px;right:2px;width:18px;height:18px;border-radius:50%;background:var(--teal);border:2px solid #fff;display:flex;align-items:center;justify-content:center"><i class="fas fa-check" style="font-size:8px;color:#fff"></i></div>
         </div>
         <div>
           <div style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
-          <span style="display:inline-block;margin-top:4px;padding:3px 10px;border-radius:99px;background:rgba(13,115,119,.1);color:var(--teal);font-size:12px;font-weight:600">College Administrator</span>
+          <span style="display:inline-block;margin-top:4px;padding:3px 10px;border-radius:99px;background:var(--teal-10);color:var(--teal);font-size:12px;font-weight:600">College Administrator</span>
           {% if college %}<div style="font-size:12px;color:var(--muted);margin-top:5px">{{ college.name }}</div>{% endif %}
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(135deg,rgba(13,115,119,.04),rgba(13,115,119,.08));border:1px solid rgba(13,115,119,.12);border-radius:12px">
-        <div style="width:40px;height:40px;border-radius:50%;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fas fa-shield-halved"></i></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(135deg,var(--teal-04),var(--teal-08));border:1px solid var(--teal-12);border-radius:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--teal-10);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fas fa-shield-halved"></i></div>
         <div><div style="font-size:13px;font-weight:700;color:var(--teal)">Your account is secure</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Keep your profile information up to date.</div></div>
       </div>
     </div>
@@ -423,7 +466,7 @@
   <div class="d-card" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:38px;height:38px;border-radius:50%;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-headset"></i></div>
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-headset"></i></div>
         <div><div style="font-size:14px;font-weight:700;color:var(--deep)">Profile Settings</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Need to update your account details? Contact the platform administrator for assistance.</div></div>
       </div>
       <a href="{% url 'admin_contact_support' %}" class="qa-btn qa-teal" style="font-size:12px;padding:9px 18px;white-space:nowrap"><i class="fas fa-headset"></i> Contact Platform Support</a>
@@ -450,31 +493,34 @@
       </div>
     </form>
   </div>
+</div>
 </section>
 
 <!-- START HERE -->
 <section data-dashboard-pane="workflow" class="dashboard-pane">
+  <div class="adm-pane-shell">
+    <div class="adm-pane-header">
+      <div>
+        <div class="adm-pane-title">Start Here</div>
+        <div class="adm-pane-sub">Use this guided setup flow to bring a new semester online in the right order, with the same visual language as the rest of your admin tools.</div>
+        <div class="adm-breadcrumb"><a href="#overview" data-section-target="overview">Dashboard</a><span>&rsaquo;</span><span>Start Here</span></div>
+      </div>
+      <div class="adm-header-actions">
+        <div class="adm-chip"><i class="fas fa-route"></i><span>Setup sequence</span></div>
+        <div class="adm-chip"><i class="fas fa-circle-check"></i><span>Admin checklist</span></div>
+      </div>
+    </div>
 
-  <!-- Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
-    <div>
-      <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:var(--deep)">Start Here <i class="fas fa-play-circle" style="color:var(--teal);font-size:18px"></i></div>
-      <div style="font-size:13px;color:var(--muted);margin-top:3px">Everything you need to set up a successful academic cycle.</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px 12px;box-shadow:var(--sh);flex-shrink:0;cursor:pointer;position:relative" onclick="toggleProfileMenu(this)">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
-      <div style="display:flex;flex-direction:column;gap:1px">
-        <div style="font-size:13px;font-weight:700;color:var(--deep)">{{ request.user.get_full_name|default:request.user.username }}</div>
-        <div style="font-size:11px;color:var(--muted)">Admin</div>
+    <div class="adm-pane-hero">
+      <div class="adm-hero-main">
+        <div class="adm-hero-icon"><i class="fas fa-play-circle"></i></div>
+        <div>
+          <div class="adm-hero-title">A clearer onboarding path for each academic cycle</div>
+          <div class="adm-hero-copy">From departments to exams, this flow keeps first-step setup connected to the same theme, spacing, and card styles used everywhere else in college admin.</div>
+        </div>
       </div>
-      <i class="fas fa-chevron-down" style="color:var(--muted);font-size:12px;margin-left:4px;transition:transform .2s"></i>
-      <div style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:1000;min-width:200px" class="profile-menu">
-        <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--deep);text-decoration:none;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:16px"></i> My Profile</a>
-        <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--deep);text-decoration:none;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:16px"></i> Support</a>
-        <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:#dc2626;text-decoration:none;font-size:13px;font-weight:600;transition:background .15s" onmouseover="this.style.background='rgba(220,38,38,.05)'" onmouseout="this.style.background=''"><i class="fas fa-sign-out-alt" style="width:16px"></i> Logout</a>
-      </div>
+      <div class="adm-hero-badge"><i class="fas fa-compass"></i><span>Guided workflow</span></div>
     </div>
-  </div>
 
   <!-- Three-col cards -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:20px">
@@ -482,7 +528,7 @@
     <!-- New Semester Setup -->
     <div class="d-card" style="margin-bottom:0">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-        <div style="width:48px;height:48px;border-radius:14px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-graduation-cap"></i></div>
+        <div style="width:48px;height:48px;border-radius:14px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-graduation-cap"></i></div>
         <div>
           <div style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)">New Semester Setup</div>
           <div style="font-size:12px;color:var(--muted)">Use this order when setting up a fresh academic cycle.</div>
@@ -506,7 +552,7 @@
         </div>
         {% endfor %}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:rgba(13,115,119,.05);border-radius:9px">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:var(--teal-05);border-radius:9px">
         <i class="fas fa-list-check" style="color:var(--teal)"></i>
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--teal)">Follow this order</div>
@@ -518,7 +564,7 @@
     <!-- Common Mistakes -->
     <div class="d-card" style="margin-bottom:0">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-        <div style="width:48px;height:48px;border-radius:14px;background:rgba(230,168,23,.1);color:#b88510;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-triangle-exclamation"></i></div>
+        <div style="width:48px;height:48px;border-radius:14px;background:var(--gold-10);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-triangle-exclamation"></i></div>
         <div>
           <div style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)">Common Mistakes</div>
           <div style="font-size:12px;color:var(--muted)">Most rework comes from skipping these checks.</div>
@@ -526,7 +572,7 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         {% for mistake in "1234" %}
-        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:9px;background:#fffbf0;border:1px solid rgba(230,168,23,.15)">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:9px;background:#fffbf0;border:1px solid var(--gold-15)">
           <i class="fas fa-triangle-exclamation" style="color:var(--gold);margin-top:1px;flex-shrink:0"></i>
           <span style="font-size:13px;color:var(--deep)">
             {% if mistake == "1" %}Missing fee record after student creation
@@ -537,10 +583,10 @@
         </div>
         {% endfor %}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:rgba(230,168,23,.06);border-radius:9px">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;background:var(--gold-06);border-radius:9px">
         <i class="fas fa-lightbulb" style="color:var(--gold)"></i>
         <div>
-          <div style="font-size:12px;font-weight:700;color:#92400e">Review before you proceed</div>
+          <div style="font-size:12px;font-weight:700;color:var(--gold)">Review before you proceed</div>
           <div style="font-size:11px;color:var(--muted)">Avoid common errors and save time.</div>
         </div>
       </div>
@@ -549,7 +595,7 @@
     <!-- Quick Shortcuts -->
     <div class="d-card" style="margin-bottom:0">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-        <div style="width:48px;height:48px;border-radius:14px;background:rgba(99,102,241,.08);color:#6366f1;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-bolt"></i></div>
+        <div style="width:48px;height:48px;border-radius:14px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><i class="fas fa-bolt"></i></div>
         <div>
           <div style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)">Quick Shortcuts</div>
           <div style="font-size:12px;color:var(--muted)">Jump to the section you need most.</div>
@@ -561,11 +607,11 @@
           <i class="fas fa-chevron-right" style="font-size:10px;color:var(--muted)"></i>
         </a>
         <a href="{% url 'admin_faculty_list' %}" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-chalkboard-teacher" style="color:#b88510;width:14px"></i><span style="font-size:13px;font-weight:600;color:var(--deep)">Faculty</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-chalkboard-teacher" style="color:var(--gold);width:14px"></i><span style="font-size:13px;font-weight:600;color:var(--deep)">Faculty</span></div>
           <i class="fas fa-chevron-right" style="font-size:10px;color:var(--muted)"></i>
         </a>
         <a href="{% url 'admin_hods' %}" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-building-columns" style="color:#6366f1;width:14px"></i><span style="font-size:13px;font-weight:600;color:var(--deep)">HOD</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-building-columns" style="color:var(--teal);width:14px"></i><span style="font-size:13px;font-weight:600;color:var(--deep)">HOD</span></div>
           <i class="fas fa-chevron-right" style="font-size:10px;color:var(--muted)"></i>
         </a>
         <a href="{% url 'admin_fees' %}" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -573,14 +619,14 @@
           <i class="fas fa-chevron-right" style="font-size:10px;color:var(--muted)"></i>
         </a>
         <a href="{% url 'admin_exams' %}" style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;transition:all .2s;grid-column:span 2" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-file-pen" style="color:#6366f1;width:14px"></i><span style="font-size:13px;font-weight:600;color:var(--deep)">Exams</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><i class="fas fa-file-pen" style="color:var(--teal);width:14px"></i><span style="font-size:13px;font-weight:600;color:var(--deep)">Exams</span></div>
           <i class="fas fa-chevron-right" style="font-size:10px;color:var(--muted)"></i>
         </a>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(99,102,241,.05);border-radius:9px">
-        <i class="fas fa-clock" style="color:#6366f1"></i>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--teal-05);border-radius:9px">
+        <i class="fas fa-clock" style="color:var(--teal)"></i>
         <div>
-          <div style="font-size:12px;font-weight:700;color:#4338ca">Save time</div>
+          <div style="font-size:12px;font-weight:700;color:var(--teal)">Save time</div>
           <div style="font-size:11px;color:var(--muted)">Access important sections quickly.</div>
         </div>
       </div>
@@ -588,9 +634,9 @@
   </div>
 
   <!-- Help banner -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:22px 24px;background:linear-gradient(135deg,rgba(13,115,119,.04),rgba(13,115,119,.08));border:1px solid rgba(13,115,119,.15);border-radius:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:22px 24px;background:linear-gradient(135deg,var(--teal-04),var(--teal-08));border:1px solid var(--teal-15);border-radius:16px">
     <div style="display:flex;align-items:center;gap:16px">
-      <div style="width:56px;height:56px;border-radius:16px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0"><i class="fas fa-circle-check"></i></div>
+      <div style="width:56px;height:56px;border-radius:16px;background:var(--teal-10);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0"><i class="fas fa-circle-check"></i></div>
       <div>
         <div style="font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;color:var(--deep)">Need help getting started?</div>
         <div style="font-size:13px;color:var(--muted);margin-top:3px">We've prepared setup resources to help you configure everything the right way.</div>
@@ -601,6 +647,7 @@
       <a href="{% url 'admin_contact_support' %}" class="qa-btn qa-teal" style="font-size:13px"><i class="fas fa-headset"></i> Contact Support</a>
     </div>
   </div>
+</div>
 </section>
 
 <!-- STUDENTS -->
@@ -626,7 +673,7 @@
     <div class="stu-stat-card"><div class="stu-stat-icon" style="background:rgba(34,197,94,.1);color:#16a34a"><i class="fas fa-circle-check"></i></div><div><div class="stu-stat-val">{{ active_students_count|default:all_students_total }}</div><div class="stu-stat-lbl">Active Students</div><div class="stu-stat-sub">Currently active</div></div></div>
     <div class="stu-stat-card"><div class="stu-stat-icon" style="background:rgba(139,92,246,.1);color:#7c3aed"><i class="fas fa-graduation-cap"></i></div><div><div class="stu-stat-val">{{ graduated_count|default:0 }}</div><div class="stu-stat-lbl">Graduated</div><div class="stu-stat-sub">Passed out</div></div></div>
     <div class="stu-stat-card"><div class="stu-stat-icon" style="background:rgba(239,68,68,.08);color:#ef4444"><i class="fas fa-clock"></i></div><div><div class="stu-stat-val">{{ inactive_count|default:0 }}</div><div class="stu-stat-lbl">Inactive / Left</div><div class="stu-stat-sub">Not active</div></div></div>
-    <div class="stu-stat-card"><div class="stu-stat-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-building-columns"></i></div><div><div class="stu-stat-val">{{ all_departments|length }}</div><div class="stu-stat-lbl">Departments</div><div class="stu-stat-sub">Offering programs</div></div></div>
+    <div class="stu-stat-card"><div class="stu-stat-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-building-columns"></i></div><div><div class="stu-stat-val">{{ all_departments|length }}</div><div class="stu-stat-lbl">Departments</div><div class="stu-stat-sub">Offering programs</div></div></div>
   </div>
   <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh)">
     <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -673,7 +720,7 @@
             </td>
             <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6;font-weight:600;color:var(--teal);font-size:12px">{{ s.roll_number }}</td>
             <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6;font-size:12px;color:var(--muted)">{{ s.department.code }}</td>
-            <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6"><span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal)">Sem {{ s.current_semester }}</span></td>
+            <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6"><span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;background:var(--teal-08);color:var(--teal)">Sem {{ s.current_semester }}</span></td>
             <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6;font-size:12px;color:var(--muted)">{{ s.user.email }}</td>
             <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6">
               {% if s.status == 'ACTIVE' %}<span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46">Active</span>
@@ -682,8 +729,8 @@
             </td>
             <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6">
               <div style="display:flex;gap:6px;align-items:center">
-                <a href="{% url 'admin_student_profile' s.pk %}" style="width:28px;height:28px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-eye"></i></a>
-                <a href="{% url 'admin_student_edit' s.pk %}" style="width:28px;height:28px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
+                <a href="{% url 'admin_student_profile' s.pk %}" style="width:28px;height:28px;border-radius:7px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-eye"></i></a>
+                <a href="{% url 'admin_student_edit' s.pk %}" style="width:28px;height:28px;border-radius:7px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
                 <button type="button" onclick="event.stopPropagation(); openStudentDeleteModal('{% url 'admin_student_delete' s.pk %}','{{ s.user.get_full_name|default:s.user.username|escapejs }}','{{ s.roll_number|escapejs }}')" style="width:28px;height:28px;border-radius:7px;background:rgba(239,68,68,.08);color:#ef4444;border:none;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer"><i class="fas fa-trash"></i></button>
               </div>
             </td>
@@ -717,9 +764,9 @@
     .fac-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;margin-bottom:20px}
     .fac-stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;box-shadow:var(--sh)}
     .fac-stat-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;flex-shrink:0}
-    .fac-stat-icon.teal{background:rgba(13,115,119,.08);color:var(--teal)}
+    .fac-stat-icon.teal{background:var(--teal-08);color:var(--teal)}
     .fac-stat-icon.blue{background:rgba(37,99,235,.08);color:#2563eb}
-    .fac-stat-icon.gold{background:rgba(230,168,23,.1);color:#d97706}
+    .fac-stat-icon.gold{background:var(--gold-10);color:var(--gold)}
     .fac-stat-icon.red{background:rgba(239,68,68,.08);color:#ef4444}
     .fac-stat-val{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;color:var(--deep)}
     .fac-stat-lbl{font-size:12px;color:var(--muted);margin-top:4px;font-weight:600}
@@ -738,7 +785,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)"><i class="fas fa-chalkboard-teacher" style="color:var(--teal);margin-right:6px"></i>Faculty</span>
-        <span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.1);color:var(--teal);padding:2px 8px;border-radius:99px">{{ all_faculty_total }} Total</span>
+        <span style="font-size:11px;font-weight:700;background:var(--teal-10);color:var(--teal);padding:2px 8px;border-radius:99px">{{ all_faculty_total }} Total</span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="{% url 'admin_faculty_add' %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px"><i class="fas fa-plus"></i> Add Faculty</a>
@@ -783,7 +830,7 @@
             <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6"><span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46">Active</span></td>
             <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6">
               <div style="display:flex;gap:6px;align-items:center">
-                <a href="{% url 'admin_faculty_edit' f.pk %}" style="width:28px;height:28px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
+                <a href="{% url 'admin_faculty_edit' f.pk %}" style="width:28px;height:28px;border-radius:7px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
                 <button type="button" onclick="event.stopPropagation(); openFacultyDeleteModal('{% url 'admin_faculty_delete' f.pk %}','{{ f.user.get_full_name|default:f.user.username|escapejs }}','{{ f.employee_id|escapejs }}')" style="width:28px;height:28px;border-radius:7px;background:rgba(239,68,68,.08);color:#ef4444;border:none;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer"><i class="fas fa-trash"></i></button>
               </div>
             </td>
@@ -799,8 +846,8 @@
   <div class="d-card" style="padding:0;overflow:hidden;margin-top:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)"><i class="fas fa-crown" style="color:#d97706;margin-right:6px"></i>Heads of Department</span>
-        <span style="font-size:11px;font-weight:700;background:rgba(230,168,23,.1);color:#d97706;padding:2px 8px;border-radius:99px">{{ all_hods_full|length }} Total</span>
+        <span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)"><i class="fas fa-crown" style="color:var(--gold);margin-right:6px"></i>Heads of Department</span>
+        <span style="font-size:11px;font-weight:700;background:var(--gold-10);color:var(--gold);padding:2px 8px;border-radius:99px">{{ all_hods_full|length }} Total</span>
       </div>
     </div>
     <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -836,7 +883,7 @@
             <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;font-size:12px;color:var(--muted)">{{ h.qualification }}</td>
             <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6">
               <div style="display:flex;gap:6px;align-items:center">
-                <a href="{% url 'admin_hod_edit' h.pk %}" style="width:28px;height:28px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
+                <a href="{% url 'admin_hod_edit' h.pk %}" style="width:28px;height:28px;border-radius:7px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none" onclick="event.stopPropagation()"><i class="fas fa-pen"></i></a>
                 <button type="button" onclick="event.stopPropagation(); openHodDeleteModal('{% url 'admin_hod_delete' h.pk %}','{{ h.user.get_full_name|default:h.user.username|escapejs }}','{{ h.department.name|escapejs }}')" style="width:28px;height:28px;border-radius:7px;background:rgba(239,68,68,.08);color:#ef4444;border:none;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer"><i class="fas fa-trash"></i></button>
               </div>
             </td>
@@ -903,7 +950,7 @@
           {% for d in all_departments %}
           <tr data-dept-id="{{ d.pk }}" data-dept-name="{{ d.name|escape }}" data-students="{{ d.student_count }}" data-faculty="{{ d.faculty_count }}" data-subjects="{{ d.subject_count }}">
             <td style="font-weight:600;color:var(--deep)">{{ d.name }}</td>
-            <td><span style="font-size:11px;font-weight:700;background:rgba(13,115,119,.08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ d.code }}</span></td>
+            <td><span style="font-size:11px;font-weight:700;background:var(--teal-08);color:var(--teal);padding:2px 8px;border-radius:6px">{{ d.code }}</span></td>
             <td style="text-align:center">{{ d.student_count }}</td>
             <td style="text-align:center">{{ d.faculty_count }}</td>
             <td style="text-align:center">{{ d.subject_count }}</td>
@@ -977,7 +1024,7 @@
         <a href="{% url 'admin_bulk_import' %}" class="qa-btn qa-indigo" style="font-size:11px;padding:6px 12px;width:100%;justify-content:center"><i class="fas fa-cloud-upload-alt"></i> Start Import</a>
       </div>
       <div style="padding:16px;border:1.5px solid var(--border);border-radius:12px;background:#f8fafc">
-        <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:8px"><i class="fas fa-download" style="color:#d97706;margin-right:6px"></i> Download Template</div>
+        <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:8px"><i class="fas fa-download" style="color:var(--gold);margin-right:6px"></i> Download Template</div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Get a sample CSV template with required columns.</p>
         <a href="{% url 'admin_sample_csv' %}?type=student" class="qa-btn" style="background:#4b5563;color:#fff;font-size:11px;padding:6px 12px;width:100%;justify-content:center"><i class="fas fa-download"></i> Download</a>
       </div>
@@ -987,7 +1034,7 @@
         <a href="{% url 'admin_students_export_csv' %}" class="qa-btn qa-deep" style="font-size:11px;padding:6px 12px;width:100%;justify-content:center"><i class="fas fa-file-csv"></i> Export</a>
       </div>
       <div style="padding:16px;border:1.5px solid var(--border);border-radius:12px;background:#f8fafc">
-        <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:8px"><i class="fas fa-arrow-up" style="color:#0d7377;margin-right:6px"></i> Bulk Promote</div>
+        <div style="font-size:13px;font-weight:700;color:var(--deep);margin-bottom:8px"><i class="fas fa-arrow-up" style="color:var(--teal);margin-right:6px"></i> Bulk Promote</div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5">Promote multiple students to next semester.</p>
         <a href="{% url 'admin_students_bulk_promote' %}" class="qa-btn qa-teal" style="font-size:11px;padding:6px 12px;width:100%;justify-content:center"><i class="fas fa-arrow-up"></i> Promote</a>
       </div>
@@ -1180,13 +1227,13 @@
       <div class="dex-stat-sub">Upcoming exams</div>
     </div>
     <div class="dex-stat-card">
-      <div class="dex-stat-icon" style="background:rgba(230,168,23,.1);color:#d97706"><i class="fas fa-circle-dot"></i></div>
+      <div class="dex-stat-icon" style="background:var(--gold-10);color:var(--gold)"><i class="fas fa-circle-dot"></i></div>
       <div class="dex-stat-val">{{ ongoing_count|default:0 }}</div>
       <div class="dex-stat-lbl">Ongoing</div>
       <div class="dex-stat-sub">In progress</div>
     </div>
     <div class="dex-stat-card">
-      <div class="dex-stat-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-circle-check"></i></div>
+      <div class="dex-stat-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-circle-check"></i></div>
       <div class="dex-stat-val">{{ completed_count|default:0 }}</div>
       <div class="dex-stat-lbl">Completed</div>
       <div class="dex-stat-sub">Finished exams</div>
@@ -1239,7 +1286,7 @@
             <tr data-sem="{{ exam.semester }}" data-status="{% if exam.start_date|date:'Y-m-d' > today %}upcoming{% elif exam.end_date|date:'Y-m-d' < today %}completed{% else %}ongoing{% endif %}" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
               <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6">
                 <div style="display:flex;align-items:center;gap:9px">
-                  <div style="width:30px;height:30px;border-radius:8px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0"><i class="fas fa-file-pen"></i></div>
+                  <div style="width:30px;height:30px;border-radius:8px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0"><i class="fas fa-file-pen"></i></div>
                   <div>
                     <div style="font-weight:600;color:var(--deep);font-size:13px">{{ exam.name }}</div>
                     <div style="font-size:10px;color:var(--muted)">{{ exam.name|slice:":3"|upper }}-{{ exam.start_date|date:"Y" }}-{{ exam.semester }}</div>
@@ -1261,7 +1308,7 @@
               </td>
               <td style="padding:12px 14px;border-bottom:1px solid #f3f4f6">
                 <div style="display:flex;gap:6px;align-items:center">
-                  <a href="{% url 'admin_exam_add' %}" style="width:28px;height:28px;border-radius:7px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none"><i class="fas fa-pen"></i></a>
+                  <a href="{% url 'admin_exam_add' %}" style="width:28px;height:28px;border-radius:7px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none"><i class="fas fa-pen"></i></a>
                   <form method="POST" action="{% url 'admin_exam_delete' exam.pk %}" style="display:inline" onsubmit="return confirm('Delete {{ exam.name|escapejs }}?')">
                     {% csrf_token %}
                     <button type="submit" style="width:28px;height:28px;border-radius:7px;background:rgba(239,68,68,.08);color:#ef4444;border:none;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer"><i class="fas fa-trash"></i></button>
@@ -1285,7 +1332,7 @@
       <!-- Feature cards -->
       <div class="dex-feature-grid">
         <div class="dex-feature-card">
-          <div class="dex-feature-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-calendar-days"></i></div>
+          <div class="dex-feature-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-calendar-days"></i></div>
           <div style="font-size:12px;font-weight:700;color:var(--deep);margin-bottom:4px">Smart Scheduling</div>
           <div style="font-size:11px;color:var(--muted);line-height:1.5">Avoids clashes and optimizes room allocation for smooth exam conduction.</div>
         </div>
@@ -1307,7 +1354,7 @@
       <div class="dex-sidebar-card">
         <div class="dex-sidebar-title">Quick Actions</div>
         <a href="{% url 'admin_exam_add' %}" class="dex-qa-item" style="text-decoration:none">
-          <div class="dex-qa-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-plus"></i></div>
+          <div class="dex-qa-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-plus"></i></div>
           <div><div class="dex-qa-label">Create New Exam</div><div class="dex-qa-sub">Add a new exam</div></div>
         </a>
         <div class="dex-qa-item">
@@ -1315,7 +1362,7 @@
           <div><div class="dex-qa-label">Generate Timetable</div><div class="dex-qa-sub">Auto or manual scheduling</div></div>
         </div>
         <div class="dex-qa-item">
-          <div class="dex-qa-icon" style="background:rgba(230,168,23,.1);color:#d97706"><i class="fas fa-users"></i></div>
+          <div class="dex-qa-icon" style="background:var(--gold-10);color:var(--gold)"><i class="fas fa-users"></i></div>
           <div><div class="dex-qa-label">Assign Invigilators</div><div class="dex-qa-sub">Manage exam duty</div></div>
         </div>
         <div class="dex-qa-item">
@@ -1331,7 +1378,7 @@
         <div class="dex-sidebar-title">Exam Overview</div>
         <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-user-graduate" style="color:var(--teal)"></i> Total Students</span><strong>{{ all_students_total|default:"--" }}</strong></div>
         <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-chalkboard-teacher" style="color:#2563eb"></i> Total Invigilators</span><strong>{{ all_faculty_total|default:"--" }}</strong></div>
-        <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-door-open" style="color:#d97706"></i> Total Rooms</span><strong>--</strong></div>
+        <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-door-open" style="color:var(--gold)"></i> Total Rooms</span><strong>--</strong></div>
         <div class="dex-ov-row"><span style="color:var(--muted);display:flex;align-items:center;gap:6px"><i class="fas fa-file-lines" style="color:#7c3aed"></i> Question Papers</span><strong>{{ exam_total_count|default:0 }}</strong></div>
       </div>
     </div>
@@ -1367,39 +1414,39 @@
 <!-- FINANCE -->
 <section data-dashboard-pane="finance" class="dashboard-pane">
 <style>
-  /* ── Fee Management page header ── */
+  /* -- Fee Management page header -- */
   .fm-page-header{margin-bottom:20px}
   .fm-page-title{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;color:var(--deep);line-height:1.1;margin-bottom:4px}
   .fm-page-sub{font-size:13px;color:var(--muted)}
-  /* ── Top two-column layout ── */
+  /* -- Top two-column layout -- */
   .fm-top-row{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:20px;align-items:start}
-  /* ── Fee Summary card ── */
+  /* -- Fee Summary card -- */
   .fm-summary-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:20px 22px}
   .fm-summary-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;display:flex;align-items:center;gap:6px}
-  .fm-summary-label i{width:28px;height:28px;border-radius:8px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px}
+  .fm-summary-label i{width:28px;height:28px;border-radius:8px;background:var(--teal-10);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px}
   .fm-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
   .fm-stat{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;background:#fafafa}
   .fm-stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
   .fm-stat-icon.green{background:#f0fdf4;color:#16a34a}
   .fm-stat-icon.red{background:#fef2f2;color:#dc2626}
-  .fm-stat-icon.amber{background:#fffbeb;color:#d97706}
+  .fm-stat-icon.amber{background:#fffbeb;color:var(--gold)}
   .fm-stat-val{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;line-height:1.1}
   .fm-stat-val.green{color:#16a34a}
   .fm-stat-val.red{color:#dc2626}
   .fm-stat-val.amber{color:var(--deep)}
   .fm-stat-lbl{font-size:11px;color:var(--muted);margin-top:3px}
   .fm-stat-sub{font-size:10px;color:var(--muted);margin-top:1px}
-  /* ── Quick Actions card ── */
+  /* -- Quick Actions card -- */
   .fm-qa-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:20px 22px}
   .fm-qa-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-  .fm-qa-label i{width:28px;height:28px;border-radius:8px;background:rgba(13,115,119,.1);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px}
+  .fm-qa-label i{width:28px;height:28px;border-radius:8px;background:var(--teal-10);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px}
   .fm-create-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:var(--teal);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:12px;transition:background .15s}
   .fm-create-btn:hover{background:var(--teal-dk,#0a5c60)}
   .fm-qa-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .fm-qa-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--deep);font-size:10px;font-weight:600;text-decoration:none;cursor:pointer;transition:border-color .15s,background .15s;text-align:center}
-  .fm-qa-btn:hover{border-color:var(--teal);background:rgba(13,115,119,.04)}
+  .fm-qa-btn:hover{border-color:var(--teal);background:var(--teal-04)}
   .fm-qa-btn i{font-size:15px;color:var(--teal);margin-bottom:2px}
-  /* ── Table card ── */
+  /* -- Table card -- */
   .fm-tbl-wrap{background:#fff;border:1.5px solid var(--border);border-radius:14px;overflow:hidden}
   .fm-tbl-head{padding:14px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .fm-tbl-title{font-size:12px;font-weight:700;color:var(--deep);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
@@ -1413,7 +1460,7 @@
   .fm-search{width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;outline:none;background:#fff;box-sizing:border-box}
   .fm-search:focus{border-color:var(--teal)}
   .fm-filter-icon{width:32px;height:32px;border:1.5px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;cursor:pointer;background:#fff;flex-shrink:0}
-  /* ── Table ── */
+  /* -- Table -- */
   .fm-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
   .fm-tbl table{width:100%;border-collapse:collapse}
   .fm-tbl thead th{padding:10px 14px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--border);white-space:nowrap;background:#fafafa}
@@ -1424,7 +1471,7 @@
   .fm-badge.paid{background:#dcfce7;color:#16a34a}
   .fm-badge.partial{background:#fef9c3;color:#92400e}
   .fm-badge.pending{background:#fee2e2;color:#dc2626}
-  /* ── Pagination ── */
+  /* -- Pagination -- */
   .fm-pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #f3f4f6;flex-wrap:wrap;gap:8px}
   .fm-pg-info{font-size:12px;color:var(--muted)}
   .fm-pg-btns{display:flex;align-items:center;gap:4px}
@@ -1437,13 +1484,13 @@
   @media(max-width:600px){.fm-stat-row{grid-template-columns:1fr}}
 </style>
 
-{# ── Page header ── #}
+{# -- Page header -- #}
 <div class="fm-page-header">
   <div class="fm-page-title">Fee Management</div>
   <div class="fm-page-sub">Manage student fee records, track payments and pending balances.</div>
 </div>
 
-{# ── Top row: Fee Summary card (left) + Quick Actions card (right) ── #}
+{# -- Top row: Fee Summary card (left) + Quick Actions card (right) -- #}
 <div class="fm-top-row">
   {# Fee Summary #}
   <div class="fm-summary-card">
@@ -1497,7 +1544,7 @@
   </div>
 </div>
 
-{# ── All Fee Records table ── #}
+{# -- All Fee Records table -- #}
 <div class="fm-tbl-wrap">
   <div class="fm-tbl-head">
     <div class="fm-tbl-title">

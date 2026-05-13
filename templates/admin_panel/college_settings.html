@@ -9,7 +9,7 @@
 
 {% block extra_css %}
 <style>
-/* ── Tab bar ── */
+/* -- Tab bar -- */
 .cs-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
 .cs-tab{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;cursor:pointer;transition:all .15s;white-space:nowrap}
 .cs-tab:hover{border-color:var(--teal);color:var(--teal)}
@@ -17,39 +17,39 @@
 .cs-tab.active-gold{background:var(--gold);border-color:var(--gold);color:#fff}
 .cs-tab i{font-size:13px}
 
-/* ── Two-col layout ── */
+/* -- Two-col layout -- */
 .cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 @media(max-width:900px){.cs-grid{grid-template-columns:1fr}}
 
-/* ── Cards ── */
+/* -- Cards -- */
 .cs-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:18px}
 .cs-card-title{font-size:14px;font-weight:700;color:var(--deep);display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .cs-card-title i{color:var(--teal);font-size:14px}
 .cs-card-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
 
-/* ── Form fields ── */
+/* -- Form fields -- */
 .cs-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
 .cs-input{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box;background:#fff;color:var(--deep)}
 .cs-input:focus{border-color:var(--teal)}
 .cs-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .cs-field{margin-bottom:12px}
 
-/* ── CGPA info box ── */
-.cs-info-box{background:rgba(13,115,119,.04);border:1px solid rgba(13,115,119,.18);border-radius:9px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+/* -- CGPA info box -- */
+.cs-info-box{background:var(--teal-04);border:1px solid var(--teal-18);border-radius:9px;padding:11px 14px;font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px}
 .cs-info-box strong{color:var(--teal)}
 
-/* ── Save button ── */
+/* -- Save button -- */
 .cs-save-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--teal);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .15s}
 .cs-save-btn:hover{opacity:.88}
 
-/* ── Leave quota cards ── */
+/* -- Leave quota cards -- */
 .cs-quota-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .cs-quota-card{background:var(--surface2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px}
 .cs-quota-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
 .cs-quota-val{font-size:20px;font-weight:800;font-family:'Outfit',sans-serif;color:var(--deep);line-height:1}
 .cs-quota-lbl{font-size:10px;color:var(--muted);margin-top:2px}
 
-/* ── Feature toggles ── */
+/* -- Feature toggles -- */
 .cs-toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:16px}
 .cs-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6}
 .cs-toggle-row:last-child{border-bottom:none}
@@ -66,14 +66,14 @@
 .cs-switch input:checked + .cs-slider{background:var(--teal)}
 .cs-switch input:checked + .cs-slider:before{transform:translateX(16px)}
 
-/* ── Section header ── */
+/* -- Section header -- */
 .cs-section-hd{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;padding-bottom:6px;border-bottom:1.5px solid var(--border)}
 
-/* ── Add rule btn ── */
-.cs-add-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--teal);text-decoration:none;padding:5px 10px;border:1.5px solid rgba(13,115,119,.25);border-radius:7px;transition:all .15s}
-.cs-add-btn:hover{background:rgba(13,115,119,.06)}
+/* -- Add rule btn -- */
+.cs-add-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--teal);text-decoration:none;padding:5px 10px;border:1.5px solid var(--teal-25);border-radius:7px;transition:all .15s}
+.cs-add-btn:hover{background:var(--teal-06)}
 
-/* ── View all link ── */
+/* -- View all link -- */
 .cs-view-all{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--teal);text-decoration:none;margin-top:10px}
 .cs-view-all:hover{text-decoration:underline}
 </style>
@@ -90,7 +90,7 @@
 {% endfor %}
 {% endif %}
 
-{# ── Tab bar ── #}
+{# -- Tab bar -- #}
 <div class="cs-tabs">
   <a href="{% url 'admin_attendance_rules' %}" class="cs-tab"><i class="fas fa-sliders"></i> Attendance Rules</a>
   <a href="{% url 'admin_regulations' %}" class="cs-tab"><i class="fas fa-scroll"></i> Regulations &amp; Curriculum</a>
@@ -100,10 +100,10 @@
   <a href="{% url 'admin_semester_results' %}" class="cs-tab active-gold"><i class="fas fa-square-poll-horizontal"></i> Semester Results</a>
 </div>
 
-{# ── Two-column grid ── #}
+{# -- Two-column grid -- #}
 <div class="cs-grid">
 
-{# ══ LEFT COLUMN ══ #}
+{# -- LEFT COLUMN -- #}
 <div>
 
 {# 1. Evaluation Scheme #}
@@ -163,7 +163,7 @@
       </div>
     </div>
     <div class="cs-info-box">
-      <strong>CGPA Formula:</strong> CGPA = Σ(Grade Point × Credits) ÷ Σ(Credits) across all semesters.<br>
+      <strong>CGPA Formula:</strong> CGPA = S(Grade Point × Credits) ÷ S(Credits) across all semesters.<br>
       Grade points: O=10, A+=9, A=8, B+=7, B=6, C=5, P=4, F=0
     </div>
     <button type="submit" class="cs-save-btn"><i class="fas fa-save"></i> Save Evaluation Scheme</button>
@@ -172,7 +172,7 @@
 
 </div>{# end left col #}
 
-{# ══ RIGHT COLUMN ══ #}
+{# -- RIGHT COLUMN -- #}
 <div>
 
 {# Feature Toggles #}

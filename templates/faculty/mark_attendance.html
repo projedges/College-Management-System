@@ -115,6 +115,7 @@
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Session Date</div>
+        
         <input type="date" id="date-picker" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" class="date-input"/>
         
         <div id="sunday-error" style="display:none; font-size:10px; color:var(--red); font-weight:700; margin-top:4px;">
