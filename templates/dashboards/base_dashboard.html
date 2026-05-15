@@ -3,26 +3,55 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'students/css/mobile_dashboard.css' %}"/>
+{% endblock %}
+
+{% block body %}
 {% if branding or request.user.userrole.college.branding %}
 <style>
 :root{
   --teal:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }};
   --teal-lt:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}cc;
   --teal-dk:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}dd;
+  --teal-03:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}08;
+  --teal-04:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}0a;
+  --teal-05:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}0d;
+  --teal-06:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}0f;
+  --teal-07:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}12;
+  --teal-08:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}14;
+  --teal-09:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}17;
+  --teal-10:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}1a;
+  --teal-11:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}1c;
+  --teal-12:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}1f;
+  --teal-14:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}24;
+  --teal-15:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}26;
+  --teal-16:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}29;
+  --teal-18:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}2e;
+  --teal-20:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}33;
+  --teal-24:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}3d;
+  --teal-25:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}40;
+  --teal-30:{{ branding.primary_color|default:request.user.userrole.college.branding.primary_color|default:"#0d7377" }}4d;
   --gold:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }};
   --gold-lt:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}cc;
+  --gold-05:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}0d;
+  --gold-06:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}0f;
+  --gold-07:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}12;
+  --gold-10:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}1a;
+  --gold-12:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}1f;
+  --gold-14:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}24;
+  --gold-15:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}26;
+  --gold-18:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}2e;
+  --gold-20:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}33;
+  --gold-25:{{ branding.accent_color|default:request.user.userrole.college.branding.accent_color|default:"#e6a817" }}40;
   --deep:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }};
   --deep2:{{ branding.sidebar_deep|default:request.user.userrole.college.branding.sidebar_deep|default:"#071e26" }}ee;
 }
 </style>
 {% endif %}
-{% endblock %}
 
-{% block body %}
 <div class="db-layout">
   <div id="global-dashboard-loader" style="display:flex;position:fixed;inset:0;background:rgba(7,30,38,.24);backdrop-filter:blur(2px);z-index:10050;align-items:center;justify-content:center;padding:20px">
     <div style="min-width:240px;background:#fff;border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.18);padding:24px 28px;text-align:center">
-      <div style="width:42px;height:42px;border-radius:50%;border:4px solid rgba(13,115,119,.15);border-top-color:var(--teal);margin:0 auto 12px;animation:globalDashboardSpin .8s linear infinite"></div>
+      <div style="width:42px;height:42px;border-radius:50%;border:4px solid var(--teal-15);border-top-color:var(--teal);margin:0 auto 12px;animation:globalDashboardSpin .8s linear infinite"></div>
       <div id="global-dashboard-loader-title" style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--deep)">Loading Page</div>
       <div id="global-dashboard-loader-sub" style="font-size:12px;color:var(--muted);margin-top:4px">Please wait...</div>
     </div>
@@ -42,11 +71,11 @@
       <div style="width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
       <i class="fas fa-chevron-down" style="color:var(--muted);font-size:10px;transition:transform .2s"></i>
       <div style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:1000;min-width:160px" class="profile-menu">
-        <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:13px"></i> My Profile</a>
+        <a href="#profile" data-section-target="profile" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--teal-05)'" onmouseout="this.style.background=''"><i class="fas fa-user-circle" style="color:var(--teal);width:13px"></i> My Profile</a>
         {% if is_impersonating %}
         <a href="{% url 'super_admin_impersonate_stop' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:#9a3412;text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(154,52,18,.05)'" onmouseout="this.style.background=''"><i class="fas fa-user-shield" style="width:13px"></i> Stop Impersonation</a>
         {% endif %}
-        <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='rgba(13,115,119,.05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:13px"></i> Support</a>
+        <a href="{% url 'admin_contact_support' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--deep);text-decoration:none;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--teal-05)'" onmouseout="this.style.background=''"><i class="fas fa-headset" style="color:var(--teal);width:13px"></i> Support</a>
         <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;color:#dc2626;text-decoration:none;font-size:11px;font-weight:600;transition:background .15s" onmouseover="this.style.background='rgba(220,38,38,.05)'" onmouseout="this.style.background=''"><i class="fas fa-sign-out-alt" style="width:13px"></i> Logout</a>
       </div>
     </div>
@@ -87,7 +116,7 @@
 
   <!-- Main content -->
   <main class="db-main">
-    <!-- Fixed topbar with profile — always visible -->
+    <!-- Fixed topbar with profile â€” always visible -->
     <div class="db-topbar" id="db-topbar">
       <div id="db-page-head-text">
         <h1 class="db-page-title">{% block page_title %}Dashboard{% endblock %}</h1>
@@ -171,7 +200,7 @@
 {% block quick_nav %}{% endblock %}
 
 <style>
-/* Inline bottom nav — guaranteed to load regardless of static file caching */
+/* Inline bottom nav â€” guaranteed to load regardless of static file caching */
 .mob-bottom-nav{display:none}
 @media(max-width:860px){
   .mob-bottom-nav{
@@ -187,7 +216,7 @@
     border-top:2px solid transparent;
   }
   .mob-bottom-nav a i{font-size:17px}
-  .mob-bottom-nav a.active{color:#0d7377;border-top-color:#0d7377}
+  .mob-bottom-nav a.active{color:var(--teal);border-top-color:var(--teal)}
   .db-main{padding-bottom:72px!important}
   /* Pure CSS: hide bottom nav whenever sidebar is open */
   body:has(#db-sidebar.open) .mob-bottom-nav{display:none!important}
@@ -211,7 +240,7 @@ document.querySelectorAll('.auto-dismiss-msg').forEach(function(el) {
     <div style="width:56px;height:56px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:22px;color:#ef4444"><i class="fas fa-clock"></i></div>
     <h3 style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:#071e26;margin-bottom:8px">Session Expired</h3>
     <p style="font-size:14px;color:#5a7080;margin-bottom:24px;line-height:1.6">You've been inactive for 30 minutes. Please sign in again to continue.</p>
-    <a href="{% url 'login' %}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;background:#0d7377;color:#fff;font-size:14px;font-weight:700;text-decoration:none"><i class="fas fa-arrow-right-to-bracket"></i> Sign In Again</a>
+    <a href="{% url 'login' %}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;text-decoration:none"><i class="fas fa-arrow-right-to-bracket"></i> Sign In Again</a>
   </div>
 </div>
 {% endif %}
@@ -227,7 +256,7 @@ body{overflow:hidden}
 .mob-ham span{display:block;width:22px;height:2px;background:var(--deep);border-radius:2px;transition:.3s}
 .mob-brand{flex:1;display:flex;align-items:center}
 .mob-logo-img{height:36px;width:auto;max-width:140px;object-fit:contain}
-.mob-role-badge{font-size:11px;font-weight:700;color:var(--teal);background:rgba(13,115,119,.08);padding:3px 10px;border-radius:99px;white-space:nowrap}
+.mob-role-badge{font-size:11px;font-weight:700;color:var(--teal);background:var(--teal-08);padding:3px 10px;border-radius:99px;white-space:nowrap}
 
 .sb-head{padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;min-height:72px}
 .sb-college-logo{height:52px;width:auto;max-width:160px;object-fit:contain;display:block;flex-shrink:0}
@@ -255,7 +284,7 @@ body{overflow:hidden}
 .topbar-session-timer i{font-size:13px;color:var(--teal)}
 .topbar-session-timer .timer-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
 .topbar-session-timer.warn{color:#92400e;background:#fef3c7;border-color:#fcd34d}
-.topbar-session-timer.warn i{color:#d97706}
+.topbar-session-timer.warn i{color:var(--gold)}
 .topbar-session-timer.urgent{color:#991b1b;background:#fee2e2;border-color:#fca5a5;animation:pulse-timer .8s infinite}
 .topbar-session-timer.urgent i{color:#ef4444}
 .admin-timer-hidden{display:none !important}
@@ -269,7 +298,7 @@ body{overflow:hidden}
 /* ---- Topbar profile dropdown ---- */
 .topbar-profile-wrap{position:relative}
 .topbar-profile-btn{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;border-radius:99px;border:1.5px solid var(--border);background:#fff;cursor:pointer;box-shadow:var(--sh);transition:all .2s}
-.topbar-profile-btn:hover{border-color:rgba(13,115,119,.3);box-shadow:0 4px 14px rgba(13,115,119,.1)}
+.topbar-profile-btn:hover{border-color:var(--teal-30);box-shadow:0 4px 14px var(--teal-10)}
 .topbar-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-lt));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
 .topbar-profile-info{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
 .topbar-profile-name{font-size:13px;font-weight:700;color:var(--deep);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
@@ -338,7 +367,7 @@ body{overflow:hidden}
 
 .quick-nav{display:flex;gap:10px;flex-wrap:wrap;margin:-10px 0 20px;max-width:100%;overflow-x:auto;padding-bottom:2px}
 .quick-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:#fff;border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:700;text-decoration:none;box-shadow:var(--sh);transition:all .2s}
-.quick-chip:hover,.quick-chip.active{color:var(--teal);border-color:rgba(13,115,119,.25);transform:translateY(-1px)}
+.quick-chip:hover,.quick-chip.active{color:var(--teal);border-color:var(--teal-25);transform:translateY(-1px)}
 .quick-chip i{color:var(--teal)}
 
 .section-meta{font-size:12px;color:var(--muted);margin:-8px 0 14px}

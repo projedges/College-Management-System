@@ -35,7 +35,7 @@
   .reg-error.show{display:block}
 
   .reg-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;transition:border-color .15s}
-  .reg-card:hover{border-color:rgba(13,115,119,.3)}
+  .reg-card:hover{border-color:var(--teal-30)}
   .reg-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
   .reg-card-title{font-family:'Outfit',sans-serif;font-size:15px;font-weight:800;color:var(--deep)}
   .reg-card-sub{font-size:12px;color:var(--muted);margin-top:3px}
@@ -49,7 +49,7 @@
   @media(max-width:640px){.reg-row{grid-template-columns:1fr}}
 </style>
 
-{# ── Inline Add Panel ── #}
+{# -- Inline Add Panel -- #}
 <div class="reg-panel" id="reg-panel">
   <div class="reg-panel-head">
     <div class="reg-panel-title"><i class="fas fa-scroll"></i> <span id="reg-panel-title-text">Add Regulation</span></div>
@@ -86,7 +86,7 @@
   </form>
 </div>
 
-{# ── Regulations list ── #}
+{# -- Regulations list -- #}
 <div id="reg-list">
 {% if regulations %}
 {% for reg in regulations %}

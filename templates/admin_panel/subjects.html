@@ -14,7 +14,7 @@
 <div class="stat-row" style="margin-bottom:20px">
   <div class="stat-mini">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-book"></i></div>
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-book"></i></div>
       <div><div class="n">{{ subjects|length }}</div><div class="l">Total Subjects</div></div>
     </div>
   </div>
@@ -26,16 +26,16 @@
   </div>
   <div class="stat-mini">
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(230,168,23,.1);color:#b88510;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-layer-group"></i></div>
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--gold-10);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-layer-group"></i></div>
       <div><div class="n">8</div><div class="l">Total Semesters</div></div>
     </div>
   </div>
   <div class="stat-mini">
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:38px;height:38px;border-radius:10px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-circle-check"></i></div>
-      <div><div class="n" style="color:var(--teal)">Active</div><div class="l">All Subjects</div></div>
-    </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:38px;height:38px;border-radius:10px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0"><i class="fas fa-book"></i></div>
+    <div><div class="n">{{ total_subjects }}</div><div class="l">Total Subjects</div></div>
   </div>
+</div>
 </div>
 
 <!-- Filter bar -->
@@ -79,13 +79,13 @@
       <tr>
         <td style="padding-left:20px">
           <div style="display:flex;align-items:center;gap:10px">
-            <div style="width:30px;height:30px;border-radius:8px;background:rgba(13,115,119,.08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0"><i class="fas fa-book-open"></i></div>
+            <div style="width:30px;height:30px;border-radius:8px;background:var(--teal-08);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0"><i class="fas fa-book-open"></i></div>
             <span style="font-weight:600;color:var(--deep)">{{ s.name }}</span>
           </div>
         </td>
         <td><a href="#" style="color:var(--teal);font-weight:600;text-decoration:none;font-size:13px">{{ s.code }}</a></td>
         <td style="color:var(--muted)">{{ s.department.name }}</td>
-        <td><span class="ap-badge" style="background:rgba(13,115,119,.08);color:var(--teal);font-size:11px;padding:2px 8px;border-radius:5px">Sem {{ s.semester }}</span></td>
+        <td><span class="ap-badge" style="background:var(--teal-08);color:var(--teal);font-size:11px;padding:2px 8px;border-radius:5px">Sem {{ s.semester }}</span></td>
         <td>
           <div style="display:flex;gap:6px;align-items:center">
             <a href="{% url 'admin_subject_edit' s.pk %}" class="btn-edit"><i class="fas fa-pen"></i> Edit</a>
@@ -97,14 +97,38 @@
     </tbody>
   </table>
   <div style="padding:12px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>Showing 1 to {{ subjects|length }} of {{ subjects|length }} subjects</span>
+    <span>Showing {{ subjects.start_index|default:0 }} to {{ subjects.end_index|default:0 }} of {{ total_subjects }} subjects</span>
+    
     <div style="display:flex;align-items:center;gap:6px">
-      <select style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;outline:none;background:#fff">
-        <option>10 per page</option><option>25 per page</option><option>50 per page</option>
-      </select>
-      <button style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;color:var(--muted)"><i class="fas fa-chevron-left"></i></button>
-      <span style="width:28px;height:28px;border-radius:7px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">1</span>
-      <button style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;color:var(--muted)"><i class="fas fa-chevron-right"></i></button>
+      <!-- Per Page Dropdown -->
+      <form method="GET" style="margin:0;display:flex;gap:6px;align-items:center;">
+        {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+        {% if dept_filter %}<input type="hidden" name="dept" value="{{ dept_filter }}">{% endif %}
+        {% if semester_filter %}<input type="hidden" name="sem" value="{{ semester_filter }}">{% endif %}
+        <input type="hidden" name="page" value="1">
+        <select name="per_page" onchange="this.form.submit()" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;outline:none;background:#fff;cursor:pointer;">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10 per page</option>
+          <option value="25" {% if per_page == 25 %}selected{% endif %}>25 per page</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50 per page</option>
+        </select>
+      </form>
+
+      <!-- Previous Button -->
+      {% if subjects.has_previous %}
+      <a href="?page={{ subjects.previous_page_number }}&per_page={{ per_page }}&q={{ search_query|urlencode }}&dept={{ dept_filter|urlencode }}&sem={{ semester_filter|urlencode }}" style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;text-decoration:none;"><i class="fas fa-chevron-left"></i></a>
+      {% else %}
+      <button disabled style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#f3f4f6;cursor:not-allowed;font-size:12px;color:var(--muted);opacity:0.5;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chevron-left"></i></button>
+      {% endif %}
+      
+      <!-- Current Page indicator -->
+      <span style="width:28px;height:28px;border-radius:7px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ subjects.number }}</span>
+      
+      <!-- Next Button -->
+      {% if subjects.has_next %}
+      <a href="?page={{ subjects.next_page_number }}&per_page={{ per_page }}&q={{ search_query|urlencode }}&dept={{ dept_filter|urlencode }}&sem={{ semester_filter|urlencode }}" style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;text-decoration:none;"><i class="fas fa-chevron-right"></i></a>
+      {% else %}
+      <button disabled style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:7px;background:#f3f4f6;cursor:not-allowed;font-size:12px;color:var(--muted);opacity:0.5;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chevron-right"></i></button>
+      {% endif %}
     </div>
   </div>
 </div>

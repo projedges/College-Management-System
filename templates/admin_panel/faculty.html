@@ -11,18 +11,18 @@
   .fac-stat-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;box-shadow:var(--sh);transition:transform .2s,box-shadow .2s}
   .fac-stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(7,30,38,.1)}
   .fac-stat-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto 10px;flex-shrink:0}
-  .fac-stat-icon.teal{background:rgba(13,115,119,.08);color:var(--teal)}
+  .fac-stat-icon.teal{background:var(--teal-08);color:var(--teal)}
   .fac-stat-icon.blue{background:rgba(37,99,235,.08);color:#2563eb}
-  .fac-stat-icon.gold{background:rgba(230,168,23,.1);color:#d97706}
+  .fac-stat-icon.gold{background:var(--gold-10);color:var(--gold)}
   .fac-stat-icon.red{background:rgba(239,68,68,.08);color:#ef4444}
   .fac-stat-val{font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:var(--deep);line-height:1}
   .fac-stat-lbl{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
   .fac-action-bar{display:flex;gap:10px;margin-bottom:20px;justify-content:flex-end;flex-wrap:wrap}
   .fac-btn-add{display:inline-flex;align-items:center;gap:6px;padding:11px 18px;border-radius:11px;background:var(--teal);color:#fff;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:all .2s;box-shadow:var(--sh)}
-  .fac-btn-add:hover{background:var(--teal-dk);transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,115,119,.2)}
+  .fac-btn-add:hover{background:var(--teal-dk);transform:translateY(-1px);box-shadow:0 6px 20px var(--teal-20)}
   .fac-search-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
   .fac-search{flex:1;min-width:200px;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fff}
-  .fac-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1)}
+  .fac-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-10)}
   .fac-filter-btn{padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--deep);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
   .fac-filter-btn:hover{border-color:var(--teal);color:var(--teal)}
   .fac-table-wrap{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
@@ -35,8 +35,8 @@
   .fac-badge{display:inline-block;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700}
   .fac-badge-active{background:#d1fae5;color:#065f46}
   .fac-actions{display:flex;gap:8px;align-items:center}
-  .fac-action-btn{width:32px;height:32px;border-radius:8px;border:none;background:rgba(13,115,119,.08);color:var(--teal);cursor:pointer;font-size:12px;transition:all .2s;display:flex;align-items:center;justify-content:center;font-weight:600}
-  .fac-action-btn:hover{background:rgba(13,115,119,.15);transform:scale(1.05)}
+  .fac-action-btn{width:32px;height:32px;border-radius:8px;border:none;background:var(--teal-08);color:var(--teal);cursor:pointer;font-size:12px;transition:all .2s;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .fac-action-btn:hover{background:var(--teal-15);transform:scale(1.05)}
   .fac-action-btn.del{background:rgba(239,68,68,.08);color:#ef4444}
   .fac-action-btn.del:hover{background:rgba(239,68,68,.15)}
   .fac-empty{text-align:center;padding:48px 20px;color:var(--muted)}
@@ -44,7 +44,7 @@
   .fac-empty p{margin:0;font-size:14px}
   .fac-hod-section{margin-top:32px}
   .fac-hod-title{font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;color:var(--deep);margin-bottom:16px;display:flex;align-items:center;gap:10px}
-  .fac-hod-title i{width:28px;height:28px;border-radius:9px;background:rgba(13,115,119,.09);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:13px}
+  .fac-hod-title i{width:28px;height:28px;border-radius:9px;background:var(--teal-09);display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:13px}
   @media(max-width:1024px){.fac-stat-grid{grid-template-columns:repeat(2,1fr)}.fac-search-bar{flex-direction:column}.fac-search{width:100%}}
   @media(max-width:640px){.fac-stat-grid{grid-template-columns:1fr}.fac-table{font-size:12px}.fac-table th,.fac-table td{padding:11px 12px}.fac-action-bar{flex-direction:column}.fac-btn-add{width:100%;justify-content:center}.fac-actions{flex-direction:column;gap:4px}.fac-action-btn{width:100%;justify-content:center}}
 </style>
@@ -91,7 +91,7 @@
       {% endfor %}
     </select>
     <button type="submit" class="fac-filter-btn"><i class="fas fa-search"></i> Search</button>
-    {% if dept_filter or search_query %}<a href="{% url 'admin_faculty_list' %}" class="fac-filter-btn" style="background:rgba(13,115,119,.08);color:var(--teal)">Clear</a>{% endif %}
+    {% if dept_filter or search_query %}<a href="{% url 'admin_faculty_list' %}" class="fac-filter-btn" style="background:var(--teal-08);color:var(--teal)">Clear</a>{% endif %}
   </form>
 </div>
 

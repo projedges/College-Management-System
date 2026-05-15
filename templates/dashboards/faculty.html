@@ -1,4 +1,4 @@
-{% extends 'dashboards/base_dashboard.html' %}
+﻿{% extends 'dashboards/base_dashboard.html' %}
 {% block title %}Faculty Dashboard - EduTrack{% endblock %}
 {% block role_label %}Faculty{% endblock %}
 {% block role_label_foot %}Faculty{% endblock %}
@@ -219,17 +219,36 @@
     </div>
   </div>
 
-  {% if has_unmarked_today %}
-  <div style="margin-bottom:16px;padding:14px 18px;background:rgba(230,168,23,.07);border:1.5px solid rgba(230,168,23,.3);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-    <i class="fas fa-triangle-exclamation" style="color:var(--gold);font-size:20px;flex-shrink:0"></i>
-    <div style="flex:1">
-      <div style="font-size:13px;font-weight:700;color:var(--deep)">Attendance Pending Today</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">
-        {% for t in today_timetable %}{% if t.subject.id not in marked_subject_ids %}<span style="font-weight:600;color:var(--deep)">{{ t.subject.name }}</span> {% endif %}{% endfor %}
+  {% if today_timetable %}
+    {% if has_unmarked_today %}
+    <div style="margin-bottom:16px;padding:14px 18px;background:rgba(230,168,23,.07);border:1.5px solid rgba(230,168,23,.3);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <i class="fas fa-triangle-exclamation" style="color:var(--gold);font-size:20px;flex-shrink:0"></i>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--deep)">Attendance Pending Today</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">
+          {% for subject in unmarked_subjects %}
+            <span style="font-weight:600;color:var(--deep)">{{ subject.name }}</span>{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        </div>
       </div>
+      <a href="{% url 'faculty_mark_attendance' unmarked_subjects.0.id %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px;text-decoration:none"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
     </div>
-    <a href="#dashboard" data-section-target="dashboard" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px;text-decoration:none"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
-  </div>
+    {% else %}
+      
+      <div style="margin-bottom:16px;padding:14px 18px;background:rgba(16,185,129,.07);border:1.5px solid rgba(16,185,129,.3);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <i class="fas fa-check-circle" style="color:#10b981;font-size:20px;flex-shrink:0"></i>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#059669">Attendance Marked for Today</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">
+            Great job! All your scheduled classes for today have been successfully marked.
+          </div>
+        </div>
+        <a href="{% url 'faculty_mark_attendance' today_timetable.0.subject.id %}" style="font-size:12px;font-weight:700;color:#059669;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.2);padding:7px 14px;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s">
+          <i class="fas fa-calendar-check"></i> Review Attendance
+        </a>
+      </div>
+
+    {% endif %}
   {% endif %}
 
   <div class="two-col">
@@ -259,33 +278,39 @@
     <div class="d-card">
       <div class="d-title"><i class="fas fa-clock"></i> Today's Schedule</div>
       {% if today_timetable %}
-      <div class="content-scroll soft">
-        {% for t in today_timetable %}
-        {% with is_marked=t.subject.id|stringformat:"s" %}
-        <div class="tt-row" style="{% if t.subject.id in marked_subject_ids %}border-left:3px solid var(--teal);{% else %}border-left:3px solid var(--gold);{% endif %}">
-          <div class="tt-time">{{ t.start_time|time:"g:i A" }} - {{ t.end_time|time:"g:i A" }}</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--deep)">{{ t.subject.name }}</div>
-            <div style="font-size:11px;color:var(--muted)">{{ t.subject.code }}</div>
+  
+    {% if has_unmarked_today %}
+      
+      <div style="margin-bottom:16px;padding:14px 18px;background:rgba(230,168,23,.07);border:1.5px solid rgba(230,168,23,.3);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <i class="fas fa-triangle-exclamation" style="color:var(--gold);font-size:20px;flex-shrink:0"></i>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--deep)">Attendance Pending Today</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">
+            {% for subject in unmarked_subjects %}
+                <span style="font-weight:600;color:var(--deep)">{{ subject.name }}</span>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
           </div>
-          <div class="tt-room">
-            {% if t.display_room_numbers %}{{ t.display_room_numbers|join:", " }}{% else %}{{ t.classroom.room_number }}{% endif %}
-            {% if t.display_sections %}<span style="display:block;font-size:9px;color:var(--muted);font-weight:600">Sections {{ t.display_sections|join:", " }}</span>{% endif %}
-          </div>
-          {% if t.subject.id in marked_subject_ids %}
-            <span style="font-size:10px;font-weight:700;color:var(--teal);background:rgba(13,115,119,.1);padding:2px 8px;border-radius:99px;white-space:nowrap"><i class="fas fa-check"></i> Marked</span>
-          {% else %}
-            <a href="{% url 'faculty_mark_attendance' t.subject.id %}" style="font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:4px 10px;border-radius:7px;text-decoration:none;white-space:nowrap"><i class="fas fa-calendar-check"></i> Mark Now</a>
-          {% endif %}
         </div>
-        {% endwith %}
-        {% endfor %}
+        <a href="{% url 'faculty_mark_attendance' unmarked_subjects.0.id %}" class="qa-btn qa-gold" style="font-size:12px;padding:7px 14px;text-decoration:none"><i class="fas fa-calendar-check"></i> Mark Attendance</a>
       </div>
-      {% else %}
-      <div class="empty"><i class="fas fa-mug-hot"></i>No classes today.</div>
-      {% endif %}
+
+    {% else %}
+      
+      <div style="margin-bottom:16px;padding:14px 18px;background:rgba(16,185,129,.07);border:1.5px solid rgba(16,185,129,.3);border-radius:var(--r-lg);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <i class="fas fa-check-circle" style="color:#10b981;font-size:20px;flex-shrink:0"></i>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#059669">Attendance Marked for Today</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">
+            Great job! All your scheduled classes for today have been successfully marked.
+          </div>
+        </div>
+      </div>
+
+    {% endif %}
+  {% endif %}
     </div>
   </div>
+
 
   <!-- My Timetable (weekly matrix) -->
   <div class="d-card" style="margin-top:20px">
@@ -1661,4 +1686,134 @@ function toggleRejectForm(id) {
   var el = document.getElementById(id);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
+
+// =====================================================================
+// LIVE MULTI-WINDOW ATTENDANCE COUNTDOWN
+// =====================================================================
+document.addEventListener('DOMContentLoaded', function() {
+  // 0. Prevent duplicates: If a timer already exists, stop running!
+  if (document.getElementById('live-attendance-timer-badge')) return;
+
+  // 1. Safely find the new "Attendance locked. Allowed:" message
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+  let targetTextNode = null;
+  let fullText = "";
+  
+  while (walker.nextNode()) {
+    if (/Attendance locked\. Allowed:/i.test(walker.currentNode.nodeValue)) {
+      targetTextNode = walker.currentNode;
+      fullText = targetTextNode.parentNode.textContent;
+      break;
+    }
+  }
+
+  if (targetTextNode) {
+    // 2. Extract the class times and grace period from the text
+    const classRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*(?:-|–)\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*\+\s*(\d+)\s*min/i;
+    const match = fullText.match(classRegex);
+
+    if (match) {
+      const startStr = match[1];
+      const endStr = match[2];
+      const graceMins = parseInt(match[3], 10);
+
+      // 3. Create the badge
+      const timerBadge = document.createElement('span');
+      timerBadge.id = 'live-attendance-timer-badge'; // Assign an ID for the duplicate check
+      timerBadge.style.fontWeight = '800';
+      timerBadge.style.marginLeft = '10px';
+      timerBadge.style.padding = '3px 8px';
+      timerBadge.style.borderRadius = '6px';
+      timerBadge.style.fontVariantNumeric = 'tabular-nums';
+      timerBadge.style.letterSpacing = '0.5px';
+
+      // Insert right after the text
+      targetTextNode.parentNode.insertBefore(timerBadge, targetTextNode.nextSibling);
+
+      // Helper to convert time strings to Date objects for today
+      function getTodayTime(timeStr) {
+         let parts = timeStr.split(':');
+         let d = new Date();
+         d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2] || 0, 10), 0);
+         return d;
+      }
+
+      // Define Window 1: During Class (+ Grace)
+      const classStart = getTodayTime(startStr);
+      const classEnd = getTodayTime(endStr);
+      classEnd.setMinutes(classEnd.getMinutes() + graceMins);
+
+      // Define Window 2: Evening Window (5 PM - 8 PM)
+      const eveningStart = new Date();
+      eveningStart.setHours(17, 0, 0, 0); // 17:00 (5 PM)
+      const eveningEnd = new Date();
+      eveningEnd.setHours(20, 0, 0, 0);   // 20:00 (8 PM)
+
+      // Midnight fix (just in case class runs past midnight)
+      const now = new Date();
+      if (now.getHours() < 12 && classStart.getHours() > 12) {
+          classStart.setDate(classStart.getDate() - 1);
+          classEnd.setDate(classEnd.getDate() - 1);
+      }
+
+      // 4. Multi-window timer logic
+      function updateTimer() {
+        const currentTime = new Date();
+        let diff = 0;
+        let prefix = "";
+
+        if (currentTime < classStart) {
+          // Waiting for class to start
+          diff = Math.floor((classStart - currentTime) / 1000);
+          prefix = "Class opens in: ";
+          timerBadge.style.background = '#fef3c7'; // Gold
+          timerBadge.style.color = '#92400e';
+          
+        } else if (currentTime >= classStart && currentTime <= classEnd) {
+          // Window 1 is OPEN (During Class)
+          diff = Math.floor((classEnd - currentTime) / 1000);
+          prefix = "Class window closes in: ";
+          timerBadge.style.background = 'rgba(16, 185, 129, 0.15)'; // Green
+          timerBadge.style.color = '#047857';
+          
+        } else if (currentTime > classEnd && currentTime < eveningStart) {
+          // Class window closed, waiting for Evening window
+          diff = Math.floor((eveningStart - currentTime) / 1000);
+          prefix = "Evening window opens in: ";
+          timerBadge.style.background = '#fef3c7'; // Gold
+          timerBadge.style.color = '#92400e';
+          
+        } else if (currentTime >= eveningStart && currentTime <= eveningEnd) {
+          // Window 2 is OPEN (Evening)
+          diff = Math.floor((eveningEnd - currentTime) / 1000);
+          prefix = "Evening window closes in: ";
+          timerBadge.style.background = 'rgba(16, 185, 129, 0.15)'; // Green
+          timerBadge.style.color = '#047857';
+          
+        } else {
+          // Both windows have completely passed
+          timerBadge.innerText = "All Windows Closed";
+          timerBadge.style.background = 'rgba(153, 27, 27, 0.1)'; // Red
+          timerBadge.style.color = '#991b1b';
+          return;
+        }
+
+        // Format math into HH:MM:SS
+        if (diff < 0) diff = 0;
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+
+        let timeString = h > 0 
+          ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+          : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+        timerBadge.innerText = `${prefix} ${timeString}`;
+      }
+
+      setInterval(updateTimer, 1000);
+      updateTimer();
+    }
+  }
+});
 {% endblock %}

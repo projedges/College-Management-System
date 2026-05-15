@@ -41,13 +41,13 @@
   .em-badge-ongoing{background:#fef3c7;color:#92400e}
   .em-badge-completed{background:#d1fae5;color:#065f46}
   .em-badge-cancelled{background:#fee2e2;color:#991b1b}
-  .em-badge-internal{background:rgba(13,115,119,.1);color:var(--teal)}
+  .em-badge-internal{background:var(--teal-10);color:var(--teal)}
   .em-badge-endsem{background:#dbeafe;color:#1d4ed8}
   .em-badge-practical{background:#fef3c7;color:#92400e}
   .em-badge-backlog{background:#fee2e2;color:#991b1b}
   .em-badge-supplementary{background:rgba(139,92,246,.1);color:#7c3aed}
-  .em-action-btn{width:28px;height:28px;border-radius:7px;border:none;background:rgba(13,115,119,.08);color:var(--teal);cursor:pointer;font-size:11px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:all .2s}
-  .em-action-btn:hover{background:rgba(13,115,119,.15)}
+  .em-action-btn{width:28px;height:28px;border-radius:7px;border:none;background:var(--teal-08);color:var(--teal);cursor:pointer;font-size:11px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:all .2s}
+  .em-action-btn:hover{background:var(--teal-15)}
   .em-action-btn.del{background:rgba(239,68,68,.08);color:#ef4444}
   .em-action-btn.del:hover{background:rgba(239,68,68,.15)}
   .em-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);flex-wrap:wrap;gap:8px}
@@ -65,7 +65,7 @@
   .em-cal-day{font-size:10px;font-weight:700;color:var(--muted);padding:4px 0}
   .em-cal-cell{font-size:11px;padding:5px 2px;border-radius:6px;cursor:default;color:var(--text)}
   .em-cal-cell.today{background:var(--teal);color:#fff;font-weight:700}
-  .em-cal-cell.has-exam{background:rgba(13,115,119,.1);color:var(--teal);font-weight:700}
+  .em-cal-cell.has-exam{background:var(--teal-10);color:var(--teal);font-weight:700}
   .em-overview-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
   .em-overview-row:last-child{border-bottom:none}
   .em-overview-row i{color:var(--teal);width:16px}
@@ -95,11 +95,11 @@
     <div><div class="em-stat-val">{{ upcoming_count }}</div><div class="em-stat-lbl">Scheduled</div><div class="em-stat-sub">Upcoming exams</div></div>
   </div>
   <div class="em-stat-card">
-    <div class="em-stat-icon" style="background:rgba(230,168,23,.1);color:#d97706"><i class="fas fa-circle-dot"></i></div>
+    <div class="em-stat-icon" style="background:var(--gold-10);color:var(--gold)"><i class="fas fa-circle-dot"></i></div>
     <div><div class="em-stat-val">{{ ongoing_count }}</div><div class="em-stat-lbl">Ongoing</div><div class="em-stat-sub">In progress</div></div>
   </div>
   <div class="em-stat-card">
-    <div class="em-stat-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-circle-check"></i></div>
+    <div class="em-stat-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-circle-check"></i></div>
     <div><div class="em-stat-val">{{ completed_count }}</div><div class="em-stat-lbl">Completed</div><div class="em-stat-sub">Finished exams</div></div>
   </div>
   <div class="em-stat-card">
@@ -150,7 +150,7 @@
             <tr data-sem="{{ e.semester }}" data-status="{% now 'Y-m-d' as today %}{% if e.start_date|date:'Y-m-d' > today %}upcoming{% elif e.end_date|date:'Y-m-d' < today %}completed{% else %}ongoing{% endif %}">
               <td>
                 <div style="display:flex;align-items:center;gap:10px">
-                  <div class="em-exam-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-file-pen"></i></div>
+                  <div class="em-exam-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-file-pen"></i></div>
                   <div>
                     <div style="font-weight:600;color:var(--deep);font-size:13px">{{ e.name }}</div>
                     <div style="font-size:11px;color:var(--muted)">Semester {{ e.semester }}</div>
@@ -277,7 +277,7 @@
     <div class="em-sidebar-card">
       <div class="em-sidebar-title"><i class="fas fa-bolt" style="color:var(--teal)"></i> Quick Actions</div>
       <div class="em-qa-item" onclick="window.location='{% url 'admin_exam_add' %}'">
-        <div class="em-qa-icon" style="background:rgba(13,115,119,.08);color:var(--teal)"><i class="fas fa-plus"></i></div>
+        <div class="em-qa-icon" style="background:var(--teal-08);color:var(--teal)"><i class="fas fa-plus"></i></div>
         <div><div class="em-qa-label">Create New Exam</div><div class="em-qa-sub">Add a new exam</div></div>
       </div>
       <div class="em-qa-item">
@@ -285,7 +285,7 @@
         <div><div class="em-qa-label">Generate Timetable</div><div class="em-qa-sub">Auto or manual scheduling</div></div>
       </div>
       <div class="em-qa-item">
-        <div class="em-qa-icon" style="background:rgba(230,168,23,.1);color:#d97706"><i class="fas fa-users"></i></div>
+        <div class="em-qa-icon" style="background:var(--gold-10);color:var(--gold)"><i class="fas fa-users"></i></div>
         <div><div class="em-qa-label">Assign Invigilators</div><div class="em-qa-sub">Manage exam duty</div></div>
       </div>
       <div class="em-qa-item">

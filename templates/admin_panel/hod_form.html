@@ -39,7 +39,7 @@
       <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Joined Date</label><input type="date" name="joined_date" value="{% if hod.joined_date %}{{ hod.joined_date|date:'Y-m-d' }}{% endif %}" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/></div>
     </div>
     <div style="margin-bottom:16px"><label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Specialization</label><input type="text" name="specialization" value="{{ hod.specialization|default:'' }}" placeholder="e.g. Machine Learning, VLSI Design" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'Inter',sans-serif;outline:none"/><div style="font-size:11px;color:var(--muted);margin-top:4px">Research or teaching specialization areas.</div></div>
-    <div style="margin-bottom:20px;padding:14px 16px;background:rgba(13,115,119,.05);border:1.5px solid rgba(13,115,119,.2);border-radius:var(--r)">
+    <div style="margin-bottom:20px;padding:14px 16px;background:var(--teal-05);border:1.5px solid var(--teal-20);border-radius:var(--r)">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
         <input type="checkbox" name="can_take_classes" id="can-take-classes" {% if hod.can_take_classes %}checked{% endif %} style="width:16px;height:16px;accent-color:var(--teal)"/>
         <span style="font-size:13px;font-weight:600">This HOD also teaches classes (like a faculty member)</span>

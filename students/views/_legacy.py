@@ -4475,10 +4475,6 @@ def faculty_dashboard(request):
     now = timezone.localtime(timezone.now())
     today = now.date()
 
-    marked_subject_ids = set(AttendanceSession.objects.filter(
-        faculty=faculty, date=today
-    ).values_list('subject_id', flat=True))
-
     day_map = {0:'MON',1:'TUE',2:'WED',3:'THU',4:'FRI',5:'SAT',6:'SUN'}
     today_day = day_map.get(today.weekday(), '')
     raw_timetable = Timetable.objects.filter(
@@ -4487,7 +4483,18 @@ def faculty_dashboard(request):
     ).select_related('subject', 'classroom').order_by('start_time').distinct()
     today_timetable = _merge_timetable_section_rows(list(raw_timetable))
     today_sessions = today_timetable
-    has_unmarked_today = any(t.subject_id not in marked_subject_ids for t in today_timetable)
+    today_subject_ids = {t.subject_id for t in today_timetable}
+    marked_subject_ids = set(AttendanceSession.objects.filter(
+        subject_id__in=today_subject_ids, date=today
+    ).values_list('subject_id', flat=True)) if today_subject_ids else set()
+    unmarked_subjects = []
+    seen_unmarked_subject_ids = set()
+    for slot in today_timetable:
+        if slot.subject_id in marked_subject_ids or slot.subject_id in seen_unmarked_subject_ids:
+            continue
+        unmarked_subjects.append(slot.subject)
+        seen_unmarked_subject_ids.add(slot.subject_id)
+    has_unmarked_today = bool(unmarked_subjects)
 
     # Full week timetable + matrix for the new matrix view
     week_days = ['MON','TUE','WED','THU','FRI','SAT']
@@ -4634,6 +4641,7 @@ def faculty_dashboard(request):
         'week_timetable_matrix': week_timetable_matrix,
         'availability_slots': availability_slots,
         'marked_subject_ids': marked_subject_ids,
+        'unmarked_subjects': unmarked_subjects,
         'has_unmarked_today': has_unmarked_today,
         'recent_sessions': recent_sessions,
         'pending_submissions': pending_submissions_qs[:10],
@@ -4925,18 +4933,35 @@ def faculty_request_add(request):
 def _get_section_students(faculty, subject):
     """
     Returns the queryset of students this faculty should see for a subject.
-    If a SectionSubjectFacultyMap exists for this faculty+subject, scope to that section.
+    If section mappings exist for this faculty+subject, prefer a mapped section that
+    currently has active students. This avoids stale/empty historical mappings hiding
+    the real class list.
     Otherwise fall back to all active students in the department+semester.
     """
-    ssf = SectionSubjectFacultyMap.objects.filter(faculty=faculty, subject=subject).select_related('section').first()
     base_qs = Student.objects.filter(
         department=subject.department,
         current_semester=subject.semester,
         status='ACTIVE',
         is_deleted=False,
     ).select_related('user').order_by('roll_number')
-    if ssf:
-        return base_qs.filter(section=ssf.section.label)
+
+    if not faculty:
+        return base_qs
+
+    mappings = list(
+        SectionSubjectFacultyMap.objects.filter(
+            faculty=faculty,
+            subject=subject,
+            section__department=subject.department,
+            section__semester=subject.semester,
+        )
+        .select_related('section')
+        .order_by('section__label', 'created_at')
+    )
+    for mapping in mappings:
+        scoped_qs = base_qs.filter(section=mapping.section.label)
+        if scoped_qs.exists():
+            return scoped_qs
     return base_qs
 
 
@@ -4965,19 +4990,37 @@ def faculty_mark_attendance(request, subject_id):
     students = _get_section_students(faculty, subject)
     today = timezone.localdate()
 
+    selected_date = today
+    if request.method == 'GET':
+        requested_date = request.GET.get('date')
+        if requested_date:
+            try:
+                parsed_date = datetime.fromisoformat(requested_date).date()
+                if parsed_date > today:
+                    messages.error(request, 'Cannot view attendance for a future date.')
+                    return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+                if parsed_date.weekday() == 6:
+                    messages.error(request, 'Attendance cannot be marked on Sundays.')
+                    return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+                selected_date = parsed_date
+            except (ValueError, TypeError):
+                messages.error(request, 'Invalid attendance date selected.')
+                return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+
     # Check for accepted substitution today — look up by subject+faculty+date directly
     # (do NOT filter by day_of_week; the sub slot may be from a different weekday)
     active_sub = None
-    if faculty:
+    if faculty and selected_date == today:
         active_sub = Substitution.objects.filter(
             timetable_slot__subject=subject,
             substitute_faculty=faculty,
-            date=today,
+            date=selected_date,
             status='ACCEPTED',
         ).select_related('timetable_slot').first()
 
-    # Existing session for today (pre-fill topic + attendance)
-    existing_session = AttendanceSession.objects.filter(subject=subject, date=today).first()
+    # Existing session for selected date (pre-fill topic + attendance)
+    existing_session = AttendanceSession.objects.filter(subject=subject, date=selected_date).first()
+
 
     # Lesson plan topics → quick-select chips
     topic_suggestions = []
@@ -5000,25 +5043,28 @@ def faculty_mark_attendance(request, subject_id):
         }
 
     if request.method == 'POST':
-        date_str = request.POST.get('date', str(today))
+        topic_covered = request.POST.get('topic_covered', '').strip()
+        if not topic_covered:
+            messages.error(request, 'Topic covered is required before saving attendance.')
+            return render(request, 'faculty/mark_attendance.html', {
+                'subject': subject, 'students': students, 'today': today, 'selected_date': selected_date,
+                'active_sub': active_sub, 'topic_suggestions': topic_suggestions,
+                'existing_session': existing_session, 'existing_att': existing_att,
+            })
+
+        date_str = request.POST.get('date', str(selected_date))
         try:
             session_date = datetime.fromisoformat(date_str).date()
         except (ValueError, TypeError):
-            session_date = today
+            session_date = selected_date
 
         if session_date > today:
             messages.error(request, 'Cannot mark attendance for a future date.')
-            return redirect('faculty_dashboard')
+            return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
+        if session_date.weekday() == 6:
+            messages.error(request, 'Attendance cannot be marked on Sundays.')
+            return redirect(reverse('faculty_mark_attendance', args=[subject.id]))
 
-        topic_covered = request.POST.get('topic_covered', '').strip()
-        if not topic_covered:
-            prior_session = AttendanceSession.objects.filter(subject=subject, date=session_date).first()
-            topic_covered = (
-                (prior_session.topic_covered if prior_session else '')
-                or (active_sub.topic_covered if active_sub else '')
-                or (topic_suggestions[0] if topic_suggestions else '')
-                or f'Attendance session for {subject.code}'
-            )
 
         # Always store topic on the session
         session, created = AttendanceSession.objects.update_or_create(
@@ -5055,6 +5101,7 @@ def faculty_mark_attendance(request, subject_id):
         'subject': subject,
         'students': students,
         'today': today,
+        'selected_date': selected_date,
         'active_sub': active_sub,
         'topic_suggestions': topic_suggestions,
         'existing_session': existing_session,
@@ -10018,13 +10065,16 @@ def admin_hod_delete(request, pk):
 def admin_subjects(request):
     if not _admin_guard(request):
         return redirect('dashboard')
+        
     departments = _scope_departments(request).order_by('name')
     dept_filter = request.GET.get('dept', '').strip()
     semester_filter = request.GET.get('sem', '').strip()
     search_query = request.GET.get('q', '').strip()
+    
     subjects = Subject.objects.filter(
         department__in=departments
     ).select_related('department').order_by('department__code', 'semester', 'code')
+    
     if dept_filter:
         subjects = subjects.filter(department_id=dept_filter)
     if semester_filter:
@@ -10036,8 +10086,23 @@ def admin_subjects(request):
             Q(department__name__icontains=search_query) |
             Q(department__code__icontains=search_query)
         )
+        
+    # --- ADDED: Real Pagination Logic ---
+    per_page = request.GET.get('per_page', '10')
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 10
+        
+    paginator = Paginator(subjects, per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    # ------------------------------------
+
     return render(request, 'admin_panel/subjects.html', {
-        'subjects': subjects,
+        'subjects': page_obj,              # Pass the paginated page object instead of raw list
+        'total_subjects': paginator.count, # Total count of subjects across all pages
+        'per_page': per_page,              # Current per-page count to keep the UI in sync
         'departments': departments,
         'dept_filter': dept_filter,
         'semester_filter': semester_filter,
@@ -11496,6 +11561,10 @@ def admin_save_colors(request):
         else:
             branding.sidebar_deep = deep
     branding.save()
+    cache.delete_many([
+        f'college_branding_{user_id}'
+        for user_id in UserRole.objects.filter(college=college).values_list('user_id', flat=True)
+    ])
     messages.success(request, 'Colors saved. They will apply on next page load for all users.')
     return redirect('/dashboard/admin/#profile')
 
